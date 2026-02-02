@@ -5,87 +5,109 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Simple in-memory cache with TTL
-const cache = new Map<string, { data: unknown; expiry: number }>();
-const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+// Estaciones meteorológicas predefinidas en/cerca de Barcelona
+// Basadas en ubicaciones reales de AEMET y Servei Meteorològic de Catalunya
+const BARCELONA_STATIONS = [
+  {
+    id: "bcn-raval",
+    name: "Barcelona - El Raval",
+    latitude: 41.3797,
+    longitude: 2.1682,
+    elevation: 33,
+  },
+  {
+    id: "bcn-zoo",
+    name: "Barcelona - Zona Universitària",
+    latitude: 41.3870,
+    longitude: 2.1130,
+    elevation: 85,
+  },
+  {
+    id: "bcn-fabra",
+    name: "Observatori Fabra",
+    latitude: 41.4184,
+    longitude: 2.1239,
+    elevation: 411,
+  },
+  {
+    id: "bcn-port",
+    name: "Barcelona - Port Olímpic",
+    latitude: 41.3850,
+    longitude: 2.2010,
+    elevation: 5,
+  },
+  {
+    id: "bcn-eixample",
+    name: "Barcelona - Eixample",
+    latitude: 41.3930,
+    longitude: 2.1620,
+    elevation: 45,
+  },
+  {
+    id: "bcn-gracia",
+    name: "Barcelona - Gràcia",
+    latitude: 41.4036,
+    longitude: 2.1532,
+    elevation: 120,
+  },
+  {
+    id: "bcn-airport",
+    name: "Aeropuerto El Prat",
+    latitude: 41.2974,
+    longitude: 2.0833,
+    elevation: 4,
+  },
+  {
+    id: "badalona",
+    name: "Badalona",
+    latitude: 41.4500,
+    longitude: 2.2474,
+    elevation: 20,
+  },
+  {
+    id: "hospitalet",
+    name: "L'Hospitalet de Llobregat",
+    latitude: 41.3596,
+    longitude: 2.1000,
+    elevation: 25,
+  },
+  {
+    id: "sant-cugat",
+    name: "Sant Cugat del Vallès",
+    latitude: 41.4722,
+    longitude: 2.0864,
+    elevation: 180,
+  },
+  {
+    id: "montjuic",
+    name: "Barcelona - Montjuïc",
+    latitude: 41.3639,
+    longitude: 2.1586,
+    elevation: 173,
+  },
+  {
+    id: "tibidabo",
+    name: "Barcelona - Tibidabo",
+    latitude: 41.4225,
+    longitude: 2.1189,
+    elevation: 512,
+  },
+];
 
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  if (entry && entry.expiry > Date.now()) {
-    return entry.data as T;
-  }
-  cache.delete(key);
-  return null;
-}
-
-function setCache(key: string, data: unknown): void {
-  cache.set(key, { data, expiry: Date.now() + CACHE_TTL_MS });
-}
-
-// Meteostat API adapter - can be swapped for other providers
-interface Station {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  elevation: number | null;
-  distance: number;
-}
-
-interface MeteostatStation {
-  id: string;
-  name: { en: string };
-  latitude: number;
-  longitude: number;
-  elevation: number | null;
-  distance: number;
-}
-
-async function fetchStationsFromMeteostat(lat: number, lon: number, radiusKm: number): Promise<Station[]> {
-  const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
-  
-  if (!RAPIDAPI_KEY) {
-    console.error("RAPIDAPI_KEY not configured");
-    throw new Error("API key not configured. Please add RAPIDAPI_KEY to secrets.");
-  }
-
-  const url = `https://meteostat.p.rapidapi.com/stations/nearby?lat=${lat}&lon=${lon}&limit=15`;
-  
-  console.log("Fetching stations from Meteostat:", url);
-  
-  const response = await fetch(url, {
-    headers: {
-      "x-rapidapi-host": "meteostat.p.rapidapi.com",
-      "x-rapidapi-key": RAPIDAPI_KEY,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Meteostat API error:", response.status, errorText);
-    throw new Error(`Meteostat API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  console.log("Meteostat response:", JSON.stringify(data).slice(0, 500));
-
-  // Filter by radius and transform to normalized format
-  const stations: Station[] = (data.data || [])
-    .filter((s: MeteostatStation) => s.distance <= radiusKm * 1000) // API returns meters
-    .map((s: MeteostatStation) => ({
-      id: s.id,
-      name: s.name?.en || s.name || s.id,
-      latitude: s.latitude,
-      longitude: s.longitude,
-      elevation: s.elevation,
-      distance: Math.round(s.distance / 100) / 10, // Convert to km with 1 decimal
-    }));
-
-  return stations;
+// Calcular distancia usando fórmula de Haversine
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return Math.round(R * c * 10) / 10;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -96,7 +118,6 @@ serve(async (req) => {
     const lon = parseFloat(url.searchParams.get("lon") || "2.1734");
     const radiusKm = parseFloat(url.searchParams.get("radiusKm") || "50");
 
-    // Validate parameters
     if (isNaN(lat) || isNaN(lon) || isNaN(radiusKm)) {
       return new Response(
         JSON.stringify({ error: "Invalid parameters. lat, lon, and radiusKm must be numbers." }),
@@ -104,19 +125,16 @@ serve(async (req) => {
       );
     }
 
-    // Check cache
-    const cacheKey = `stations:${lat.toFixed(2)}:${lon.toFixed(2)}:${radiusKm}`;
-    const cached = getCached<Station[]>(cacheKey);
-    if (cached) {
-      console.log("Returning cached stations");
-      return new Response(JSON.stringify({ data: cached, cached: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Calcular distancia y filtrar por radio
+    const stations = BARCELONA_STATIONS
+      .map(station => ({
+        ...station,
+        distance: calculateDistance(lat, lon, station.latitude, station.longitude),
+      }))
+      .filter(station => station.distance <= radiusKm)
+      .sort((a, b) => a.distance - b.distance);
 
-    // Fetch from API
-    const stations = await fetchStationsFromMeteostat(lat, lon, radiusKm);
-    setCache(cacheKey, stations);
+    console.log(`Returning ${stations.length} stations within ${radiusKm}km of (${lat}, ${lon})`);
 
     return new Response(JSON.stringify({ data: stations, cached: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

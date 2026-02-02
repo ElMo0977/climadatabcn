@@ -15,25 +15,18 @@ Aplicación web para visualizar y descargar datos meteorológicos históricos de
 
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
 - **Backend**: Supabase Edge Functions (Deno)
-- **Fuente de datos**: [Meteostat](https://meteostat.net/) via RapidAPI
+- **Fuente de datos**: [Open-Meteo](https://open-meteo.com/) - API gratuita sin autenticación
 
 ## Configuración
 
-### 1. Clave API de Meteostat
-
-La app utiliza la API de Meteostat a través de RapidAPI. Necesitas configurar el secret `RAPIDAPI_KEY`:
-
-1. Regístrate en [RapidAPI](https://rapidapi.com/)
-2. Suscríbete a la [API de Meteostat](https://rapidapi.com/meteostat/api/meteostat)
-3. Copia tu API key
-4. En Lovable Cloud, ve a Secrets y añade `RAPIDAPI_KEY` con tu key
-
-### 2. Ejecutar localmente
+### Ejecutar localmente
 
 ```bash
 npm install
 npm run dev
 ```
+
+No se requiere API key - Open-Meteo es completamente gratuita y abierta.
 
 ## Cambiar fuente de datos
 
