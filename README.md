@@ -1,73 +1,74 @@
-# Welcome to your Lovable project
+# Meteo BCN
 
-## Project info
+Aplicación web para visualizar y descargar datos meteorológicos históricos de Barcelona.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Características
 
-## How can I edit this code?
+- **Selector de estaciones**: Lista de estaciones meteorológicas cercanas a Barcelona con búsqueda
+- **Rango de fechas**: Selector con presets (7, 14, 30 días) y granularidad horaria/diaria
+- **KPIs**: Temperatura media, humedad media, velocidad del viento media
+- **Gráficos interactivos**: Series temporales con zoom para temperatura, humedad y viento
+- **Tabla paginada**: Datos detallados con timestamps locales (Europe/Madrid)
+- **Descarga**: Exportación a CSV y JSON
 
-There are several ways of editing your application.
+## Tecnologías
 
-**Use Lovable**
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
+- **Backend**: Supabase Edge Functions (Deno)
+- **Fuente de datos**: [Meteostat](https://meteostat.net/) via RapidAPI
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Configuración
 
-Changes made via Lovable will be committed automatically to this repo.
+### 1. Clave API de Meteostat
 
-**Use your preferred IDE**
+La app utiliza la API de Meteostat a través de RapidAPI. Necesitas configurar el secret `RAPIDAPI_KEY`:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Regístrate en [RapidAPI](https://rapidapi.com/)
+2. Suscríbete a la [API de Meteostat](https://rapidapi.com/meteostat/api/meteostat)
+3. Copia tu API key
+4. En Lovable Cloud, ve a Secrets y añade `RAPIDAPI_KEY` con tu key
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 2. Ejecutar localmente
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Cambiar fuente de datos
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Para usar otra API meteorológica, modifica los adaptadores en:
 
-**Use GitHub Codespaces**
+- `supabase/functions/stations/index.ts` - Función `fetchStationsFromMeteostat`
+- `supabase/functions/observations/index.ts` - Función `fetchObservationsFromMeteostat`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+El formato normalizado esperado:
 
-## What technologies are used for this project?
+```typescript
+// Estación
+interface Station {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  elevation: number | null;
+  distance: number; // km
+}
 
-This project is built with:
+// Observación
+interface Observation {
+  timestamp: string; // ISO 8601
+  temperature: number | null; // °C
+  humidity: number | null; // %
+  windSpeed: number | null; // km/h
+}
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## API Interna
 
-## How can I deploy this project?
+- `GET /api/stations?lat=..&lon=..&radiusKm=..` - Lista estaciones cercanas
+- `GET /api/observations?stationId=..&from=YYYY-MM-DD&to=YYYY-MM-DD&granularity=hourly|daily` - Datos meteorológicos
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## Caché
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Los datos se cachean en memoria durante 15 minutos por combinación de parámetros.
