@@ -71,6 +71,13 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
               <TableHead className="font-semibold text-right">Temp (°C)</TableHead>
               <TableHead className="font-semibold text-right">Humedad (%)</TableHead>
               <TableHead className="font-semibold text-right">Viento (m/s)</TableHead>
+              {!isHourly && (
+                <>
+                  <TableHead className="font-semibold text-right">V. Mín (m/s)</TableHead>
+                  <TableHead className="font-semibold text-right">V. Máx (m/s)</TableHead>
+                </>
+              )}
+              <TableHead className="font-semibold text-right">Precip. (mm)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -87,6 +94,19 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {obs.windSpeed !== null ? obs.windSpeed : '—'}
+                </TableCell>
+                {!isHourly && (
+                  <>
+                    <TableCell className="text-right tabular-nums">
+                      {obs.windSpeedMin !== null ? obs.windSpeedMin : '—'}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {obs.windSpeedMax !== null ? obs.windSpeedMax : '—'}
+                    </TableCell>
+                  </>
+                )}
+                <TableCell className="text-right tabular-nums">
+                  {obs.precipitation !== null ? obs.precipitation : '—'}
                 </TableCell>
               </TableRow>
             ))}

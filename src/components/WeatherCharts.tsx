@@ -7,8 +7,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   Brush,
+  BarChart,
+  Bar,
 } from 'recharts';
-import { Thermometer, Droplets, Wind } from 'lucide-react';
+import { Thermometer, Droplets, Wind, CloudRain } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
 import { formatShortDate } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,7 +29,7 @@ export function WeatherCharts({ observations, granularity, isLoading }: WeatherC
     label: formatShortDate(obs.timestamp),
   }));
 
-  const charts = [
+  const lineCharts = [
     {
       title: 'Temperatura',
       icon: Thermometer,
@@ -79,7 +81,7 @@ export function WeatherCharts({ observations, granularity, isLoading }: WeatherC
 
   return (
     <div className="space-y-4">
-      {charts.map((chart, index) => (
+      {lineCharts.map((chart, index) => (
         <div 
           key={chart.dataKey} 
           className="chart-container animate-slide-up"
@@ -140,6 +142,62 @@ export function WeatherCharts({ observations, granularity, isLoading }: WeatherC
           </ResponsiveContainer>
         </div>
       ))}
+      
+      {/* Precipitation Bar Chart */}
+      <div 
+        className="chart-container animate-slide-up"
+        style={{ animationDelay: `${lineCharts.length * 100}ms` }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <CloudRain className="h-5 w-5 text-primary" />
+          <h4 className="font-display font-semibold text-sm">Precipitación</h4>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="label" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tickLine={false}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              interval="preserveStartEnd"
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tickLine={false}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              unit="mm"
+              width={50}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                fontSize: '12px',
+              }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
+              formatter={(value: number | null) => [
+                value !== null ? `${value} mm` : 'Sin datos',
+                'Precipitación',
+              ]}
+            />
+            <Bar
+              dataKey="precipitation"
+              fill="hsl(var(--primary))"
+              radius={[4, 4, 0, 0]}
+            />
+            {chartData.length > 20 && (
+              <Brush 
+                dataKey="label" 
+                height={30} 
+                stroke="hsl(var(--primary))"
+                fill="hsl(var(--muted))"
+              />
+            )}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

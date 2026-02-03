@@ -1,4 +1,4 @@
-import { Thermometer, Droplets, Wind, BarChart3 } from 'lucide-react';
+import { Thermometer, Droplets, Wind, BarChart3, CloudRain } from 'lucide-react';
 import type { WeatherStats } from '@/types/weather';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -25,23 +25,32 @@ export function WeatherKPIs({ stats, isLoading }: WeatherKPIsProps) {
       bgClass: 'bg-humidity/10',
     },
     {
-      label: 'Viento medio',
-      value: stats?.avgWindSpeed !== null ? `${stats?.avgWindSpeed} m/s` : '—',
+      label: 'Viento (min-max)',
+      value: stats?.minWindSpeed !== null && stats?.maxWindSpeed !== null 
+        ? `${stats?.minWindSpeed} - ${stats?.maxWindSpeed} m/s` 
+        : '—',
       icon: Wind,
       colorClass: 'text-wind',
       bgClass: 'bg-wind/10',
     },
     {
+      label: 'Precipitación total',
+      value: stats?.totalPrecipitation !== null ? `${stats?.totalPrecipitation} mm` : '—',
+      icon: CloudRain,
+      colorClass: 'text-primary',
+      bgClass: 'bg-primary/10',
+    },
+    {
       label: 'Datos',
       value: stats?.dataPoints ?? 0,
       icon: BarChart3,
-      colorClass: 'text-primary',
-      bgClass: 'bg-primary/10',
+      colorClass: 'text-muted-foreground',
+      bgClass: 'bg-muted/50',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
       {kpis.map((kpi, index) => (
         <div key={kpi.label} className="kpi-card animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
           {isLoading ? (
