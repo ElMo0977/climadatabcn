@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Station } from '@/types/weather';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { StationMap } from './StationMap';
 
 interface StationSelectorProps {
   stations: Station[];
@@ -31,6 +32,18 @@ export function StationSelector({
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border">
         <h2 className="font-display text-lg font-semibold mb-3">Estaciones</h2>
+        
+        {/* Map */}
+        {!isLoading && !error && stations.length > 0 && (
+          <div className="mb-3">
+            <StationMap
+              stations={stations}
+              selectedStation={selectedStation}
+              onSelectStation={onSelectStation}
+            />
+          </div>
+        )}
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
