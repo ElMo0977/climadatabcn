@@ -47,7 +47,8 @@ export function convertToCSV(observations: Observation[]): string {
     o.windSpeed ?? '',
   ]);
   
-  return [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+  // Use semicolon as delimiter for Excel compatibility (European locales)
+  return [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
 }
 
 export function downloadFile(content: string, filename: string, mimeType: string): void {
