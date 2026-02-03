@@ -1,11 +1,10 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Icon, LatLngExpression } from 'leaflet';
+import { useEffect, useRef } from 'react';
+import L from 'leaflet';
 import type { Station } from '@/types/weather';
-import { useEffect } from 'react';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default marker icons in React-Leaflet
-const defaultIcon = new Icon({
+// Fix for default marker icons
+const defaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -15,7 +14,7 @@ const defaultIcon = new Icon({
   shadowSize: [41, 41],
 });
 
-const selectedIcon = new Icon({
+const selectedIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -23,7 +22,6 @@ const selectedIcon = new Icon({
   iconAnchor: [15, 49],
   popupAnchor: [1, -40],
   shadowSize: [49, 49],
-  className: 'selected-marker',
 });
 
 interface StationMapProps {
@@ -32,58 +30,83 @@ interface StationMapProps {
   onSelectStation: (station: Station) => void;
 }
 
-// Component to recenter map when selection changes
-function MapController({ selectedStation }: { selectedStation: Station | null }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (selectedStation) {
-      map.flyTo([selectedStation.latitude, selectedStation.longitude], 13, {
-        duration: 0.5,
-      });
-    }
-  }, [selectedStation, map]);
-
-  return null;
-}
-
 // Barcelona center coordinates
-const BARCELONA_CENTER: LatLngExpression = [41.3851, 2.1734];
+const BARCELONA_CENTER: L.LatLngExpression = [41.3851, 2.1734];
 
 export function StationMap({ stations, selectedStation, onSelectStation }: StationMapProps) {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<Map<string, L.Marker>>(new Map());
+
+  // Initialize map
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    mapRef.current = L.map(containerRef.current, {
+      center: BARCELONA_CENTER,
+      zoom: 11,
+      scrollWheelZoom: false,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(mapRef.current);
+
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update markers when stations change
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.remove());
+    markersRef.current.clear();
+
+    // Add new markers
+    stations.forEach(station => {
+      const marker = L.marker([station.latitude, station.longitude], {
+        icon: selectedStation?.id === station.id ? selectedIcon : defaultIcon,
+      })
+        .addTo(mapRef.current!)
+        .bindPopup(`
+          <div style="font-size: 14px;">
+            <p style="font-weight: 600; margin: 0;">${station.name}</p>
+            <p style="color: #666; margin: 4px 0 0 0; font-size: 12px;">
+              ${station.distance} km · ${station.elevation ?? '—'} m
+            </p>
+          </div>
+        `)
+        .on('click', () => onSelectStation(station));
+
+      markersRef.current.set(station.id, marker);
+    });
+  }, [stations, selectedStation, onSelectStation]);
+
+  // Fly to selected station
+  useEffect(() => {
+    if (!mapRef.current || !selectedStation) return;
+
+    mapRef.current.flyTo([selectedStation.latitude, selectedStation.longitude], 13, {
+      duration: 0.5,
+    });
+
+    // Update marker icon
+    markersRef.current.forEach((marker, id) => {
+      marker.setIcon(id === selectedStation.id ? selectedIcon : defaultIcon);
+    });
+  }, [selectedStation]);
+
   return (
-    <div className="h-48 rounded-lg overflow-hidden border border-border">
-      <MapContainer
-        center={BARCELONA_CENTER}
-        zoom={11}
-        className="h-full w-full"
-        scrollWheelZoom={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapController selectedStation={selectedStation} />
-        {stations.map((station) => (
-          <Marker
-            key={station.id}
-            position={[station.latitude, station.longitude]}
-            icon={selectedStation?.id === station.id ? selectedIcon : defaultIcon}
-            eventHandlers={{
-              click: () => onSelectStation(station),
-            }}
-          >
-            <Popup>
-              <div className="text-sm">
-                <p className="font-semibold">{station.name}</p>
-                <p className="text-muted-foreground">
-                  {station.distance} km · {station.elevation ?? '—'} m
-                </p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
-    </div>
+    <div 
+      ref={containerRef} 
+      className="h-48 rounded-lg overflow-hidden border border-border"
+      style={{ zIndex: 0 }}
+    />
   );
 }
