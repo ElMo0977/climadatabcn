@@ -58,7 +58,7 @@ interface OpenMeteoDailyResponse {
   daily: {
     time: string[];
     temperature_2m_mean: (number | null)[];
-    relative_humidity_2m_mean?: (number | null)[];
+    relative_humidity_2m_mean: (number | null)[];
     wind_speed_10m_max: (number | null)[];
   };
 }
@@ -75,7 +75,7 @@ async function fetchFromOpenMeteo(
   if (granularity === "hourly") {
     url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${from}&end_date=${to}&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&wind_speed_unit=ms&timezone=Europe/Madrid`;
   } else {
-    url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${from}&end_date=${to}&daily=temperature_2m_mean,wind_speed_10m_max&wind_speed_unit=ms&timezone=Europe/Madrid`;
+    url = `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${from}&end_date=${to}&daily=temperature_2m_mean,relative_humidity_2m_mean,wind_speed_10m_max&wind_speed_unit=ms&timezone=Europe/Madrid`;
   }
 
   console.log("Fetching from Open-Meteo:", url);
@@ -110,7 +110,7 @@ async function fetchFromOpenMeteo(
     return dailyData.daily.time.map((time, i) => ({
       timestamp: time,
       temperature: dailyData.daily.temperature_2m_mean[i],
-      humidity: null, // Open-Meteo archive no tiene humedad diaria media
+      humidity: dailyData.daily.relative_humidity_2m_mean[i],
       windSpeed: dailyData.daily.wind_speed_10m_max[i],
     }));
   }
