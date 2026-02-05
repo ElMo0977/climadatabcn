@@ -2,6 +2,77 @@ import type { Observation, WeatherStats } from '@/types/weather';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+export interface WindBucketAggregate {
+  time: string;
+  windMin: number;
+  windAvg: number;
+  windMax: number;
+}
+
+/**
+ * Agrupa velocidades de viento por bucket temporal y calcula min/media/máx.
+ * - Ignora valores null/NaN.
+ * - Si solo hay un dato en el bucket, min=avg=max.
+ * - Excluye buckets sin datos válidos.
+ * - Mantiene la clave temporal tal cual la define bucketFn (mismo formato que el eje X).
+ */
+export function aggregateWindByBucket(
+  points: Observation[],
+  bucketFn: (obs: Observation) => string,
+): WindBucketAggregate[] {
+  const buckets = new Map<
+    string,
+    { label: string; values: number[]; sortTs: number | null }
+  >();
+
+  for (const obs of points) {
+    const value = obs.windSpeed;
+    if (value === null || Number.isNaN(value)) continue;
+
+    const label = bucketFn(obs);
+    if (!label) continue;
+
+    const sortTs = Number.isNaN(Date.parse(obs.timestamp))
+      ? null
+      : Date.parse(obs.timestamp);
+
+    const existing = buckets.get(label);
+    if (existing) {
+      existing.values.push(value);
+      if (sortTs !== null && (existing.sortTs === null || sortTs < existing.sortTs)) {
+        existing.sortTs = sortTs;
+      }
+    } else {
+      buckets.set(label, { label, values: [value], sortTs });
+    }
+  }
+
+  const result: (WindBucketAggregate & { sortTs: number | null })[] = [];
+
+  buckets.forEach(bucket => {
+    if (bucket.values.length === 0) return;
+    const min = Math.min(...bucket.values);
+    const max = Math.max(...bucket.values);
+    const avg = bucket.values.reduce((a, b) => a + b, 0) / bucket.values.length;
+    result.push({
+      time: bucket.label,
+      windMin: min,
+      windAvg: avg,
+      windMax: max,
+      sortTs: bucket.sortTs,
+    });
+  });
+
+  return result
+    .sort((a, b) => {
+      if (a.sortTs === null && b.sortTs === null) return a.time.localeCompare(b.time);
+      if (a.sortTs === null) return 1;
+      if (b.sortTs === null) return -1;
+      return a.sortTs - b.sortTs;
+    })
+    .map(({ sortTs, ...rest }) => rest);
+}
+
 export function calculateStats(observations: Observation[]): WeatherStats {
   const validTemps = observations.filter(o => o.temperature !== null).map(o => o.temperature!);
   const validHumidity = observations.filter(o => o.humidity !== null).map(o => o.humidity!);

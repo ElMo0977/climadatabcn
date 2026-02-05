@@ -9,10 +9,11 @@ import {
   Brush,
   BarChart,
   Bar,
+  Legend,
 } from 'recharts';
 import { Thermometer, Droplets, Wind, CloudRain } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
-import { formatShortDate } from '@/lib/weatherUtils';
+import { aggregateWindByBucket, formatShortDate } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface WeatherChartsProps {
@@ -21,12 +22,20 @@ interface WeatherChartsProps {
   isLoading: boolean;
 }
 
-export function WeatherCharts({ observations, granularity, isLoading }: WeatherChartsProps) {
-  const isHourly = granularity === 'hourly';
-  
+export function WeatherCharts({ observations, granularity: _granularity, isLoading }: WeatherChartsProps) {
   const chartData = observations.map(obs => ({
     ...obs,
     label: formatShortDate(obs.timestamp),
+  }));
+
+  // La velocidad del viento se toma de `windSpeed` (m/s). Agrupamos con el mismo bucket temporal que ya usa el eje X.
+  const windChartData = aggregateWindByBucket(
+    observations,
+    // Usamos el mismo bucket que ya se usa para el eje X: fecha corta por timestamp.
+    (obs) => formatShortDate(obs.timestamp),
+  ).map(bucket => ({
+    ...bucket,
+    label: bucket.time,
   }));
 
   const lineCharts = [
@@ -46,15 +55,9 @@ export function WeatherCharts({ observations, granularity, isLoading }: WeatherC
       unit: '%',
       colorClass: 'text-humidity',
     },
-    {
-      title: 'Velocidad del viento',
-      icon: Wind,
-      dataKey: 'windSpeed',
-      color: 'hsl(var(--chart-wind))',
-      unit: 'm/s',
-      colorClass: 'text-wind',
-    },
   ];
+
+  const totalLineCharts = lineCharts.length + 1; // sumamos la gráfica de viento
 
   if (isLoading) {
     return (
@@ -142,11 +145,95 @@ export function WeatherCharts({ observations, granularity, isLoading }: WeatherC
           </ResponsiveContainer>
         </div>
       ))}
+
+      {/* Wind Speed Line Chart with min/avg/max */}
+      <div 
+        className="chart-container animate-slide-up"
+        style={{ animationDelay: `${lineCharts.length * 100}ms` }}
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Wind className="h-5 w-5 text-wind" />
+          <h4 className="font-display font-semibold text-sm">Velocidad del viento</h4>
+        </div>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={windChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis 
+              dataKey="label" 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tickLine={false}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              interval="preserveStartEnd"
+            />
+            <YAxis 
+              tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+              tickLine={false}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              unit="m/s"
+              width={50}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'hsl(var(--card))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: '8px',
+                fontSize: '12px',
+              }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
+              formatter={(value: number | null, name) => [
+                value !== null ? `${value} m/s` : 'Sin datos',
+                name,
+              ]}
+            />
+            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Line
+              type="monotone"
+              name="Viento mín."
+              dataKey="windMin"
+              stroke="hsl(var(--chart-wind))"
+              strokeOpacity={0.55}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 2 }}
+              connectNulls
+            />
+            <Line
+              type="monotone"
+              name="Viento media"
+              dataKey="windAvg"
+              stroke="hsl(var(--chart-wind))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 2 }}
+              connectNulls
+            />
+            <Line
+              type="monotone"
+              name="Viento máx."
+              dataKey="windMax"
+              stroke="hsl(var(--chart-wind))"
+              strokeOpacity={0.8}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, strokeWidth: 2 }}
+              connectNulls
+            />
+            {windChartData.length > 20 && (
+              <Brush 
+                dataKey="label" 
+                height={30} 
+                stroke="hsl(var(--primary))"
+                fill="hsl(var(--muted))"
+              />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
       
       {/* Precipitation Bar Chart */}
       <div 
         className="chart-container animate-slide-up"
-        style={{ animationDelay: `${lineCharts.length * 100}ms` }}
+        style={{ animationDelay: `${totalLineCharts * 100}ms` }}
       >
         <div className="flex items-center gap-2 mb-4">
           <CloudRain className="h-5 w-5 text-primary" />
