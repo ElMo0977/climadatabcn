@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { describe, it, expect } from 'vitest';
 import { aggregateWindByBucket } from './weatherUtils';
 import type { Observation } from '@/types/weather';

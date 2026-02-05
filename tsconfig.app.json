@@ -1,3 +1,4 @@
+// No incluir types globales de test (chai/d3/leaflet/etc). Build de app solo con vite/client.
 {
   "compilerOptions": {
     "target": "ES2020",
@@ -24,7 +25,13 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    "types": []
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/**/*.test.*",
+    "src/**/*.spec.*",
+    "src/test/**"
+  ]
 }
