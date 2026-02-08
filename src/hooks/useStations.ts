@@ -32,19 +32,15 @@ function haversineDistanceKm(
 }
 
 /**
- * Prioridad 1: Meteocat (si VITE_METEOCAT_API_KEY)
- * Prioridad 2: Open Data BCN
- * Prioridad 3: Fallback vía Supabase (lista fija + Open-Meteo por coordenadas)
+ * Estaciones: Open Data BCN. Si no hay datos, fallback vía Supabase (Open-Meteo).
  */
 export function useStations() {
   return useQuery({
     queryKey: ['stations', BARCELONA_LAT, BARCELONA_LON, DEFAULT_RADIUS_KM],
     queryFn: async (): Promise<Station[]> => {
-      const result = await dataService.getStations('auto', { fallback: true });
+      const result = await dataService.getStations();
 
       if (result.data && result.data.length > 0) {
-        const source: DataSource =
-          result.provider === 'meteocat' ? 'meteocat' : 'opendata-bcn';
         return result.data
           .map((s) => ({
             id: s.id,
@@ -58,7 +54,7 @@ export function useStations() {
               s.latitude,
               s.longitude
             ),
-            source,
+            source: 'opendata-bcn' as DataSource,
           }))
           .filter((s) => s.distance <= DEFAULT_RADIUS_KM)
           .sort((a, b) => a.distance - b.distance);

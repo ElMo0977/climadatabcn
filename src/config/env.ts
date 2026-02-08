@@ -6,9 +6,7 @@
 import type { DataMode, DataProvider } from '@/domain/types';
 
 interface EnvConfig {
-  /** Meteocat API key - required for live data */
-  meteocatApiKey: string | null;
-  /** Open Data BCN app token - may be optional for some endpoints */
+  /** Open Data BCN app token - optional for most endpoints */
   bcnAppToken: string | null;
   /** Data mode: 'live' for real API calls, 'mock' for development data */
   dataMode: DataMode;
@@ -29,7 +27,6 @@ function getEnvVar(key: string): string | null {
 }
 
 export const env: EnvConfig = {
-  meteocatApiKey: getEnvVar('VITE_METEOCAT_API_KEY'),
   bcnAppToken: getEnvVar('VITE_BCN_APP_TOKEN'),
   dataMode: (getEnvVar('VITE_DATA_MODE') as DataMode) || 'live',
   apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
@@ -38,37 +35,17 @@ export const env: EnvConfig = {
 };
 
 /**
- * Check if a provider has the required configuration
+ * Check if the data provider (Open Data BCN) is configured
  */
-export function isProviderConfigured(provider: DataProvider): boolean {
-  switch (provider) {
-    case 'meteocat':
-      // Meteocat requires API key for live mode
-      return env.dataMode === 'mock' || !!env.meteocatApiKey;
-    case 'opendata-bcn':
-      // Open Data BCN may work without token for some endpoints
-      return true; // Token is optional for most queries
-    default:
-      return false;
-  }
+export function isProviderConfigured(_provider: DataProvider): boolean {
+  return true; // Open Data BCN works without token for most queries
 }
 
 /**
  * Get a human-readable message for missing configuration
  */
-export function getMissingConfigMessage(provider: DataProvider): string | null {
-  if (isProviderConfigured(provider)) {
-    return null;
-  }
-  
-  switch (provider) {
-    case 'meteocat':
-      return 'Falta configurar la API key de Meteocat. Solicita tu clave gratuita en apidocs.meteocat.gencat.cat';
-    case 'opendata-bcn':
-      return 'Falta configurar el token de Open Data BCN.';
-    default:
-      return `Proveedor desconocido: ${provider}`;
-  }
+export function getMissingConfigMessage(_provider: DataProvider): string | null {
+  return null;
 }
 
 export default env;

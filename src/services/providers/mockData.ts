@@ -11,55 +11,7 @@ import type {
   DataProvider 
 } from '@/domain/types';
 
-// ============ Mock Stations ============
-
-export const mockStationsMeteocat: Station[] = [
-  {
-    id: 'D5',
-    name: 'Barcelona - el Raval',
-    provider: 'meteocat',
-    latitude: 41.3797,
-    longitude: 2.1682,
-    elevation: 33,
-    meta: { comarca: 'Barcelonès', municipi: 'Barcelona' },
-  },
-  {
-    id: 'X2',
-    name: 'Observatori Fabra',
-    provider: 'meteocat',
-    latitude: 41.4184,
-    longitude: 2.1239,
-    elevation: 411,
-    meta: { comarca: 'Barcelonès', municipi: 'Barcelona' },
-  },
-  {
-    id: 'X4',
-    name: 'Barcelona - Zona Universitària',
-    provider: 'meteocat',
-    latitude: 41.3870,
-    longitude: 2.1130,
-    elevation: 81,
-    meta: { comarca: 'Barcelonès', municipi: 'Barcelona' },
-  },
-  {
-    id: 'X8',
-    name: 'Barcelona - Barceloneta',
-    provider: 'meteocat',
-    latitude: 41.3850,
-    longitude: 2.2010,
-    elevation: 2,
-    meta: { comarca: 'Barcelonès', municipi: 'Barcelona' },
-  },
-  {
-    id: 'XL',
-    name: 'El Prat de Llobregat',
-    provider: 'meteocat',
-    latitude: 41.2974,
-    longitude: 2.0833,
-    elevation: 6,
-    meta: { comarca: 'Baix Llobregat', municipi: 'El Prat de Llobregat' },
-  },
-];
+// ============ Mock Stations (Open Data BCN) ============
 
 export const mockStationsOpenDataBcn: Station[] = [
   {

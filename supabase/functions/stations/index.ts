@@ -6,16 +6,14 @@ const corsHeaders = {
 };
 
 // Estaciones meteorológicas en/cerca de Barcelona (fallback Open-Meteo por coordenadas).
-// IDs oficiales: Meteocat (XEMA) y Open Data BCN para trazabilidad.
-// Meteocat: https://api.meteo.cat/xema/v1/estacions/metadades
 const BARCELONA_STATIONS = [
-  { id: "bcn-raval", name: "Barcelona - El Raval", latitude: 41.3797, longitude: 2.1682, elevation: 33, meteocatId: "D5" },
-  { id: "bcn-zoo", name: "Barcelona - Zona Universitària", latitude: 41.3870, longitude: 2.1130, elevation: 85, meteocatId: "X4" },
-  { id: "bcn-fabra", name: "Observatori Fabra", latitude: 41.4184, longitude: 2.1239, elevation: 411, meteocatId: "X2" },
-  { id: "bcn-port", name: "Barcelona - Port Olímpic", latitude: 41.3850, longitude: 2.2010, elevation: 5, meteocatId: "X8" },
+  { id: "bcn-raval", name: "Barcelona - El Raval", latitude: 41.3797, longitude: 2.1682, elevation: 33 },
+  { id: "bcn-zoo", name: "Barcelona - Zona Universitària", latitude: 41.3870, longitude: 2.1130, elevation: 85 },
+  { id: "bcn-fabra", name: "Observatori Fabra", latitude: 41.4184, longitude: 2.1239, elevation: 411 },
+  { id: "bcn-port", name: "Barcelona - Port Olímpic", latitude: 41.3850, longitude: 2.2010, elevation: 5 },
   { id: "bcn-eixample", name: "Barcelona - Eixample", latitude: 41.3930, longitude: 2.1620, elevation: 45 },
   { id: "bcn-gracia", name: "Barcelona - Gràcia", latitude: 41.4036, longitude: 2.1532, elevation: 120 },
-  { id: "bcn-airport", name: "Aeropuerto El Prat", latitude: 41.2974, longitude: 2.0833, elevation: 4, meteocatId: "XL" },
+  { id: "bcn-airport", name: "Aeropuerto El Prat", latitude: 41.2974, longitude: 2.0833, elevation: 4 },
   { id: "badalona", name: "Badalona", latitude: 41.4500, longitude: 2.2474, elevation: 20 },
   { id: "hospitalet", name: "L'Hospitalet de Llobregat", latitude: 41.3596, longitude: 2.1000, elevation: 25 },
   { id: "sant-cugat", name: "Sant Cugat del Vallès", latitude: 41.4722, longitude: 2.0864, elevation: 180 },

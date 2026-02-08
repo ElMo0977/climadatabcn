@@ -5,7 +5,6 @@
 import type { DataSource } from '@/types/weather';
 
 export const SOURCE_LABELS: Record<DataSource, string> = {
-  meteocat: 'Meteocat (XEMA)',
   'opendata-bcn': 'Open Data BCN',
   'open-meteo': 'Datos de respaldo (Open-Meteo)',
 };

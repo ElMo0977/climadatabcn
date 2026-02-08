@@ -4,6 +4,7 @@ import { dataService } from '@/services/dataService';
 import type { Observation, Granularity, DateRange, Station } from '@/types/weather';
 import type { WeatherVariable, AggregationType } from '@/domain/types';
 import { buildDataSourceLabel, FALLBACK_LABEL } from '@/config/sources';
+import { logDataDebug } from '@/lib/dataDebug';
 
 interface ObservationsResponse {
   data: Observation[];
@@ -41,9 +42,26 @@ export interface UseObservationsResult {
   isFetching: boolean;
 }
 
+/** QueryKey para observaciones; cambiar granularity debe provocar refetch. Exportado para tests. */
+export function getObservationsQueryKey(params: {
+  stationId: string | null;
+  stationSource: string | null;
+  fromStr: string;
+  toStr: string;
+  granularity: Granularity;
+}): unknown[] {
+  return [
+    'observations',
+    params.stationId ?? null,
+    params.stationSource ?? null,
+    params.fromStr,
+    params.toStr,
+    params.granularity,
+  ];
+}
+
 /**
- * Prioridad 1: Meteocat, 2: Open Data BCN, 3: Open-Meteo (Supabase).
- * Si la estación tiene source meteocat/opendata-bcn se usa dataService; si no, Supabase.
+ * Open Data BCN vía dataService. Si la estación es de respaldo (open-meteo), datos vía Supabase.
  */
 export function useObservations({
   station,
@@ -56,15 +74,16 @@ export function useObservations({
   const variables =
     agg === 'daily' ? VARIABLES_DAILY : VARIABLES_HOURLY;
 
+  const queryKey = getObservationsQueryKey({
+    stationId: station?.id ?? null,
+    stationSource: station?.source ?? null,
+    fromStr,
+    toStr,
+    granularity,
+  });
+
   const query = useQuery({
-    queryKey: [
-      'observations',
-      station?.id ?? null,
-      station?.source ?? null,
-      fromStr,
-      toStr,
-      granularity,
-    ],
+    queryKey,
     queryFn: async (): Promise<{ data: Observation[]; dataSourceLabel: string }> => {
       if (!station) {
         return { data: [], dataSourceLabel: '' };
@@ -73,22 +92,13 @@ export function useObservations({
       const stationName = station.name;
       const source = station.source;
 
-      if (source === 'meteocat' || source === 'opendata-bcn') {
-        const provider = source === 'meteocat' ? 'meteocat' : 'opendata-bcn';
+      if (source === 'opendata-bcn') {
         const from = dateRange.from;
         const to = dateRange.to;
 
         const results = await Promise.all(
           variables.map((variable) =>
-            dataService.getTimeseries(
-              'auto',
-              station.id,
-              from,
-              to,
-              variable,
-              agg,
-              { fallback: true }
-            )
+            dataService.getTimeseries(station.id, from, to, variable, agg)
           )
         );
 
@@ -147,6 +157,18 @@ export function useObservations({
             dataSourceLabel,
           }));
 
+        logDataDebug(
+          {
+            stationId: station.id,
+            stationSource: source,
+            from: fromStr,
+            to: toStr,
+            granularity,
+            agg,
+            provider: firstData?.provider,
+          },
+          data
+        );
         return { data, dataSourceLabel };
       }
 
@@ -182,6 +204,17 @@ export function useObservations({
         dataSourceLabel,
       }));
 
+      logDataDebug(
+        {
+          stationId: station.id,
+          stationSource: 'open-meteo',
+          from: fromStr,
+          to: toStr,
+          granularity,
+          agg,
+        },
+        withLabel
+      );
       return { data: withLabel, dataSourceLabel };
     },
     enabled: !!station,

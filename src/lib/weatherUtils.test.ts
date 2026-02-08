@@ -1,6 +1,6 @@
 /// <reference types="vitest" />
 import { describe, it, expect } from 'vitest';
-import { aggregateWindByBucket } from './weatherUtils';
+import { aggregateWindByBucket, buildDailySummary } from './weatherUtils';
 import type { Observation } from '@/types/weather';
 
 const makeObs = (timestamp: string, windSpeed: number | null): Observation => ({
@@ -80,5 +80,27 @@ describe('aggregateWindByBucket', () => {
     expect(result[0].windMin).toBe(2);
     expect(result[0].windMax).toBe(8);
     expect(result[0].windAvg).toBe(5);
+  });
+});
+
+describe('buildDailySummary', () => {
+  it('aggregates 24 hourly points for one day into one row', () => {
+    // Use same date key for all (formatDayKey gives one day); avoid T23:00Z which can become next day in some TZ
+    const dayKey = '2024-01-15';
+    const observations: Observation[] = Array.from({ length: 24 }, (_, i) => ({
+      timestamp: `${dayKey}T${String(i).padStart(2, '0')}:00:00`,
+      temperature: 10 + i * 0.5,
+      humidity: 50 + i,
+      windSpeed: 2 + (i % 5),
+      windSpeedMin: null,
+      windSpeedMax: null,
+      precipitation: i === 12 ? 1 : 0,
+    }));
+    const result = buildDailySummary(observations);
+    expect(result).toHaveLength(1);
+    expect(result[0].date).toBe(dayKey);
+    expect(result[0].tempAvg).not.toBeNull();
+    expect(result[0].humidityAvg).not.toBeNull();
+    expect(result[0].precipSum).toBe(1);
   });
 });

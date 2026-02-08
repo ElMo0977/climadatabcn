@@ -101,7 +101,7 @@ const Index = () => {
                   Datos de respaldo (Open-Meteo)
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Las fuentes oficiales (Meteocat / Open Data BCN) no están disponibles. Se muestran datos de Open-Meteo por coordenadas.
+                  Open Data BCN no está disponible. Se muestran datos de respaldo (Open-Meteo) por coordenadas.
                 </p>
               </div>
             )}

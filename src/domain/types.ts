@@ -5,8 +5,7 @@
 
 // ============ Provider Configuration ============
 
-export type DataProvider = 'meteocat' | 'opendata-bcn';
-export type ProviderMode = DataProvider | 'auto';
+export type DataProvider = 'opendata-bcn';
 export type DataMode = 'live' | 'mock';
 
 // ============ Station Types ============

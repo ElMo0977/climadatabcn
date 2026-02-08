@@ -1,4 +1,4 @@
-import { CloudSun, RefreshCw, FlaskConical } from 'lucide-react';
+import { CloudSun, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 
@@ -24,18 +24,6 @@ export function Header({ onRefresh, isRefreshing }: HeaderProps) {
         </div>
         
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            asChild
-            className="gap-2"
-          >
-            <Link to="/provider-test">
-              <FlaskConical className="h-4 w-4" />
-              <span className="hidden sm:inline">Test Proveedores</span>
-            </Link>
-          </Button>
-          
           <Button
             variant="ghost"
             size="sm"

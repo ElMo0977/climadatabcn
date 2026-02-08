@@ -22,7 +22,7 @@ interface WeatherChartsProps {
   observations: Observation[];
   granularity: Granularity;
   isLoading: boolean;
-  /** Ej: "Fuente: Meteocat (XEMA) - Estación: Observatori Fabra" */
+  /** Ej: "Fuente: Open Data BCN - Estación: Gràcia" */
   dataSourceLabel?: string;
   stationName?: string;
 }

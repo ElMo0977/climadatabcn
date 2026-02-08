@@ -1,7 +1,6 @@
 /**
- * Provider adapters index
+ * Provider adapters index – Open Data BCN
  */
 
-export { meteocatProvider } from './meteocat';
 export { openDataBcnProvider } from './openDataBcn';
 export * from './mockData';

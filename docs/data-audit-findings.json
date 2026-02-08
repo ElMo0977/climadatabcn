@@ -1,0 +1,38 @@
+[
+  {
+    "id": "F2",
+    "severidad": "media",
+    "componente": "useObservations",
+    "descripcion": "Merge por timestamp usa string literal. Si un provider devuelve '2024-01-15' y otro '2024-01-15T00:00:00.000Z', el Map genera dos filas para el mismo instante.",
+    "evidencia": "pointsByTs.get(p.timestamp) usa p.timestamp tal cual; no hay normalización a ISO o día.",
+    "archivos": ["src/hooks/useObservations.ts"],
+    "recomendacion": "Normalizar timestamp antes de usar como clave: por ejemplo a ISO con date-fns o a 'YYYY-MM-DD' para daily y ISO para hourly, para evitar duplicados."
+  },
+  {
+    "id": "F3",
+    "severidad": "media",
+    "componente": "exportExcel",
+    "descripcion": "La hoja 'Detalle Horario' puede contener 1 fila por día cuando la granularidad es diaria; el nombre de la pestaña es engañoso.",
+    "evidencia": "exportExcel.ts línea 79: addWorksheet('Detalle Horario', ...); el contenido es observations tal cual, que puede ser daily.",
+    "archivos": ["src/lib/exportExcel.ts"],
+    "recomendacion": "Nombrar la hoja según granularidad (p. ej. 'Detalle Diario' cuando observations son 1/día) o añadir metadata que indique la granularidad."
+  },
+  {
+    "id": "F4",
+    "severidad": "baja",
+    "componente": "WeatherCharts",
+    "descripcion": "El eje X usa siempre formatShortDate (d/M HH:mm). Para datos diarios los puntos se etiquetan como '15/1 00:00', pudiendo parecer horarios.",
+    "evidencia": "WeatherCharts.tsx chartData = observations.map(obs => ({ ...obs, label: formatShortDate(obs.timestamp) })); no se cambia formato según granularity.",
+    "archivos": ["src/components/WeatherCharts.tsx"],
+    "recomendacion": "Usar formatTimestamp(obs.timestamp, granularity === 'hourly') o similar para el label del eje X según granularidad."
+  },
+  {
+    "id": "F5",
+    "severidad": "baja",
+    "componente": "pipeline",
+    "descripcion": "No hay validación de rangos (outliers), monotonía temporal ni step; timezone no unificado entre providers.",
+    "evidencia": "useObservations solo ordena por timestamp; no hay comprobación de rangos ni timezone en UI/export.",
+    "archivos": ["src/hooks/useObservations.ts", "src/lib/weatherUtils.ts", "src/lib/exportExcel.ts"],
+    "recomendacion": "Añadir validaciones opcionales (monotonía, step, rangos por variable) en modo debug; documentar timezone por provider e indicarlo en export."
+  }
+]
