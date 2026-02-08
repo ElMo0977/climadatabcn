@@ -29,7 +29,6 @@ const Index = () => {
     isFetching: stationsFetching,
   } = useStations();
 
-  const granularityForFetch = granularity === 'daily' ? 'hourly' : granularity;
   const {
     data: observations = [],
     dataSourceLabel,
@@ -40,7 +39,7 @@ const Index = () => {
   } = useObservations({
     station: selectedStation,
     dateRange,
-    granularity: granularityForFetch,
+    granularity,
   });
   const isFallbackSource =
     dataSourceLabel != null && dataSourceLabel.includes('Open-Meteo');
