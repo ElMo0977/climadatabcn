@@ -89,7 +89,6 @@ const Index = () => {
                 observations={observations}
                 stationName={selectedStation?.name || 'data'}
                 disabled={observations.length === 0}
-                granularity={granularity}
               />
             </div>
 

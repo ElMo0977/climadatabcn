@@ -187,6 +187,58 @@ export function buildDailyWindReport(observations: Observation[]): WindBucketAgg
   return aggregateWindByBucket(observations, (obs) => formatDayKey(obs.timestamp));
 }
 
+export interface DailySummaryRow {
+  date: string;
+  tempAvg: number | null;
+  humidityAvg: number | null;
+  windMin: number | null;
+  windAvg: number | null;
+  windMax: number | null;
+  precipSum: number;
+}
+
+/**
+ * Resumen diario completo para Excel: Fecha, Temp Media, Humedad Media, Viento Mín/Media/Máx (media ponderada temporal), Precip Total.
+ * Espera observaciones horarias. Una fila por cada día presente en los datos.
+ */
+export function buildDailySummary(observations: Observation[]): DailySummaryRow[] {
+  const windReport = buildDailyWindReport(observations);
+  const windByDate = new Map(windReport.map((w) => [w.time, w]));
+  const byDay = new Map<
+    string,
+    { temps: number[]; hums: number[]; precips: number[] }
+  >();
+
+  for (const obs of observations) {
+    const key = formatDayKey(obs.timestamp);
+    if (!byDay.has(key)) byDay.set(key, { temps: [], hums: [], precips: [] });
+    const b = byDay.get(key)!;
+    if (obs.temperature !== null && !Number.isNaN(obs.temperature)) b.temps.push(obs.temperature);
+    if (obs.humidity !== null && !Number.isNaN(obs.humidity)) b.hums.push(obs.humidity);
+    if (obs.precipitation !== null && !Number.isNaN(obs.precipitation)) b.precips.push(obs.precipitation);
+  }
+
+  const sortedDays = Array.from(byDay.keys()).sort();
+  const rows: DailySummaryRow[] = sortedDays.map((date) => {
+    const day = byDay.get(date)!;
+    const w = windByDate.get(date);
+    const tempAvg = day.temps.length ? day.temps.reduce((a, b) => a + b, 0) / day.temps.length : null;
+    const humidityAvg = day.hums.length ? day.hums.reduce((a, b) => a + b, 0) / day.hums.length : null;
+    const precipSum = day.precips.length ? day.precips.reduce((a, b) => a + b, 0) : 0;
+    return {
+      date,
+      tempAvg: tempAvg !== null ? Math.round(tempAvg * 10) / 10 : null,
+      humidityAvg: humidityAvg !== null ? Math.round(humidityAvg) : null,
+      windMin: w?.windMin ?? null,
+      windAvg: w?.windAvg ?? null,
+      windMax: w?.windMax ?? null,
+      precipSum: Math.round(precipSum * 10) / 10,
+    };
+  });
+
+  return rows;
+}
+
 /**
  * CSV de informe diario (viento mín/media/máx) con la misma precisión que el gráfico.
  * Espera observaciones horarias; la media es la media ponderada temporal.
@@ -222,6 +274,23 @@ export function convertToCSV(observations: Observation[]): string {
 
 export function downloadFile(content: string, filename: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/** Descarga un archivo binario (p. ej. Excel) desde un ArrayBuffer o Buffer. */
+export function downloadFileBuffer(
+  buffer: ArrayBuffer | Uint8Array | BlobPart,
+  filename: string,
+  mimeType: string,
+): void {
+  const blob = new Blob([buffer as BlobPart], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
