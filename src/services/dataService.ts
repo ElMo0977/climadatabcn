@@ -1,8 +1,5 @@
 /**
- * Data Service – Open Data BCN
- *
- * Única fuente de datos oficial: Open Data BCN.
- * Respaldo vía Supabase/Open-Meteo se gestiona en useObservations cuando no hay estaciones del provider.
+ * Data Service – XEMA (Transparència Catalunya) como fuente principal, Open Data BCN y Open-Meteo como respaldo.
  */
 
 import type {
@@ -16,29 +13,49 @@ import type {
 } from '@/domain/types';
 import { ProviderError } from '@/domain/types';
 import { openDataBcnProvider } from './providers';
-
-const PROVIDER: DataProvider = 'opendata-bcn';
+import { listStations as listStationsXema } from './providers/xemaTransparencia';
 
 // ============ Main Service ============
 
 class DataService {
   /**
-   * Get list of stations from Open Data BCN
+   * Get list of stations: XEMA (Transparència) first, then Open Data BCN, then Supabase in useStations.
    */
   async getStations(): Promise<ProviderResult<Station[]>> {
+    try {
+      const xemaList = listStationsXema();
+      if (xemaList.length > 0) {
+        const stations: Station[] = xemaList.map((s) => ({
+          id: s.id,
+          name: s.name,
+          provider: 'xema-transparencia' as DataProvider,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          elevation: s.elevation,
+        }));
+        return {
+          data: stations,
+          error: null,
+          provider: 'xema-transparencia',
+          cached: false,
+        };
+      }
+    } catch (_) {
+      // fallback to Open Data BCN
+    }
     try {
       const stations = await openDataBcnProvider.listStations();
       return {
         data: stations,
         error: null,
-        provider: PROVIDER,
+        provider: 'opendata-bcn',
         cached: false,
       };
     } catch (error) {
       return {
         data: null,
         error: this.toApiError(error),
-        provider: PROVIDER,
+        provider: 'opendata-bcn',
         cached: false,
       };
     }
@@ -53,14 +70,14 @@ class DataService {
       return {
         data,
         error: null,
-        provider: PROVIDER,
+        provider: 'opendata-bcn',
         cached: false,
       };
     } catch (error) {
       return {
         data: null,
-        error: this.toApiError(error),
-        provider: PROVIDER,
+        error: this.toApiError(error, 'opendata-bcn'),
+        provider: 'opendata-bcn',
         cached: false,
       };
     }
@@ -87,20 +104,20 @@ class DataService {
       return {
         data,
         error: null,
-        provider: PROVIDER,
+        provider: 'opendata-bcn',
         cached: false,
       };
     } catch (error) {
       return {
         data: null,
-        error: this.toApiError(error),
-        provider: PROVIDER,
+        error: this.toApiError(error, 'opendata-bcn'),
+        provider: 'opendata-bcn',
         cached: false,
       };
     }
   }
 
-  private toApiError(error: unknown): import('@/domain/types').ApiError {
+  private toApiError(error: unknown, provider: DataProvider = 'opendata-bcn'): import('@/domain/types').ApiError {
     if (error instanceof ProviderError) {
       return error.toApiError();
     }
@@ -108,13 +125,13 @@ class DataService {
       return {
         code: 'UNKNOWN',
         message: error.message,
-        provider: PROVIDER,
+        provider,
       };
     }
     return {
       code: 'UNKNOWN',
       message: 'Error desconocido',
-      provider: PROVIDER,
+      provider,
     };
   }
 }

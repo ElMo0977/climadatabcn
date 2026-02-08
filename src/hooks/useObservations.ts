@@ -5,6 +5,7 @@ import type { Observation, Granularity, DateRange, Station } from '@/types/weath
 import type { WeatherVariable, AggregationType } from '@/domain/types';
 import { buildDataSourceLabel, FALLBACK_LABEL } from '@/config/sources';
 import { logDataDebug } from '@/lib/dataDebug';
+import { getObservations as getObservationsXema } from '@/services/providers/xemaTransparencia';
 
 interface ObservationsResponse {
   data: Observation[];
@@ -91,6 +92,33 @@ export function useObservations({
 
       const stationName = station.name;
       const source = station.source;
+
+      if (source === 'xema-transparencia') {
+        const from = dateRange.from;
+        const to = dateRange.to;
+        const xemaGranularity = granularity === 'daily' ? 'day' : 'hour';
+        const data = await getObservationsXema({
+          stationId: station.id,
+          from,
+          to,
+          granularity: xemaGranularity,
+        });
+        const dataSourceLabel = buildDataSourceLabel(source, stationName);
+        const withLabel = data.map((obs) => ({ ...obs, dataSourceLabel }));
+        logDataDebug(
+          {
+            stationId: station.id,
+            stationSource: source,
+            from: fromStr,
+            to: toStr,
+            granularity,
+            agg: xemaGranularity === 'day' ? 'daily' : 'hourly',
+            provider: 'xema-transparencia',
+          },
+          withLabel
+        );
+        return { data: withLabel, dataSourceLabel };
+      }
 
       if (source === 'opendata-bcn') {
         const from = dateRange.from;

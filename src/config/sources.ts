@@ -5,6 +5,7 @@
 import type { DataSource } from '@/types/weather';
 
 export const SOURCE_LABELS: Record<DataSource, string> = {
+  'xema-transparencia': 'XEMA (Transparència Catalunya)',
   'opendata-bcn': 'Open Data BCN',
   'open-meteo': 'Datos de respaldo (Open-Meteo)',
 };

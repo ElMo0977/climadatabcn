@@ -5,7 +5,7 @@
 
 // ============ Provider Configuration ============
 
-export type DataProvider = 'opendata-bcn';
+export type DataProvider = 'xema-transparencia' | 'opendata-bcn';
 export type DataMode = 'live' | 'mock';
 
 // ============ Station Types ============

@@ -1,5 +1,5 @@
-/** Origen de los datos: Open Data BCN (oficial) o respaldo (Open-Meteo) */
-export type DataSource = 'opendata-bcn' | 'open-meteo';
+/** Origen de los datos: XEMA (principal), Open Data BCN o respaldo (Open-Meteo) */
+export type DataSource = 'xema-transparencia' | 'opendata-bcn' | 'open-meteo';
 
 export interface Station {
   id: string;

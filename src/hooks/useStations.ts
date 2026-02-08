@@ -32,7 +32,7 @@ function haversineDistanceKm(
 }
 
 /**
- * Estaciones: Open Data BCN. Si no hay datos, fallback vía Supabase (Open-Meteo).
+ * Estaciones: XEMA (Transparència) primero, luego Open Data BCN, luego Supabase (Open-Meteo).
  */
 export function useStations() {
   return useQuery({
@@ -41,6 +41,8 @@ export function useStations() {
       const result = await dataService.getStations();
 
       if (result.data && result.data.length > 0) {
+        const source: DataSource =
+          result.provider === 'xema-transparencia' ? 'xema-transparencia' : 'opendata-bcn';
         return result.data
           .map((s) => ({
             id: s.id,
@@ -54,7 +56,7 @@ export function useStations() {
               s.latitude,
               s.longitude
             ),
-            source: 'opendata-bcn' as DataSource,
+            source,
           }))
           .filter((s) => s.distance <= DEFAULT_RADIUS_KM)
           .sort((a, b) => a.distance - b.distance);
