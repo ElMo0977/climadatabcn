@@ -10,6 +10,8 @@ import {
   BarChart,
   Bar,
   Legend,
+  ReferenceLine,
+  Label,
 } from 'recharts';
 import { Thermometer, Droplets, Wind, CloudRain } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
@@ -218,6 +220,20 @@ export function WeatherCharts({ observations, granularity: _granularity, isLoadi
               dot={false}
               activeDot={{ r: 4, strokeWidth: 2 }}
               connectNulls
+            />
+            <ReferenceLine
+              y={5}
+              stroke="hsl(25 95% 50%)"
+              strokeDasharray="5 5"
+              strokeWidth={2}
+              label={
+                <Label
+                  value="Límite mediciones acústicas (5 m/s)"
+                  position="top"
+                  fill="hsl(25 95% 50%)"
+                  fontSize={11}
+                />
+              }
             />
             {windChartData.length > 20 && (
               <Brush 

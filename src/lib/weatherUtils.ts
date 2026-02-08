@@ -72,19 +72,19 @@ export function aggregateWindByBucket(
     const maxSource =
       bucket.windMaxValues.length > 0 ? bucket.windMaxValues : bucket.windValues;
 
-    // Para la media priorizamos windSpeed; si no hay, usamos los valores disponibles (min/max).
-    const avgSource =
-      bucket.windValues.length > 0
-        ? bucket.windValues
-        : [...bucket.windMinValues, ...bucket.windMaxValues];
-
-    if (minSource.length === 0 && maxSource.length === 0 && avgSource.length === 0) return;
+    if (minSource.length === 0 && maxSource.length === 0) return;
 
     const min = minSource.length ? Math.min(...minSource) : null;
     const max = maxSource.length ? Math.max(...maxSource) : null;
-    const avg = avgSource.length
-      ? avgSource.reduce((a, b) => a + b, 0) / avgSource.length
-      : null;
+
+    // Media: con datos daily, windSpeed viene rellenado con el máximo, por lo que no usamos
+    // windValues para la media. Usamos (min+max)/2 cuando hay min/max; si no, promedio real de windValues.
+    const avg =
+      bucket.windMinValues.length > 0 && bucket.windMaxValues.length > 0
+        ? (min! + max!) / 2
+        : bucket.windValues.length > 0
+          ? bucket.windValues.reduce((a, b) => a + b, 0) / bucket.windValues.length
+          : null;
 
     if (min === null || max === null || avg === null) return;
 
