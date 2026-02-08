@@ -36,7 +36,7 @@ describe('aggregateWindByBucket', () => {
     ]);
   });
 
-  it('uses dedicated min/max fields when present and computes avg from available values', () => {
+  it('drops bucket when only min/max present (no hourly windSpeed): media requiere registros horarios', () => {
     const data: Observation[] = [
       {
         ...makeObs('2024-01-01T00:00:00Z', null),
@@ -47,9 +47,7 @@ describe('aggregateWindByBucket', () => {
 
     const result = aggregateWindByBucket(data, obs => obs.timestamp);
 
-    expect(result).toEqual([
-      { time: '2024-01-01T00:00:00Z', windMin: 2, windAvg: 5, windMax: 8 },
-    ]);
+    expect(result).toEqual([]);
   });
 
   it('aggregates multiple points per bucket and sorts by time', () => {
@@ -65,5 +63,22 @@ describe('aggregateWindByBucket', () => {
       { time: '2024-01-01', windMin: 4, windAvg: 5, windMax: 6 },
       { time: '2024-01-02', windMin: 8, windAvg: 8, windMax: 8 },
     ]);
+  });
+
+  it('computes daily avg as temporal weighted mean (sum of hourly speeds / N)', () => {
+    const data = [
+      makeObs('2024-01-01T00:00:00Z', 2),
+      makeObs('2024-01-01T06:00:00Z', 4),
+      makeObs('2024-01-01T12:00:00Z', 6),
+      makeObs('2024-01-01T18:00:00Z', 8),
+    ];
+
+    const result = aggregateWindByBucket(data, obs => obs.timestamp.split('T')[0]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].time).toBe('2024-01-01');
+    expect(result[0].windMin).toBe(2);
+    expect(result[0].windMax).toBe(8);
+    expect(result[0].windAvg).toBe(5);
   });
 });

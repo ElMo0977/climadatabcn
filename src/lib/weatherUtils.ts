@@ -10,11 +10,24 @@ export interface WindBucketAggregate {
 }
 
 /**
+ * Clave de día para agrupar por fecha (yyyy-MM-dd). Usar cuando el bucket sea "un día"
+ * y los puntos sean registros horarios.
+ */
+export function formatDayKey(timestamp: string): string {
+  try {
+    const date = parseISO(timestamp);
+    return format(date, 'yyyy-MM-dd');
+  } catch {
+    return timestamp;
+  }
+}
+
+/**
  * Agrupa velocidades de viento por bucket temporal y calcula min/media/máx.
- * - Ignora valores null/NaN.
- * - Si solo hay un dato en el bucket, min=avg=max.
- * - Excluye buckets sin datos válidos.
- * - Mantiene la clave temporal tal cual la define bucketFn (mismo formato que el eje X).
+ * - Media = media ponderada temporal: suma de todas las velocidades en el bucket / número de registros.
+ *   No se usan los consolidados min/max del día; se iteran los registros horarios del bucket.
+ * - Min/máx: mínimo y máximo de los valores en el bucket (windSpeed o windMin/windMax si existen).
+ * - Ignora valores null/NaN. Excluye buckets sin datos válidos.
  */
 export function aggregateWindByBucket(
   points: Observation[],
@@ -77,14 +90,12 @@ export function aggregateWindByBucket(
     const min = minSource.length ? Math.min(...minSource) : null;
     const max = maxSource.length ? Math.max(...maxSource) : null;
 
-    // Media: con datos daily, windSpeed viene rellenado con el máximo, por lo que no usamos
-    // windValues para la media. Usamos (min+max)/2 cuando hay min/max; si no, promedio real de windValues.
+    // Media ponderada temporal: suma de velocidades horarias / nº de registros.
+    // No usar (min+max)/2 ni consolidados diarios.
     const avg =
-      bucket.windMinValues.length > 0 && bucket.windMaxValues.length > 0
-        ? (min! + max!) / 2
-        : bucket.windValues.length > 0
-          ? bucket.windValues.reduce((a, b) => a + b, 0) / bucket.windValues.length
-          : null;
+      bucket.windValues.length > 0
+        ? bucket.windValues.reduce((a, b) => a + b, 0) / bucket.windValues.length
+        : null;
 
     if (min === null || max === null || avg === null) return;
 
@@ -154,6 +165,43 @@ export function formatShortDate(timestamp: string): string {
   } catch {
     return timestamp;
   }
+}
+
+/**
+ * Formatea una clave de día (yyyy-MM-dd) para mostrar en tabla/UI.
+ */
+export function formatDayLabel(dayKey: string): string {
+  try {
+    const date = parseISO(dayKey);
+    return format(date, 'd MMM yyyy', { locale: es });
+  } catch {
+    return dayKey;
+  }
+}
+
+/**
+ * Resumen diario de viento con la misma lógica que el gráfico: media = suma(velocidades horarias) / N.
+ * Debe recibir observaciones horarias; agrupa por día con formatDayKey.
+ */
+export function buildDailyWindReport(observations: Observation[]): WindBucketAggregate[] {
+  return aggregateWindByBucket(observations, (obs) => formatDayKey(obs.timestamp));
+}
+
+/**
+ * CSV de informe diario (viento mín/media/máx) con la misma precisión que el gráfico.
+ * Espera observaciones horarias; la media es la media ponderada temporal.
+ */
+export function convertToDailyReportCSV(observations: Observation[]): string {
+  const daily = buildDailyWindReport(observations);
+  const headers = ['Fecha', 'Viento mín (m/s)', 'Viento media (m/s)', 'Viento máx (m/s)'];
+  const round = (v: number) => Math.round(v * 10) / 10;
+  const rows = daily.map((d) => [
+    d.time,
+    round(d.windMin),
+    round(d.windAvg),
+    round(d.windMax),
+  ]);
+  return [headers.join(';'), ...rows.map((row) => row.join(';'))].join('\n');
 }
 
 export function convertToCSV(observations: Observation[]): string {

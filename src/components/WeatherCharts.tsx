@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 import { Thermometer, Droplets, Wind, CloudRain } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
-import { aggregateWindByBucket, formatShortDate } from '@/lib/weatherUtils';
+import { aggregateWindByBucket, formatShortDate, formatDayKey } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface WeatherChartsProps {
@@ -24,18 +24,16 @@ interface WeatherChartsProps {
   isLoading: boolean;
 }
 
-export function WeatherCharts({ observations, granularity: _granularity, isLoading }: WeatherChartsProps) {
+export function WeatherCharts({ observations, granularity, isLoading }: WeatherChartsProps) {
   const chartData = observations.map(obs => ({
     ...obs,
     label: formatShortDate(obs.timestamp),
   }));
 
-  // Causa raíz: antes usábamos solo `windSpeed`, por eso min/avg/max salían iguales. Ahora usamos min/max si vienen y agrupamos igual que el eje X.
-  const windChartData = aggregateWindByBucket(
-    observations,
-    // Usamos el mismo bucket que ya se usa para el eje X: fecha corta por timestamp.
-    (obs) => formatShortDate(obs.timestamp),
-  ).map(bucket => ({
+  // Vista diaria: agrupar por día (registros horarios) para media ponderada temporal.
+  // Vista horaria: un bucket por timestamp.
+  const windBucketFn = granularity === 'daily' ? (obs: Observation) => formatDayKey(obs.timestamp) : (obs: Observation) => formatShortDate(obs.timestamp);
+  const windChartData = aggregateWindByBucket(observations, windBucketFn).map(bucket => ({
     ...bucket,
     label: bucket.time,
   }));
@@ -187,15 +185,18 @@ export function WeatherCharts({ observations, granularity: _granularity, isLoadi
                 value !== null ? `${Number(value.toFixed(1))} m/s` : 'Sin datos',
                 name,
               ]}
+              itemSorter={(a, b) => {
+                const order = ['Viento máx.', 'Viento media', 'Viento mín.'];
+                return order.indexOf(String(a.name)) - order.indexOf(String(b.name));
+              }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Line
               type="monotone"
-              name="Viento mín."
-              dataKey="windMin"
-              stroke="hsl(var(--chart-wind))"
-              strokeOpacity={0.55}
-              strokeWidth={2}
+              name="Viento máx."
+              dataKey="windMax"
+              stroke="hsl(160 55% 30%)"
+              strokeWidth={2.5}
               dot={false}
               activeDot={{ r: 4, strokeWidth: 2 }}
               connectNulls
@@ -212,11 +213,11 @@ export function WeatherCharts({ observations, granularity: _granularity, isLoadi
             />
             <Line
               type="monotone"
-              name="Viento máx."
-              dataKey="windMax"
+              name="Viento mín."
+              dataKey="windMin"
               stroke="hsl(var(--chart-wind))"
-              strokeOpacity={0.8}
-              strokeWidth={2}
+              strokeOpacity={0.4}
+              strokeWidth={1.5}
               dot={false}
               activeDot={{ r: 4, strokeWidth: 2 }}
               connectNulls

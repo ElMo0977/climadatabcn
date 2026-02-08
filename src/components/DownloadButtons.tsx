@@ -1,18 +1,23 @@
 import { Download, FileJson, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Observation } from '@/types/weather';
-import { convertToCSV, downloadFile } from '@/lib/weatherUtils';
+import type { Granularity } from '@/types/weather';
+import { convertToCSV, convertToDailyReportCSV, downloadFile } from '@/lib/weatherUtils';
 
 interface DownloadButtonsProps {
   observations: Observation[];
   stationName: string;
   disabled: boolean;
+  granularity?: Granularity;
 }
 
-export function DownloadButtons({ observations, stationName, disabled }: DownloadButtonsProps) {
+export function DownloadButtons({ observations, stationName, disabled, granularity = 'hourly' }: DownloadButtonsProps) {
   const handleDownloadCSV = () => {
-    const csv = convertToCSV(observations);
-    const filename = `meteo-bcn-${stationName.replace(/\s+/g, '-').toLowerCase()}.csv`;
+    const csv = granularity === 'daily'
+      ? convertToDailyReportCSV(observations)
+      : convertToCSV(observations);
+    const suffix = granularity === 'daily' ? '-informe-diario' : '';
+    const filename = `meteo-bcn-${stationName.replace(/\s+/g, '-').toLowerCase()}${suffix}.csv`;
     downloadFile(csv, filename, 'text/csv');
   };
 

@@ -29,6 +29,8 @@ const Index = () => {
     isFetching: stationsFetching,
   } = useStations();
 
+  // Vista diaria: pedir datos horarios para calcular media ponderada temporal (suma(velocidades)/N).
+  const granularityForFetch = granularity === 'daily' ? 'hourly' : granularity;
   const {
     data: observations = [],
     isLoading: observationsLoading,
@@ -38,7 +40,7 @@ const Index = () => {
   } = useObservations({
     stationId: selectedStation?.id || null,
     dateRange,
-    granularity,
+    granularity: granularityForFetch,
   });
 
   const stats = useMemo(() => {
@@ -87,6 +89,7 @@ const Index = () => {
                 observations={observations}
                 stationName={selectedStation?.name || 'data'}
                 disabled={observations.length === 0}
+                granularity={granularity}
               />
             </div>
 
