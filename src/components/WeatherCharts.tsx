@@ -195,7 +195,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
               ]}
               itemSorter={(a, b) => {
                 const order = ['Viento máx.', 'Viento media', 'Viento mín.'];
-                return order.indexOf(String(a.name)) - order.indexOf(String(b.name));
+                return order.indexOf(String(a?.name ?? '')) - order.indexOf(String(b?.name ?? ''));
               }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
