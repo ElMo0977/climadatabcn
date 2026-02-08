@@ -37,6 +37,7 @@ function styleSafetyCell(cell: ExcelJS.Cell): void {
 export async function buildAndDownloadExcel(
   observations: Observation[],
   stationName: string,
+  dataSourceLabel?: string,
 ): Promise<void> {
   const workbook = new ExcelJS.Workbook();
   const daily = buildDailySummary(observations);
@@ -51,7 +52,12 @@ export async function buildAndDownloadExcel(
     { header: 'Viento Máx (m/s)', key: 'windMax', width: 14 },
     { header: 'Precipitación Total (mm)', key: 'precipSum', width: 20 },
   ];
-  const headerRowResumen = sheetResumen.getRow(1);
+  if (dataSourceLabel) {
+    sheetResumen.spliceRows(1, 0, [dataSourceLabel], []);
+    sheetResumen.getRow(1).font = { italic: true, size: 10 };
+  }
+  const dataStartRow = dataSourceLabel ? 3 : 1;
+  const headerRowResumen = sheetResumen.getRow(dataStartRow);
   headerRowResumen.eachCell((cell) => styleHeaderCell(cell));
 
   daily.forEach((row) => {
@@ -80,7 +86,12 @@ export async function buildAndDownloadExcel(
     { header: 'Viento (m/s)', key: 'windSpeed', width: 12 },
     { header: 'Precip (mm)', key: 'precipitation', width: 12 },
   ];
-  const headerRowDetalle = sheetDetalle.getRow(1);
+  if (dataSourceLabel) {
+    sheetDetalle.spliceRows(1, 0, [dataSourceLabel], []);
+    sheetDetalle.getRow(1).font = { italic: true, size: 10 };
+  }
+  const detailHeaderRow = dataSourceLabel ? 3 : 1;
+  const headerRowDetalle = sheetDetalle.getRow(detailHeaderRow);
   headerRowDetalle.eachCell((cell) => styleHeaderCell(cell));
 
   observations.forEach((obs) => {

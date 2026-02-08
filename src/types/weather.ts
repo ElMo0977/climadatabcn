@@ -1,3 +1,6 @@
+/** Origen de los datos: oficial (Meteocat/Open Data BCN) o respaldo (Open-Meteo) */
+export type DataSource = 'meteocat' | 'opendata-bcn' | 'open-meteo';
+
 export interface Station {
   id: string;
   name: string;
@@ -5,16 +8,20 @@ export interface Station {
   longitude: number;
   elevation: number | null;
   distance: number; // km from search center
+  /** Fuente de datos; si no está, se considera open-meteo (respaldo) */
+  source?: DataSource;
 }
 
 export interface Observation {
   timestamp: string; // ISO 8601
-  temperature: number | null; // Celsius
-  humidity: number | null; // Percentage
-  windSpeed: number | null; // m/s (mean for hourly, max for daily)
-  windSpeedMin: number | null; // m/s (daily only)
-  windSpeedMax: number | null; // m/s (daily only)
-  precipitation: number | null; // mm (accumulated)
+  temperature: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  windSpeedMin: number | null;
+  windSpeedMax: number | null;
+  precipitation: number | null;
+  /** Etiqueta para mostrar: "Fuente: X - Estación: Y" */
+  dataSourceLabel?: string;
 }
 
 export type Granularity = 'hourly' | 'daily';

@@ -29,19 +29,21 @@ const Index = () => {
     isFetching: stationsFetching,
   } = useStations();
 
-  // Vista diaria: pedir datos horarios para calcular media ponderada temporal (suma(velocidades)/N).
   const granularityForFetch = granularity === 'daily' ? 'hourly' : granularity;
   const {
     data: observations = [],
+    dataSourceLabel,
     isLoading: observationsLoading,
     error: observationsError,
     refetch: refetchObservations,
     isFetching: observationsFetching,
   } = useObservations({
-    stationId: selectedStation?.id || null,
+    station: selectedStation,
     dateRange,
     granularity: granularityForFetch,
   });
+  const isFallbackSource =
+    dataSourceLabel != null && dataSourceLabel.includes('Open-Meteo');
 
   const stats = useMemo(() => {
     if (observations.length === 0) return null;
@@ -88,9 +90,22 @@ const Index = () => {
               <DownloadButtons
                 observations={observations}
                 stationName={selectedStation?.name || 'data'}
+                dataSourceLabel={dataSourceLabel ?? undefined}
                 disabled={observations.length === 0}
               />
             </div>
+
+            {/* Aviso datos de respaldo (Open-Meteo) */}
+            {isFallbackSource && observations.length > 0 && (
+              <div className="glass-card rounded-xl p-4 border-amber-500/50 bg-amber-500/10">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  Datos de respaldo (Open-Meteo)
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Las fuentes oficiales (Meteocat / Open Data BCN) no están disponibles. Se muestran datos de Open-Meteo por coordenadas.
+                </p>
+              </div>
+            )}
 
             {/* Error State */}
             {observationsError && (
@@ -112,9 +127,14 @@ const Index = () => {
                   <div>
                     <h2 className="font-display font-semibold text-lg">{selectedStation.name}</h2>
                     <p className="text-sm text-muted-foreground">
-                      {selectedStation.distance} km desde Barcelona • 
-                      {selectedStation.elevation !== null && ` ${selectedStation.elevation}m altitud`}
+                      {selectedStation.distance} km desde Barcelona •
+                      {selectedStation.elevation != null && ` ${selectedStation.elevation} m altitud`}
                     </p>
+                    {dataSourceLabel && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {dataSourceLabel}
+                      </p>
+                    )}
                   </div>
                   {(observationsLoading || observationsFetching) && (
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -131,6 +151,8 @@ const Index = () => {
               observations={observations}
               granularity={granularity}
               isLoading={observationsLoading}
+              dataSourceLabel={dataSourceLabel ?? undefined}
+              stationName={selectedStation?.name}
             />
 
             {/* Data Table */}

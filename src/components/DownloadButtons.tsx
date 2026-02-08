@@ -7,16 +7,17 @@ import { buildAndDownloadExcel } from '@/lib/exportExcel';
 interface DownloadButtonsProps {
   observations: Observation[];
   stationName: string;
+  dataSourceLabel?: string;
   disabled: boolean;
 }
 
-export function DownloadButtons({ observations, stationName, disabled }: DownloadButtonsProps) {
+export function DownloadButtons({ observations, stationName, dataSourceLabel, disabled }: DownloadButtonsProps) {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   const handleDownloadExcel = async () => {
     setExportingExcel(true);
     try {
-      await buildAndDownloadExcel(observations, stationName);
+      await buildAndDownloadExcel(observations, stationName, dataSourceLabel);
     } finally {
       setExportingExcel(false);
     }

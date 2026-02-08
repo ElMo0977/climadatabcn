@@ -22,9 +22,12 @@ interface WeatherChartsProps {
   observations: Observation[];
   granularity: Granularity;
   isLoading: boolean;
+  /** Ej: "Fuente: Meteocat (XEMA) - Estación: Observatori Fabra" */
+  dataSourceLabel?: string;
+  stationName?: string;
 }
 
-export function WeatherCharts({ observations, granularity, isLoading }: WeatherChartsProps) {
+export function WeatherCharts({ observations, granularity, isLoading, dataSourceLabel, stationName }: WeatherChartsProps) {
   const chartData = observations.map(obs => ({
     ...obs,
     label: formatShortDate(obs.timestamp),
@@ -85,6 +88,11 @@ export function WeatherCharts({ observations, granularity, isLoading }: WeatherC
 
   return (
     <div className="space-y-4">
+      {dataSourceLabel && (
+        <p className="text-xs text-muted-foreground">
+          {dataSourceLabel}
+        </p>
+      )}
       {lineCharts.map((chart, index) => (
         <div 
           key={chart.dataKey} 

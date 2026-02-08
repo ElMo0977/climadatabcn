@@ -15,7 +15,10 @@ Aplicación web para visualizar y descargar datos meteorológicos históricos de
 
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
 - **Backend**: Supabase Edge Functions (Deno)
-- **Fuente de datos**: [Open-Meteo](https://open-meteo.com/) - API gratuita sin autenticación
+- **Fuentes de datos** (prioridad automática):
+  1. **Meteocat (XEMA)** – datos oficiales de Catalunya (requiere API key)
+  2. **Open Data BCN** – datos abiertos del Ayuntamiento de Barcelona
+  3. **Open-Meteo** – respaldo por coordenadas (sin clave)
 
 ## Configuración
 
@@ -26,19 +29,35 @@ npm install
 npm run dev
 ```
 
-No se requiere API key - Open-Meteo es completamente gratuita y abierta.
+### Variable de entorno para Meteocat (prioridad 1)
 
-## Cambiar fuente de datos
+Para usar datos oficiales de Meteocat, añade en tu archivo **`.env.local`** (en la raíz del proyecto) la variable:
 
-Para usar otra API meteorológica, modifica los adaptadores en:
+```bash
+VITE_METEOCAT_API_KEY=tu_clave_aqui
+```
 
-- `supabase/functions/stations/index.ts` - Función `fetchStationsFromMeteostat`
-- `supabase/functions/observations/index.ts` - Función `fetchObservationsFromMeteostat`
+- **Nombre exacto**: `VITE_METEOCAT_API_KEY`
+- El prefijo `VITE_` es necesario para que Vite exponga la variable al frontend como `import.meta.env.VITE_METEOCAT_API_KEY`.
+- No escribas la clave en el código; solo en `.env.local` (y añade `.env.local` a `.gitignore` si no está).
+- Clave gratuita: [apidocs.meteocat.gencat.cat](https://apidocs.meteocat.gencat.cat/documentacio/acces-ciutada-i-administracio/)
 
-El formato normalizado esperado:
+Sin esta variable, la app usará Open Data BCN y, si falla, **Open-Meteo** (respaldo), mostrando el aviso *"Datos de respaldo (Open-Meteo)"* en la interfaz.
+
+## Jerarquía de fuentes
+
+La app intenta en este orden:
+
+1. **Meteocat**: si `VITE_METEOCAT_API_KEY` está definida.
+2. **Open Data BCN**: si Meteocat no está configurado o falla.
+3. **Open-Meteo** (vía Supabase): solo si las anteriores fallan; se muestra el aviso de respaldo.
+
+En gráficos y Excel se incluye la línea *"Fuente: [nombre] - Estación: [nombre]"*.
+
+## Formato de datos (referencia)
 
 ```typescript
-// Estación
+// Estación (types/weather)
 interface Station {
   id: string;
   name: string;
@@ -46,6 +65,7 @@ interface Station {
   longitude: number;
   elevation: number | null;
   distance: number; // km
+  source?: 'meteocat' | 'opendata-bcn' | 'open-meteo';
 }
 
 // Observación
@@ -53,7 +73,8 @@ interface Observation {
   timestamp: string; // ISO 8601
   temperature: number | null; // °C
   humidity: number | null; // %
-  windSpeed: number | null; // km/h
+  windSpeed: number | null; // m/s
+  dataSourceLabel?: string; // "Fuente: X - Estación: Y"
 }
 ```
 
