@@ -194,14 +194,14 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
                 name,
               ]}
               itemSorter={(a, b) => {
-                const order = ['Viento máx.', 'Viento media', 'Viento mín.'];
+                const order = ['Racha máx.', 'Viento media'];
                 return order.indexOf(String(a?.name ?? '')) - order.indexOf(String(b?.name ?? ''));
               }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Line
               type="monotone"
-              name="Viento máx."
+              name="Racha máx."
               dataKey="windMax"
               stroke="hsl(160 55% 30%)"
               strokeWidth={2.5}
@@ -215,17 +215,6 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
               dataKey="windAvg"
               stroke="hsl(var(--chart-wind))"
               strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, strokeWidth: 2 }}
-              connectNulls
-            />
-            <Line
-              type="monotone"
-              name="Viento mín."
-              dataKey="windMin"
-              stroke="hsl(var(--chart-wind))"
-              strokeOpacity={0.4}
-              strokeWidth={1.5}
               dot={false}
               activeDot={{ r: 4, strokeWidth: 2 }}
               connectNulls

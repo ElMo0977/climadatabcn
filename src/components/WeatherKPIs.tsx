@@ -25,9 +25,10 @@ export function WeatherKPIs({ stats, isLoading }: WeatherKPIsProps) {
       bgClass: 'bg-humidity/10',
     },
     {
-      label: 'Viento (min-max)',
-      value: stats?.minWindSpeed !== null && stats?.maxWindSpeed !== null 
-        ? `${stats?.minWindSpeed} - ${stats?.maxWindSpeed} m/s` 
+      label: 'Viento media / racha',
+      value: stats?.avgWindSpeed !== null && stats?.maxWindSpeed !== null 
+        ? `${stats?.avgWindSpeed} / ${stats?.maxWindSpeed} m/s` 
+        : stats?.avgWindSpeed !== null ? `${stats?.avgWindSpeed} m/s`
         : '—',
       icon: Wind,
       colorClass: 'text-wind',
