@@ -101,7 +101,8 @@ async function fetchHourlyObservations(
   const fromStr = from.toISOString().slice(0, 19);
   const toStr = to.toISOString().slice(0, 19);
   const vars = [SUBDAILY_CODES.T, SUBDAILY_CODES.HR, SUBDAILY_CODES.PPT, SUBDAILY_CODES.VV10, SUBDAILY_CODES.DV10, SUBDAILY_CODES.VVx10, SUBDAILY_CODES.DVVx10];
-  const where = `codi_estacio = '${stationId}' and data_lectura >= '${fromStr}' and data_lectura <= '${toStr}' and codi_variable in (${vars.join(',')}) and (codi_estat = 'V' or codi_estat is null)`;
+  const varsIn = vars.map((v) => `'${v}'`).join(',');
+  const where = `codi_estacio = '${stationId}' and data_lectura >= '${fromStr}' and data_lectura <= '${toStr}' and codi_variable in (${varsIn}) and (codi_estat = 'V' or codi_estat is null)`;
   const rows = await fetchSocrata<SubdailyRow[]>(RESOURCE_SUBDAILY, {
     $select: 'codi_estacio,codi_variable,data_lectura,valor_lectura',
     $where: where,
@@ -220,7 +221,8 @@ async function fetchDailyObservations(
   const fromStr = from.toISOString().slice(0, 10) + 'T00:00:00';
   const toStr = to.toISOString().slice(0, 10) + 'T23:59:59';
   const vars = [DAILY_CODES.TM, DAILY_CODES.HRM, DAILY_CODES.PPT, DAILY_CODES.VVM10vec, DAILY_CODES.VVM10, DAILY_CODES.VVX10];
-  const where = `codi_estacio = '${stationId}' and data_lectura >= '${fromStr}' and data_lectura <= '${toStr}' and codi_variable in (${vars.join(',')})`;
+  const varsIn = vars.map((v) => `'${v}'`).join(',');
+  const where = `codi_estacio = '${stationId}' and data_lectura >= '${fromStr}' and data_lectura <= '${toStr}' and codi_variable in (${varsIn})`;
   const rows = await fetchSocrata<DailyRow[]>(RESOURCE_DAILY, {
     $select: 'codi_estacio,data_lectura,codi_variable,valor',
     $where: where,
