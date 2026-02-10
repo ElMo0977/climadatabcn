@@ -18,22 +18,6 @@ interface UseObservationsParams {
   granularity: Granularity;
 }
 
-/** Variables que se piden al dataService para construir Observation[] */
-const VARIABLES_HOURLY: WeatherVariable[] = [
-  'temperature',
-  'humidity',
-  'windSpeed',
-  'precipitation',
-];
-const VARIABLES_DAILY: WeatherVariable[] = [
-  'temperature',
-  'humidity',
-  'windSpeed',
-  'windSpeedMin',
-  'windSpeedMax',
-  'precipitation',
-];
-
 export interface UseObservationsResult {
   data: Observation[];
   dataSourceLabel: string | null;
@@ -43,7 +27,6 @@ export interface UseObservationsResult {
   isFetching: boolean;
 }
 
-/** QueryKey para observaciones; cambiar granularity debe provocar refetch. Exportado para tests. */
 export function getObservationsQueryKey(params: {
   stationId: string | null;
   stationSource: string | null;
@@ -61,9 +44,6 @@ export function getObservationsQueryKey(params: {
   ];
 }
 
-/**
- * Open Data BCN vía dataService. Si la estación es de respaldo (open-meteo), datos vía Supabase.
- */
 export function useObservations({
   station,
   dateRange,
@@ -71,9 +51,6 @@ export function useObservations({
 }: UseObservationsParams): UseObservationsResult {
   const fromStr = format(dateRange.from, 'yyyy-MM-dd');
   const toStr = format(dateRange.to, 'yyyy-MM-dd');
-  const agg: AggregationType = granularity === 'daily' ? 'daily' : 'hourly';
-  const variables =
-    agg === 'daily' ? VARIABLES_DAILY : VARIABLES_HOURLY;
 
   const queryKey = getObservationsQueryKey({
     stationId: station?.id ?? null,
@@ -94,13 +71,11 @@ export function useObservations({
       const source = station.source;
 
       if (source === 'xema-transparencia') {
-        const from = dateRange.from;
-        const to = dateRange.to;
-        const xemaGranularity = granularity === 'daily' ? 'day' : 'hour';
+        const xemaGranularity = granularity === 'daily' ? 'day' : '30min';
         const data = await getObservationsXema({
           stationId: station.id,
-          from,
-          to,
+          from: dateRange.from,
+          to: dateRange.to,
           granularity: xemaGranularity,
         });
         const dataSourceLabel = buildDataSourceLabel(source, stationName);
@@ -115,44 +90,36 @@ export function useObservations({
             agg: xemaGranularity === 'day' ? 'daily' : 'hourly',
             provider: 'xema-transparencia',
           },
-          withLabel
+          withLabel,
         );
         return { data: withLabel, dataSourceLabel };
       }
 
       if (source === 'opendata-bcn') {
-        const from = dateRange.from;
-        const to = dateRange.to;
-
+        const agg: AggregationType = granularity === 'daily' ? 'daily' : 'hourly';
+        const variables: WeatherVariable[] = [
+          'temperature', 'humidity', 'windSpeed', 'windSpeedMax', 'precipitation',
+        ];
         const results = await Promise.all(
           variables.map((variable) =>
-            dataService.getTimeseries(station.id, from, to, variable, agg)
-          )
+            dataService.getTimeseries(station.id, dateRange.from, dateRange.to, variable, agg),
+          ),
         );
-
         const firstError = results.find((r) => r.error);
-        if (firstError?.error) {
-          throw new Error(firstError.error.message);
-        }
-
+        if (firstError?.error) throw new Error(firstError.error.message);
         const firstData = results.find((r) => r.data);
         if (!firstData?.data) {
           return { data: [], dataSourceLabel: buildDataSourceLabel(source, stationName) };
         }
 
-        const pointsByTs = new Map<
-          string,
-          Partial<Record<keyof Observation, number | null>>
-        >();
-        const keyByVariable: Partial<Record<WeatherVariable, keyof Observation>> = {
+        const pointsByTs = new Map<string, Partial<Record<string, number | null>>>();
+        const keyByVariable: Record<string, string> = {
           temperature: 'temperature',
           humidity: 'humidity',
           windSpeed: 'windSpeed',
-          windSpeedMin: 'windSpeedMin',
           windSpeedMax: 'windSpeedMax',
           precipitation: 'precipitation',
         };
-
         for (let i = 0; i < results.length; i++) {
           const res = results[i];
           if (!res.data) continue;
@@ -160,53 +127,36 @@ export function useObservations({
           if (!key) continue;
           for (const p of res.data.points) {
             let row = pointsByTs.get(p.timestamp);
-            if (!row) {
-              row = {};
-              pointsByTs.set(p.timestamp, row);
-            }
-            (row as Record<string, number | null>)[key] = p.value;
+            if (!row) { row = {}; pointsByTs.set(p.timestamp, row); }
+            row[key] = p.value;
           }
         }
 
         const dataSourceLabel = buildDataSourceLabel(source, stationName);
         const data: Observation[] = Array.from(pointsByTs.entries())
-          .sort(
-            (a, b) =>
-              new Date(a[0]).getTime() - new Date(b[0]).getTime()
-          )
+          .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
           .map(([timestamp, row]) => ({
             timestamp,
-            temperature: row.temperature ?? null,
-            humidity: row.humidity ?? null,
-            windSpeed: row.windSpeed ?? null,
-            windSpeedMin: row.windSpeedMin ?? null,
-            windSpeedMax: row.windSpeedMax ?? null,
-            precipitation: row.precipitation ?? null,
+            temperature: (row.temperature as number) ?? null,
+            humidity: (row.humidity as number) ?? null,
+            windSpeed: (row.windSpeed as number) ?? null,
+            windSpeedMax: (row.windSpeedMax as number) ?? null,
+            windDirection: null,
+            precipitation: (row.precipitation as number) ?? null,
             dataSourceLabel,
           }));
-
         logDataDebug(
-          {
-            stationId: station.id,
-            stationSource: source,
-            from: fromStr,
-            to: toStr,
-            granularity,
-            agg,
-            provider: firstData?.provider,
-          },
-          data
+          { stationId: station.id, stationSource: source, from: fromStr, to: toStr, granularity, agg, provider: firstData?.provider },
+          data,
         );
         return { data, dataSourceLabel };
       }
 
+      // Fallback: Supabase/Open-Meteo
+      const agg = granularity === 'daily' ? 'daily' : 'hourly';
       const params = new URLSearchParams({
-        stationId: station.id,
-        from: fromStr,
-        to: toStr,
-        granularity: agg,
+        stationId: station.id, from: fromStr, to: toStr, granularity: agg,
       });
-
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/observations?${params}`,
         {
@@ -214,48 +164,30 @@ export function useObservations({
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             'Content-Type': 'application/json',
           },
-        }
+        },
       );
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error || `Error fetching observations: ${response.status}`
-        );
+        throw new Error(errorData.error || `Error fetching observations: ${response.status}`);
       }
-
       const result: ObservationsResponse = await response.json();
       const list = result.data || [];
-      const dataSourceLabel = `${FALLBACK_LABEL} - Estación: ${stationName}`;
-      const withLabel = list.map((obs) => ({
-        ...obs,
-        dataSourceLabel,
-      }));
-
+      const dsl = `${FALLBACK_LABEL} - Estación: ${stationName}`;
+      const withLabel = list.map((obs) => ({ ...obs, dataSourceLabel: dsl }));
       logDataDebug(
-        {
-          stationId: station.id,
-          stationSource: 'open-meteo',
-          from: fromStr,
-          to: toStr,
-          granularity,
-          agg,
-        },
-        withLabel
+        { stationId: station.id, stationSource: 'open-meteo', from: fromStr, to: toStr, granularity, agg },
+        withLabel,
       );
-      return { data: withLabel, dataSourceLabel };
+      return { data: withLabel, dataSourceLabel: dsl };
     },
     enabled: !!station,
-    staleTime: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 
-  const data = query.data?.data ?? [];
-  const dataSourceLabel = query.data?.dataSourceLabel ?? null;
-
   return {
-    data,
-    dataSourceLabel,
+    data: query.data?.data ?? [],
+    dataSourceLabel: query.data?.dataSourceLabel ?? null,
     isLoading: query.isLoading,
     error: query.error as Error | null,
     refetch: query.refetch,

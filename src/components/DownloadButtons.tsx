@@ -5,19 +5,20 @@ import type { Observation } from '@/types/weather';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
 
 interface DownloadButtonsProps {
-  observations: Observation[];
+  obs30min: Observation[];
+  obsDaily: Observation[];
   stationName: string;
   dataSourceLabel?: string;
   disabled: boolean;
 }
 
-export function DownloadButtons({ observations, stationName, dataSourceLabel, disabled }: DownloadButtonsProps) {
+export function DownloadButtons({ obs30min, obsDaily, stationName, dataSourceLabel, disabled }: DownloadButtonsProps) {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   const handleDownloadExcel = async () => {
     setExportingExcel(true);
     try {
-      await buildAndDownloadExcel(observations, stationName, dataSourceLabel);
+      await buildAndDownloadExcel(obs30min, obsDaily, stationName, dataSourceLabel);
     } finally {
       setExportingExcel(false);
     }
