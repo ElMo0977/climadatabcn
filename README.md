@@ -16,8 +16,7 @@ Aplicación web para visualizar y descargar datos meteorológicos históricos de
 - **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
 - **Backend**: Supabase Edge Functions (Deno)
 - **Fuente de datos**:
-  - **Open Data BCN** – datos abiertos del Ayuntamiento de Barcelona (fuente principal)
-  - **Open-Meteo** – respaldo por coordenadas cuando Open Data BCN no está disponible
+  - **XEMA (Transparència Catalunya / Meteocat-Socrata)** – fuente única
 
 ## Configuración
 
@@ -32,15 +31,12 @@ npm run dev
 
 Copia `.env.example` a `.env` y rellena:
 
-- `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` para Supabase (respaldo Open-Meteo).
-- `VITE_BCN_APP_TOKEN` (opcional) para Open Data BCN si necesitas mayor tasa de peticiones.
-- `VITE_DATA_MODE=mock` para desarrollo con datos de prueba sin API.
-
-Cuando Open Data BCN no está disponible, la app usa **Open-Meteo** (vía Supabase) y muestra el aviso *"Datos de respaldo (Open-Meteo)"* en la interfaz.
+- `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (si usas integración Supabase en otras partes del proyecto).
+- `VITE_DEBUG_DATA=1` (opcional) para diagnóstico en consola.
 
 ## Fuente mostrada en la app
 
-En gráficos y Excel se muestra *"Fuente: Open Data BCN - Estación: [nombre]"* (o *"Datos de respaldo (Open-Meteo) - Estación: [nombre]"* en modo respaldo).
+En gráficos y Excel se muestra *"Fuente: XEMA (Transparència Catalunya) - Estación: [nombre]"*.
 
 ## Formato de datos (referencia)
 
@@ -53,7 +49,7 @@ interface Station {
   longitude: number;
   elevation: number | null;
   distance: number; // km
-  source?: 'opendata-bcn' | 'open-meteo';
+  source?: 'xema-transparencia';
 }
 
 // Observación

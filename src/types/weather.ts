@@ -1,5 +1,5 @@
-/** Origen de los datos: XEMA (principal), Open Data BCN o respaldo (Open-Meteo) */
-export type DataSource = 'xema-transparencia' | 'opendata-bcn' | 'open-meteo';
+/** Origen de los datos: XEMA (única fuente en runtime) */
+export type DataSource = 'xema-transparencia';
 
 export interface Station {
   id: string;
@@ -9,7 +9,7 @@ export interface Station {
   elevation: number | null;
   distance: number; // km from search center
   municipality?: string;
-  /** Fuente de datos; si no está, se considera open-meteo (respaldo) */
+  /** Fuente de datos */
   source?: DataSource;
 }
 

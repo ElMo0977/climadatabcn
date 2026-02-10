@@ -7,7 +7,7 @@ describe('createMockTimeseries', () => {
     const to = new Date('2025-01-07T00:00:00.000Z');
     const result = createMockTimeseries(
       'X2',
-      'opendata-bcn',
+      'xema-transparencia',
       from,
       to,
       'temperature',
@@ -32,7 +32,7 @@ describe('createMockTimeseries', () => {
     const to = new Date('2025-01-01T23:00:00.000Z');
     const result = createMockTimeseries(
       'X2',
-      'opendata-bcn',
+      'xema-transparencia',
       from,
       to,
       'temperature',

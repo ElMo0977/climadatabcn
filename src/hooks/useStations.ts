@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { dataService } from '@/services/dataService';
 import type { Station } from '@/types/weather';
-import type { DataSource } from '@/types/weather';
 import { fetchStationsFromSocrata } from '@/services/providers/xemaTransparencia';
 
 const BARCELONA_LAT = 41.3851;
@@ -40,7 +39,7 @@ export function useStations() {
               elevation: s.elevation ?? null,
               municipality: (s as { municipality?: string }).municipality,
               distance: haversineDistanceKm(BARCELONA_LAT, BARCELONA_LON, s.latitude, s.longitude),
-              source: 'xema-transparencia' as DataSource,
+              source: 'xema-transparencia' as const,
             }))
             .filter((s) => s.distance <= DEFAULT_RADIUS_KM)
             .sort((a, b) => a.distance - b.distance);
@@ -52,8 +51,6 @@ export function useStations() {
       // Fallback: dataService
       const result = await dataService.getStations();
       if (result.data && result.data.length > 0) {
-        const source: DataSource =
-          result.provider === 'xema-transparencia' ? 'xema-transparencia' : 'opendata-bcn';
         return result.data
           .map((s) => ({
             id: s.id,
@@ -62,29 +59,13 @@ export function useStations() {
             longitude: s.longitude,
             elevation: s.elevation ?? null,
             distance: haversineDistanceKm(BARCELONA_LAT, BARCELONA_LON, s.latitude, s.longitude),
-            source,
+            source: 'xema-transparencia' as const,
           }))
           .filter((s) => s.distance <= DEFAULT_RADIUS_KM)
           .sort((a, b) => a.distance - b.distance);
       }
 
-      // Last fallback: Supabase
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stations?lat=${BARCELONA_LAT}&lon=${BARCELONA_LON}&radiusKm=${DEFAULT_RADIUS_KM}`,
-        {
-          headers: {
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Error fetching stations: ${response.status}`);
-      }
-      const supabaseResult = await response.json();
-      const list = supabaseResult.data || [];
-      return list.map((s: Station) => ({ ...s, source: 'open-meteo' as DataSource }));
+      throw new Error('No se pudieron cargar estaciones XEMA.');
     },
     staleTime: 24 * 60 * 60 * 1000, // 24h
     retry: 2,

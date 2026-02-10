@@ -52,8 +52,6 @@ const Index = () => {
     enabled: false,
   });
 
-  const isFallbackSource = dataSourceLabel != null && dataSourceLabel.includes('Open-Meteo');
-
   const stats = useMemo(() => {
     if (observations.length === 0) return null;
     return calculateStats(observations);
@@ -136,17 +134,6 @@ const Index = () => {
                 disabled={!selectedStation || observations.length === 0}
               />
             </div>
-
-            {isFallbackSource && observations.length > 0 && (
-              <div className="glass-card rounded-xl p-4 border-amber-500/50 bg-amber-500/10">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                  Datos de respaldo (Open-Meteo)
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Open Data BCN no está disponible. Se muestran datos de respaldo (Open-Meteo) por coordenadas.
-                </p>
-              </div>
-            )}
 
             {observationsError && (
               <div className="glass-card rounded-xl p-4 border-destructive/50 bg-destructive/5">

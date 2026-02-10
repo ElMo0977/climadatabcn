@@ -4,7 +4,7 @@ import { getObservationsQueryKey } from './useObservations';
 describe('getObservationsQueryKey', () => {
   const base = {
     stationId: 'bcn-gracia',
-    stationSource: 'opendata-bcn' as const,
+    stationSource: 'xema-transparencia' as const,
     fromStr: '2024-02-01',
     toStr: '2024-02-07',
   };

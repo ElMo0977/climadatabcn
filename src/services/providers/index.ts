@@ -1,6 +1,4 @@
 /**
- * Provider adapters index – Open Data BCN
+ * Provider adapters index – XEMA utilities
  */
-
-export { openDataBcnProvider } from './openDataBcn';
 export * from './mockData';

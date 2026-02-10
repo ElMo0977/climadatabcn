@@ -11,13 +11,13 @@ import type {
   DataProvider 
 } from '@/domain/types';
 
-// ============ Mock Stations (Open Data BCN) ============
+// ============ Mock Stations (XEMA) ============
 
-export const mockStationsOpenDataBcn: Station[] = [
+export const mockStationsXema: Station[] = [
   {
     id: 'bcn-raval',
     name: 'El Raval',
-    provider: 'opendata-bcn',
+    provider: 'xema-transparencia',
     latitude: 41.3797,
     longitude: 2.1682,
     elevation: 33,
@@ -26,7 +26,7 @@ export const mockStationsOpenDataBcn: Station[] = [
   {
     id: 'bcn-gracia',
     name: 'Gràcia',
-    provider: 'opendata-bcn',
+    provider: 'xema-transparencia',
     latitude: 41.4036,
     longitude: 2.1532,
     elevation: 120,
@@ -35,7 +35,7 @@ export const mockStationsOpenDataBcn: Station[] = [
   {
     id: 'bcn-eixample',
     name: 'Eixample',
-    provider: 'opendata-bcn',
+    provider: 'xema-transparencia',
     latitude: 41.3930,
     longitude: 2.1620,
     elevation: 25,

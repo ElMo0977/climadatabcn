@@ -6,8 +6,6 @@
 import type { DataMode, DataProvider } from '@/domain/types';
 
 interface EnvConfig {
-  /** Open Data BCN app token - optional for most endpoints */
-  bcnAppToken: string | null;
   /** Data mode: 'live' for real API calls, 'mock' for development data */
   dataMode: DataMode;
   /** Base URL for API proxy (to avoid CORS / hide keys) */
@@ -27,7 +25,6 @@ function getEnvVar(key: string): string | null {
 }
 
 export const env: EnvConfig = {
-  bcnAppToken: getEnvVar('VITE_BCN_APP_TOKEN'),
   dataMode: (getEnvVar('VITE_DATA_MODE') as DataMode) || 'live',
   apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
   supabaseUrl: getEnvVar('VITE_SUPABASE_URL') || '',
@@ -35,10 +32,10 @@ export const env: EnvConfig = {
 };
 
 /**
- * Check if the data provider (Open Data BCN) is configured
+ * Check if provider configuration is valid
  */
 export function isProviderConfigured(_provider: DataProvider): boolean {
-  return true; // Open Data BCN works without token for most queries
+  return true;
 }
 
 /**

@@ -16,11 +16,11 @@
 
 | Archivo | Cambio |
 |--------|--------|
-| `src/types/weather.ts` | `DataSource` = `'xema-transparencia' \| 'opendata-bcn' \| 'open-meteo'`. |
-| `src/domain/types.ts` | `DataProvider` = `'xema-transparencia' \| 'opendata-bcn'`. |
+| `src/types/weather.ts` | `DataSource` = `'xema-transparencia'`. |
+| `src/domain/types.ts` | `DataProvider` = `'xema-transparencia'`. |
 | `src/config/sources.ts` | `SOURCE_LABELS['xema-transparencia'] = 'XEMA (Transparència Catalunya)'`. |
-| `src/services/dataService.ts` | `getStations()` prueba primero XEMA (`listStationsXema()`), luego Open Data BCN. Devuelve `provider: 'xema-transparencia'` o `'opendata-bcn'`. |
-| `src/hooks/useStations.ts` | Mapea `result.provider` a `source` (xema-transparencia u opendata-bcn). Comentario actualizado. |
+| `src/services/dataService.ts` | `getStations()` usa solo XEMA (`listStationsXema()`). |
+| `src/hooks/useStations.ts` | Devuelve estaciones con `source: 'xema-transparencia'`. |
 | `src/hooks/useObservations.ts` | Si `source === 'xema-transparencia'` llama `getObservationsXema({ stationId, from, to, granularity: 'hour' \| 'day' })`, asigna `dataSourceLabel` y `logDataDebug`. |
 | (ninguno en env) | XEMA no requiere API key; no cambios en `env.ts`. |
 
