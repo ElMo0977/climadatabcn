@@ -15,6 +15,7 @@ import { computeDailyCoverage } from '@/lib/dailyCoverage';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isXemaDebugEnabled } from '@/config/env';
 
 const Index = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
@@ -77,7 +78,7 @@ const Index = () => {
   }, [dailyCoverage]);
 
   useEffect(() => {
-    if (!import.meta.env.DEV || import.meta.env.MODE === 'test' || granularity !== 'daily' || !selectedStation) return;
+    if (!isXemaDebugEnabled() || granularity !== 'daily' || !selectedStation) return;
     console.debug('[Index daily] observations diagnostics', {
       granularity,
       stationId: selectedStation.id,

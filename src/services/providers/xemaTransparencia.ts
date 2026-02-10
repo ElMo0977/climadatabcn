@@ -7,6 +7,7 @@
 
 import type { Observation } from '@/types/weather';
 import { fetchSocrata } from '@/services/http/socrata';
+import { isXemaDebugEnabled } from '@/config/env';
 import { SUBDAILY_CODES, DAILY_CODES } from './xemaVariableMap';
 
 const RESOURCE_SUBDAILY = 'nzvn-apee';
@@ -326,7 +327,7 @@ async function fetchDailyObservations(
   const mapped = mapDailyRowsToObservations(rows);
   const final = filterDailyObservationsByRange(mapped, bounds);
 
-  if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+  if (isXemaDebugEnabled()) {
     const mappedUniqueDays = Array.from(new Set(mapped.map((o) => o.timestamp.slice(0, 10)))).sort();
     const finalUniqueDays = Array.from(new Set(final.map((o) => o.timestamp.slice(0, 10)))).sort();
     console.debug('[XEMA daily] fetch diagnostics', {
@@ -352,7 +353,7 @@ async function fetchDailyObservations(
  */
 export function mapDailyRowsToObservations(rows: DailyRow[]): Observation[] {
   // Inspect first row to detect field names
-  if (import.meta.env.DEV && import.meta.env.MODE !== 'test' && rows.length > 0) {
+  if (isXemaDebugEnabled() && rows.length > 0) {
     console.debug('[XEMA daily] sample row fields:', Object.keys(rows[0]), rows[0]);
   }
 

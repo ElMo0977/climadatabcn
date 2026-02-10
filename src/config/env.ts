@@ -14,6 +14,8 @@ interface EnvConfig {
   supabaseUrl: string;
   /** Supabase publishable key */
   supabaseKey: string;
+  /** Enable verbose XEMA diagnostics in development only */
+  xemaDebug: boolean;
 }
 
 function getEnvVar(key: string): string | null {
@@ -29,7 +31,16 @@ export const env: EnvConfig = {
   apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
   supabaseUrl: getEnvVar('VITE_SUPABASE_URL') || '',
   supabaseKey: getEnvVar('VITE_SUPABASE_PUBLISHABLE_KEY') || '',
+  xemaDebug: getEnvVar('VITE_DEBUG_XEMA') === 'true',
 };
+
+/**
+ * XEMA debug logs are opt-in and only available in development.
+ * Enable with: VITE_DEBUG_XEMA=true
+ */
+export function isXemaDebugEnabled(): boolean {
+  return import.meta.env.DEV && env.xemaDebug;
+}
 
 /**
  * Check if provider configuration is valid
