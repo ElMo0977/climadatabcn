@@ -10,8 +10,10 @@ import { DownloadButtons } from '@/components/DownloadButtons';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
 import { calculateStats } from '@/lib/weatherUtils';
+import { buildAndDownloadExcel } from '@/lib/exportExcel';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
@@ -39,11 +41,16 @@ const Index = () => {
     isFetching: observationsFetching,
   } = useObservations({ station: selectedStation, dateRange, granularity });
 
-  // Also fetch the other granularity for Excel export (both sheets)
+  // Secondary dataset for export only (lazy).
   const otherGranularity: Granularity = granularity === '30min' ? 'daily' : '30min';
   const {
-    data: otherObservations = [],
-  } = useObservations({ station: selectedStation, dateRange, granularity: otherGranularity });
+    refetch: refetchOtherObservations,
+  } = useObservations({
+    station: selectedStation,
+    dateRange,
+    granularity: otherGranularity,
+    enabled: false,
+  });
 
   const isFallbackSource = dataSourceLabel != null && dataSourceLabel.includes('Open-Meteo');
 
@@ -57,11 +64,48 @@ const Index = () => {
     if (selectedStation) refetchObservations();
   };
 
-  const isRefreshing = stationsFetching || observationsFetching;
+  const handleExportExcel = async () => {
+    if (!selectedStation) {
+      toast.error('Selecciona una estación antes de exportar.');
+      return;
+    }
 
-  // For Excel: provide both 30min and daily data
-  const obs30min = granularity === '30min' ? observations : otherObservations;
-  const obsDaily = granularity === 'daily' ? observations : otherObservations;
+    try {
+      const currentDataPromise = observationsLoading || observationsFetching
+        ? refetchObservations().then((result) => {
+            if (result.error) throw result.error;
+            return result.data?.data ?? [];
+          })
+        : Promise.resolve(observations);
+
+      const otherDataPromise = refetchOtherObservations().then((result) => {
+        if (result.error) throw result.error;
+        return result.data?.data ?? [];
+      });
+
+      const [currentData, otherData] = await Promise.all([currentDataPromise, otherDataPromise]);
+      const obs30min = granularity === '30min' ? currentData : otherData;
+      const obsDaily = granularity === 'daily' ? currentData : otherData;
+
+      if (obs30min.length === 0 || obsDaily.length === 0) {
+        throw new Error('No hay datos suficientes para generar las hojas de detalle y diario.');
+      }
+
+      await buildAndDownloadExcel(
+        obs30min,
+        obsDaily,
+        selectedStation.name || 'data',
+        dataSourceLabel ?? undefined,
+      );
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Error inesperado preparando la exportación.';
+      toast.error(`No se pudo exportar el Excel: ${message}`);
+    }
+  };
+
+  const isRefreshing = stationsFetching || observationsFetching;
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,11 +132,8 @@ const Index = () => {
                 onGranularityChange={setGranularity}
               />
               <DownloadButtons
-                obs30min={obs30min}
-                obsDaily={obsDaily}
-                stationName={selectedStation?.name || 'data'}
-                dataSourceLabel={dataSourceLabel ?? undefined}
-                disabled={observations.length === 0}
+                onDownloadExcel={handleExportExcel}
+                disabled={!selectedStation || observations.length === 0}
               />
             </div>
 

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type QueryObserverResult } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { dataService } from '@/services/dataService';
 import type { Observation, Granularity, DateRange, Station } from '@/types/weather';
@@ -16,6 +16,12 @@ interface UseObservationsParams {
   station: Station | null;
   dateRange: DateRange;
   granularity: Granularity;
+  enabled?: boolean;
+}
+
+export interface ObservationsQueryData {
+  data: Observation[];
+  dataSourceLabel: string;
 }
 
 export interface UseObservationsResult {
@@ -23,7 +29,7 @@ export interface UseObservationsResult {
   dataSourceLabel: string | null;
   isLoading: boolean;
   error: Error | null;
-  refetch: () => void;
+  refetch: () => Promise<QueryObserverResult<ObservationsQueryData, Error>>;
   isFetching: boolean;
 }
 
@@ -48,6 +54,7 @@ export function useObservations({
   station,
   dateRange,
   granularity,
+  enabled = true,
 }: UseObservationsParams): UseObservationsResult {
   const fromStr = format(dateRange.from, 'yyyy-MM-dd');
   const toStr = format(dateRange.to, 'yyyy-MM-dd');
@@ -62,7 +69,7 @@ export function useObservations({
 
   const query = useQuery({
     queryKey,
-    queryFn: async (): Promise<{ data: Observation[]; dataSourceLabel: string }> => {
+    queryFn: async (): Promise<ObservationsQueryData> => {
       if (!station) {
         return { data: [], dataSourceLabel: '' };
       }
@@ -180,7 +187,7 @@ export function useObservations({
       );
       return { data: withLabel, dataSourceLabel: dsl };
     },
-    enabled: !!station,
+    enabled: enabled && !!station,
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });

@@ -1,24 +1,19 @@
 import { useState } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { Observation } from '@/types/weather';
-import { buildAndDownloadExcel } from '@/lib/exportExcel';
 
 interface DownloadButtonsProps {
-  obs30min: Observation[];
-  obsDaily: Observation[];
-  stationName: string;
-  dataSourceLabel?: string;
+  onDownloadExcel: () => Promise<void>;
   disabled: boolean;
 }
 
-export function DownloadButtons({ obs30min, obsDaily, stationName, dataSourceLabel, disabled }: DownloadButtonsProps) {
+export function DownloadButtons({ onDownloadExcel, disabled }: DownloadButtonsProps) {
   const [exportingExcel, setExportingExcel] = useState(false);
 
   const handleDownloadExcel = async () => {
     setExportingExcel(true);
     try {
-      await buildAndDownloadExcel(obs30min, obsDaily, stationName, dataSourceLabel);
+      await onDownloadExcel();
     } finally {
       setExportingExcel(false);
     }
@@ -38,7 +33,7 @@ export function DownloadButtons({ obs30min, obsDaily, stationName, dataSourceLab
         ) : (
           <FileDown className="h-4 w-4" />
         )}
-        Excel
+        {exportingExcel ? 'Exportando...' : 'Excel'}
       </Button>
     </div>
   );
