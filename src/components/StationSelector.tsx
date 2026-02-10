@@ -3,9 +3,13 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Station } from '@/types/weather';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { StationMap } from './StationMap';
+
+const LazyStationMap = lazy(async () => {
+  const mod = await import('./StationMap');
+  return { default: mod.StationMap };
+});
 
 interface StationSelectorProps {
   stations: Station[];
@@ -23,6 +27,7 @@ export function StationSelector({
   error,
 }: StationSelectorProps) {
   const [search, setSearch] = useState('');
+  const canRenderMap = typeof window !== 'undefined';
 
   const filteredStations = stations.filter(station =>
     station.name.toLowerCase().includes(search.toLowerCase())
@@ -34,13 +39,21 @@ export function StationSelector({
         <h2 className="font-display text-lg font-semibold mb-3">Estaciones</h2>
         
         {/* Map */}
-        {!isLoading && !error && stations.length > 0 && (
+        {canRenderMap && !isLoading && !error && stations.length > 0 && (
           <div className="mb-3">
-            <StationMap
-              stations={stations}
-              selectedStation={selectedStation}
-              onSelectStation={onSelectStation}
-            />
+            <Suspense
+              fallback={
+                <div className="h-48 rounded-lg overflow-hidden border border-border">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              }
+            >
+              <LazyStationMap
+                stations={stations}
+                selectedStation={selectedStation}
+                onSelectStation={onSelectStation}
+              />
+            </Suspense>
           </div>
         )}
 

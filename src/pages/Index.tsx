@@ -10,7 +10,6 @@ import { DownloadButtons } from '@/components/DownloadButtons';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
 import { calculateStats } from '@/lib/weatherUtils';
-import { buildAndDownloadExcel } from '@/lib/exportExcel';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -88,6 +87,8 @@ const Index = () => {
       if (obs30min.length === 0 || obsDaily.length === 0) {
         throw new Error('No hay datos suficientes para generar las hojas de detalle y diario.');
       }
+
+      const { buildAndDownloadExcel } = await import('@/lib/exportExcel');
 
       await buildAndDownloadExcel(
         obs30min,
