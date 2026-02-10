@@ -1,6 +1,5 @@
-/// <reference types="vitest" />
 import { describe, it, expect } from 'vitest';
-import { aggregateWindByBucket, buildDailySummary } from './weatherUtils';
+import { aggregateWindByBucket, buildDailySummary, calculateStats } from './weatherUtils';
 import type { Observation } from '@/types/weather';
 
 const makeObs = (timestamp: string, windSpeed: number | null): Observation => ({
@@ -81,5 +80,60 @@ describe('buildDailySummary', () => {
     expect(result[0].tempAvg).not.toBeNull();
     expect(result[0].humidityAvg).not.toBeNull();
     expect(result[0].precipSum).toBe(1);
+  });
+});
+
+describe('calculateStats', () => {
+  const makeObservation = (overrides: Partial<Observation>): Observation => ({
+    timestamp: '2024-01-01T00:00:00Z',
+    temperature: null,
+    humidity: null,
+    windSpeed: null,
+    windSpeedMax: null,
+    windDirection: null,
+    precipitation: null,
+    ...overrides,
+  });
+
+  it('keeps total precipitation equal to 0 (not null)', () => {
+    const stats = calculateStats([makeObservation({ precipitation: 0 })]);
+    expect(stats.totalPrecipitation).toBe(0);
+  });
+
+  it('keeps average wind speed equal to 0 (not null)', () => {
+    const stats = calculateStats([makeObservation({ windSpeed: 0 })]);
+    expect(stats.avgWindSpeed).toBe(0);
+  });
+
+  it('keeps average temperature equal to 0 (not null)', () => {
+    const stats = calculateStats([
+      makeObservation({ temperature: -1 }),
+      makeObservation({ temperature: 1 }),
+    ]);
+    expect(stats.avgTemperature).toBe(0);
+  });
+
+  it('maps NaN and undefined values to null', () => {
+    const withNaN = makeObservation({
+      temperature: Number.NaN,
+      humidity: Number.NaN,
+      windSpeed: Number.NaN,
+      windSpeedMax: Number.NaN,
+      precipitation: Number.NaN,
+    });
+    const withUndefined = makeObservation({
+      temperature: undefined as unknown as number | null,
+      humidity: undefined as unknown as number | null,
+      windSpeed: undefined as unknown as number | null,
+      windSpeedMax: undefined as unknown as number | null,
+      precipitation: undefined as unknown as number | null,
+    });
+
+    const stats = calculateStats([withNaN, withUndefined]);
+    expect(stats.avgTemperature).toBeNull();
+    expect(stats.avgHumidity).toBeNull();
+    expect(stats.avgWindSpeed).toBeNull();
+    expect(stats.maxWindSpeed).toBeNull();
+    expect(stats.totalPrecipitation).toBeNull();
   });
 });

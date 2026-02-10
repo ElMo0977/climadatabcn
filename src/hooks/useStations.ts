@@ -38,7 +38,7 @@ export function useStations() {
               latitude: s.latitude,
               longitude: s.longitude,
               elevation: s.elevation ?? null,
-              municipality: ('municipality' in s) ? (s as any).municipality : undefined,
+              municipality: (s as { municipality?: string }).municipality,
               distance: haversineDistanceKm(BARCELONA_LAT, BARCELONA_LON, s.latitude, s.longitude),
               source: 'xema-transparencia' as DataSource,
             }))

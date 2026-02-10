@@ -8,42 +8,59 @@ interface WeatherKPIsProps {
   isLoading: boolean;
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export function WeatherKPIs({ stats, isLoading }: WeatherKPIsProps) {
+  const avgTemperature = stats?.avgTemperature;
+  const avgHumidity = stats?.avgHumidity;
+  const avgWindSpeed = stats?.avgWindSpeed;
+  const maxWindSpeed = stats?.maxWindSpeed;
+  const totalPrecipitation = stats?.totalPrecipitation;
+  const dataPoints =
+    typeof stats?.dataPoints === 'number' && Number.isFinite(stats.dataPoints)
+      ? stats.dataPoints
+      : 0;
+
+  const windValue = isFiniteNumber(avgWindSpeed) && isFiniteNumber(maxWindSpeed)
+    ? `${avgWindSpeed} / ${maxWindSpeed} m/s`
+    : isFiniteNumber(avgWindSpeed)
+      ? `${avgWindSpeed} m/s`
+      : '—';
+
   const kpis = [
     {
       label: 'Temperatura media',
-      value: stats?.avgTemperature !== null ? `${stats?.avgTemperature}°C` : '—',
+      value: isFiniteNumber(avgTemperature) ? `${avgTemperature}°C` : '—',
       icon: Thermometer,
       colorClass: 'text-temperature',
       bgClass: 'bg-temperature/10',
     },
     {
       label: 'Humedad media',
-      value: stats?.avgHumidity !== null ? `${stats?.avgHumidity}%` : '—',
+      value: isFiniteNumber(avgHumidity) ? `${avgHumidity}%` : '—',
       icon: Droplets,
       colorClass: 'text-humidity',
       bgClass: 'bg-humidity/10',
     },
     {
       label: 'Viento media / racha',
-      value: stats?.avgWindSpeed !== null && stats?.maxWindSpeed !== null 
-        ? `${stats?.avgWindSpeed} / ${stats?.maxWindSpeed} m/s` 
-        : stats?.avgWindSpeed !== null ? `${stats?.avgWindSpeed} m/s`
-        : '—',
+      value: windValue,
       icon: Wind,
       colorClass: 'text-wind',
       bgClass: 'bg-wind/10',
     },
     {
       label: 'Precipitación total',
-      value: stats?.totalPrecipitation !== null ? `${stats?.totalPrecipitation} mm` : '—',
+      value: isFiniteNumber(totalPrecipitation) ? `${totalPrecipitation} mm` : '—',
       icon: CloudRain,
       colorClass: 'text-primary',
       bgClass: 'bg-primary/10',
     },
     {
       label: 'Datos',
-      value: stats?.dataPoints ?? 0,
+      value: dataPoints,
       icon: BarChart3,
       colorClass: 'text-muted-foreground',
       bgClass: 'bg-muted/50',

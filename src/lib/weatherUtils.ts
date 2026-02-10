@@ -68,22 +68,41 @@ export function aggregateWindByBucket(
 }
 
 export function calculateStats(observations: Observation[]): WeatherStats {
-  const validTemps = observations.filter(o => o.temperature !== null).map(o => o.temperature!);
-  const validHumidity = observations.filter(o => o.humidity !== null).map(o => o.humidity!);
-  const validWind = observations.filter(o => o.windSpeed !== null).map(o => o.windSpeed!);
-  const validWindMax = observations.filter(o => o.windSpeedMax !== null).map(o => o.windSpeedMax!);
-  const validPrecip = observations.filter(o => o.precipitation !== null).map(o => o.precipitation!);
+  const toFiniteNumbers = (values: Array<number | null | undefined>): number[] =>
+    values.filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
 
-  const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
-  const max = (arr: number[]) => arr.length > 0 ? Math.max(...arr) : null;
-  const sum = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) : null;
+  const avg = (arr: number[]): number | null =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  const max = (arr: number[]): number | null =>
+    arr.length > 0 ? Math.max(...arr) : null;
+  const sum = (arr: number[]): number | null =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) : null;
+
+  const roundTo = (value: number | null, decimals: number): number | null => {
+    if (value == null || !Number.isFinite(value)) return null;
+    const factor = 10 ** decimals;
+    return Math.round(value * factor) / factor;
+  };
+
+  const roundInt = (value: number | null): number | null => {
+    if (value == null || !Number.isFinite(value)) return null;
+    return Math.round(value);
+  };
+
+  const validTemps = toFiniteNumbers(observations.map((o) => o.temperature));
+  const validHumidity = toFiniteNumbers(observations.map((o) => o.humidity));
+  const validWind = toFiniteNumbers(observations.map((o) => o.windSpeed));
+  const validWindMax = toFiniteNumbers(observations.map((o) => o.windSpeedMax));
+  const validPrecip = toFiniteNumbers(observations.map((o) => o.precipitation));
+
+  const maxWind = max(validWindMax) ?? max(validWind);
 
   return {
-    avgTemperature: avg(validTemps) ? Math.round(avg(validTemps)! * 10) / 10 : null,
-    avgHumidity: avg(validHumidity) ? Math.round(avg(validHumidity)!) : null,
-    avgWindSpeed: avg(validWind) ? Math.round(avg(validWind)! * 10) / 10 : null,
-    maxWindSpeed: max(validWindMax) ?? max(validWind) ? Math.round((max(validWindMax) ?? max(validWind))! * 10) / 10 : null,
-    totalPrecipitation: sum(validPrecip) ? Math.round(sum(validPrecip)! * 10) / 10 : null,
+    avgTemperature: roundTo(avg(validTemps), 1),
+    avgHumidity: roundInt(avg(validHumidity)),
+    avgWindSpeed: roundTo(avg(validWind), 1),
+    maxWindSpeed: roundTo(maxWind, 1),
+    totalPrecipitation: roundTo(sum(validPrecip), 1),
     dataPoints: observations.length,
   };
 }
