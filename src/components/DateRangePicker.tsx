@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { DateRange, Granularity } from '@/types/weather';
 import { cn } from '@/lib/utils';
-import { QUICK_RANGE_PRESETS, buildQuickRangeExcludingToday } from '@/lib/quickDateRanges';
+import { QUICK_RANGE_PRESETS, buildQuickRangeExcludingToday, getActiveQuickRangeKey } from '@/lib/quickDateRanges';
 
 interface DateRangePickerProps {
   dateRange: DateRange;
@@ -22,8 +22,16 @@ export function DateRangePicker({
   granularity,
   onGranularityChange,
 }: DateRangePickerProps) {
+  const activePreset = getActiveQuickRangeKey(dateRange);
+
   const applyPreset = (days: number) => {
     onDateRangeChange(buildQuickRangeExcludingToday(days));
+  };
+
+  const applyPresetByKey = (key: string) => {
+    const preset = QUICK_RANGE_PRESETS.find((p) => p.key === key);
+    if (!preset) return;
+    applyPreset(preset.days);
   };
 
   const daysDiff = Math.floor(
@@ -35,19 +43,15 @@ export function DateRangePicker({
     <div className="glass-card rounded-xl p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-display font-semibold text-sm">Rango de fechas</h3>
-        <div className="flex gap-1">
-          {QUICK_RANGE_PRESETS.map(preset => (
-            <Button
-              key={preset.days}
-              variant="ghost"
-              size="sm"
-              className="text-xs h-7 px-2"
-              onClick={() => applyPreset(preset.days)}
-            >
-              {preset.label}
-            </Button>
-          ))}
-        </div>
+        <Tabs value={activePreset ?? '__custom__'} onValueChange={applyPresetByKey}>
+          <TabsList className="h-8">
+            {QUICK_RANGE_PRESETS.map((preset) => (
+              <TabsTrigger key={preset.key} value={preset.key} className="text-xs px-3 h-6">
+                {preset.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="flex gap-2">
