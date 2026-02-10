@@ -1,5 +1,5 @@
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { endOfDay, format, startOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { DateRange, Granularity } from '@/types/weather';
 import { cn } from '@/lib/utils';
+
+const QUICK_RANGE_PRESETS = [
+  { label: '7 días', days: 7 },
+  { label: '14 días', days: 14 },
+  { label: '30 días', days: 30 },
+] as const;
 
 interface DateRangePickerProps {
   dateRange: DateRange;
@@ -21,25 +27,16 @@ export function DateRangePicker({
   granularity,
   onGranularityChange,
 }: DateRangePickerProps) {
-  const presets = granularity === '30min'
-    ? [
-        { label: '2 días', days: 2 },
-        { label: '7 días', days: 7 },
-        { label: '14 días', days: 14 },
-      ]
-    : [
-        { label: '30 días', days: 30 },
-        { label: '60 días', days: 60 },
-        { label: '90 días', days: 90 },
-      ];
-
   const applyPreset = (days: number) => {
-    const to = new Date();
-    const from = subDays(to, days - 1);
+    const today = startOfDay(new Date());
+    const to = endOfDay(subDays(today, 1));
+    const from = startOfDay(subDays(today, days));
     onDateRangeChange({ from, to });
   };
 
-  const daysDiff = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const daysDiff = Math.floor(
+    (startOfDay(dateRange.to).getTime() - startOfDay(dateRange.from).getTime()) / (1000 * 60 * 60 * 24),
+  ) + 1;
   const show30minWarning = granularity === '30min' && daysDiff > 31;
 
   return (
@@ -47,7 +44,7 @@ export function DateRangePicker({
       <div className="flex items-center justify-between">
         <h3 className="font-display font-semibold text-sm">Rango de fechas</h3>
         <div className="flex gap-1">
-          {presets.map(preset => (
+          {QUICK_RANGE_PRESETS.map(preset => (
             <Button
               key={preset.days}
               variant="ghost"
@@ -118,7 +115,7 @@ export function DateRangePicker({
         </div>
         <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as Granularity)}>
           <TabsList className="h-8">
-            <TabsTrigger value="30min" className="text-xs px-3 h-6">Detalle (30 min)</TabsTrigger>
+            <TabsTrigger value="30min" className="text-xs px-3 h-6">Por horas</TabsTrigger>
             <TabsTrigger value="daily" className="text-xs px-3 h-6">Diario</TabsTrigger>
           </TabsList>
         </Tabs>

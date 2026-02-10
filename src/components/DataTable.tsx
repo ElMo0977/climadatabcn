@@ -55,7 +55,7 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
     <div className="glass-card rounded-xl overflow-hidden animate-fade-in">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h4 className="font-display font-semibold text-sm">
-          {isDetail ? 'Datos detallados (30 min)' : 'Resumen diario'}
+          {isDetail ? 'Datos por horas' : 'Resumen diario'}
         </h4>
         <span className="text-xs text-muted-foreground">
           {observations.length} {isDetail ? 'registros' : 'días'}
@@ -69,22 +69,22 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
               {isDetail ? (
                 <>
                   <TableHead className="font-semibold">Fecha/Hora</TableHead>
-                  <TableHead className="font-semibold text-right">T (°C)</TableHead>
-                  <TableHead className="font-semibold text-right">HR (%)</TableHead>
-                  <TableHead className="font-semibold text-right">VV10 (m/s)</TableHead>
-                  <TableHead className="font-semibold text-right">DV10 (°)</TableHead>
-                  <TableHead className="font-semibold text-right">VVx10 (m/s)</TableHead>
-                  <TableHead className="font-semibold text-right">PPT (mm)</TableHead>
+                  <TableHead className="font-semibold text-right">Temperatura (°C)</TableHead>
+                  <TableHead className="font-semibold text-right">Humedad relativa (%)</TableHead>
+                  <TableHead className="font-semibold text-right">Viento medio 10 m (m/s)</TableHead>
+                  <TableHead className="font-semibold text-right">Dirección del viento 10 m (°)</TableHead>
+                  <TableHead className="font-semibold text-right">Racha máxima 10 m (m/s)</TableHead>
+                  <TableHead className="font-semibold text-right">Precipitación (mm)</TableHead>
                 </>
               ) : (
                 <>
                   <TableHead className="font-semibold">Fecha</TableHead>
-                  <TableHead className="font-semibold text-right">TM (°C)</TableHead>
-                  <TableHead className="font-semibold text-right">HRM (%)</TableHead>
-                  <TableHead className="font-semibold text-right">VVM10 (m/s)</TableHead>
-                  <TableHead className="font-semibold text-right">VVX10 (m/s)</TableHead>
-                  <TableHead className="font-semibold text-right">Hora racha</TableHead>
-                  <TableHead className="font-semibold text-right">PPT (mm)</TableHead>
+                  <TableHead className="font-semibold text-right">Temperatura media (°C)</TableHead>
+                  <TableHead className="font-semibold text-right">Humedad relativa media (%)</TableHead>
+                  <TableHead className="font-semibold text-right">Viento medio 10 m (m/s)</TableHead>
+                  <TableHead className="font-semibold text-right">Racha máxima 10 m (m/s)</TableHead>
+                  <TableHead className="font-semibold text-right">Hora de racha máxima</TableHead>
+                  <TableHead className="font-semibold text-right">Precipitación (mm)</TableHead>
                 </>
               )}
             </TableRow>
