@@ -27,8 +27,7 @@ export interface ObservationValues {
   temperature?: number | null; // °C
   humidity?: number | null; // %
   windSpeed?: number | null; // m/s
-  windSpeedMin?: number | null; // m/s
-  windSpeedMax?: number | null; // m/s
+  windSpeedMax?: number | null; // m/s (gust)
   windDirection?: number | null; // degrees
   precipitation?: number | null; // mm
   pressure?: number | null; // hPa
@@ -47,7 +46,6 @@ export type WeatherVariable =
   | 'temperature'
   | 'humidity'
   | 'windSpeed'
-  | 'windSpeedMin'
   | 'windSpeedMax'
   | 'windDirection'
   | 'precipitation'

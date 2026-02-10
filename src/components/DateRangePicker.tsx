@@ -21,11 +21,17 @@ export function DateRangePicker({
   granularity,
   onGranularityChange,
 }: DateRangePickerProps) {
-  const presets = [
-    { label: '7 días', days: 7 },
-    { label: '14 días', days: 14 },
-    { label: '30 días', days: 30 },
-  ];
+  const presets = granularity === '30min'
+    ? [
+        { label: '2 días', days: 2 },
+        { label: '7 días', days: 7 },
+        { label: '14 días', days: 14 },
+      ]
+    : [
+        { label: '30 días', days: 30 },
+        { label: '60 días', days: 60 },
+        { label: '90 días', days: 90 },
+      ];
 
   const applyPreset = (days: number) => {
     const to = new Date();
@@ -33,9 +39,8 @@ export function DateRangePicker({
     onDateRangeChange({ from, to });
   };
 
-  // Calculate days in range
   const daysDiff = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const showHourlyWarning = granularity === 'hourly' && daysDiff > 31;
+  const show30minWarning = granularity === '30min' && daysDiff > 31;
 
   return (
     <div className="glass-card rounded-xl p-4 space-y-4">
@@ -109,19 +114,19 @@ export function DateRangePicker({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
-          <span>Granularidad</span>
+          <span>Vista</span>
         </div>
         <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as Granularity)}>
           <TabsList className="h-8">
+            <TabsTrigger value="30min" className="text-xs px-3 h-6">Detalle (30 min)</TabsTrigger>
             <TabsTrigger value="daily" className="text-xs px-3 h-6">Diario</TabsTrigger>
-            <TabsTrigger value="hourly" className="text-xs px-3 h-6">Horario</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {showHourlyWarning && (
+      {show30minWarning && (
         <p className="text-xs text-destructive">
-          Máximo 31 días para datos horarios. Reduce el rango.
+          Máximo 31 días para datos de detalle. Reduce el rango.
         </p>
       )}
     </div>

@@ -12,15 +12,15 @@ describe('getObservationsQueryKey', () => {
 
   it('includes granularity in the key', () => {
     const keyDaily = getObservationsQueryKey({ ...base, granularity: 'daily' });
-    const keyHourly = getObservationsQueryKey({ ...base, granularity: 'hourly' });
+    const key30min = getObservationsQueryKey({ ...base, granularity: '30min' });
     expect(keyDaily[5]).toBe('daily');
-    expect(keyHourly[5]).toBe('hourly');
+    expect(key30min[5]).toBe('30min');
   });
 
   it('different granularity produces different queryKey (triggers refetch)', () => {
     const keyDaily = getObservationsQueryKey({ ...base, granularity: 'daily' });
-    const keyHourly = getObservationsQueryKey({ ...base, granularity: 'hourly' });
-    expect(keyDaily).not.toEqual(keyHourly);
+    const key30min = getObservationsQueryKey({ ...base, granularity: '30min' });
+    expect(keyDaily).not.toEqual(key30min);
   });
 
   it('same params produce same key', () => {

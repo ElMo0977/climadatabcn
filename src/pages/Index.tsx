@@ -19,7 +19,7 @@ const Index = () => {
     from: subDays(new Date(), 6),
     to: new Date(),
   });
-  const [granularity, setGranularity] = useState<Granularity>('daily');
+  const [granularity, setGranularity] = useState<Granularity>('30min');
 
   const { 
     data: stations = [], 
@@ -29,6 +29,7 @@ const Index = () => {
     isFetching: stationsFetching,
   } = useStations();
 
+  // Current view data
   const {
     data: observations = [],
     dataSourceLabel,
@@ -36,13 +37,15 @@ const Index = () => {
     error: observationsError,
     refetch: refetchObservations,
     isFetching: observationsFetching,
-  } = useObservations({
-    station: selectedStation,
-    dateRange,
-    granularity,
-  });
-  const isFallbackSource =
-    dataSourceLabel != null && dataSourceLabel.includes('Open-Meteo');
+  } = useObservations({ station: selectedStation, dateRange, granularity });
+
+  // Also fetch the other granularity for Excel export (both sheets)
+  const otherGranularity: Granularity = granularity === '30min' ? 'daily' : '30min';
+  const {
+    data: otherObservations = [],
+  } = useObservations({ station: selectedStation, dateRange, granularity: otherGranularity });
+
+  const isFallbackSource = dataSourceLabel != null && dataSourceLabel.includes('Open-Meteo');
 
   const stats = useMemo(() => {
     if (observations.length === 0) return null;
@@ -51,13 +54,14 @@ const Index = () => {
 
   const handleRefresh = () => {
     refetchStations();
-    if (selectedStation) {
-      refetchObservations();
-    }
+    if (selectedStation) refetchObservations();
   };
 
   const isRefreshing = stationsFetching || observationsFetching;
-  const hasError = stationsError || observationsError;
+
+  // For Excel: provide both 30min and daily data
+  const obs30min = granularity === '30min' ? observations : otherObservations;
+  const obsDaily = granularity === 'daily' ? observations : otherObservations;
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,7 +69,6 @@ const Index = () => {
       
       <main className="container mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-[320px_1fr] gap-6">
-          {/* Left Panel - Station Selector */}
           <aside className="glass-card rounded-xl overflow-hidden h-[calc(100vh-140px)] lg:sticky lg:top-24">
             <StationSelector
               stations={stations}
@@ -76,9 +79,7 @@ const Index = () => {
             />
           </aside>
 
-          {/* Right Panel - Data Visualization */}
           <section className="space-y-6">
-            {/* Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end justify-between">
               <DateRangePicker
                 dateRange={dateRange}
@@ -87,14 +88,14 @@ const Index = () => {
                 onGranularityChange={setGranularity}
               />
               <DownloadButtons
-                observations={observations}
+                obs30min={obs30min}
+                obsDaily={obsDaily}
                 stationName={selectedStation?.name || 'data'}
                 dataSourceLabel={dataSourceLabel ?? undefined}
                 disabled={observations.length === 0}
               />
             </div>
 
-            {/* Aviso datos de respaldo (Open-Meteo) */}
             {isFallbackSource && observations.length > 0 && (
               <div className="glass-card rounded-xl p-4 border-amber-500/50 bg-amber-500/10">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
@@ -106,7 +107,6 @@ const Index = () => {
               </div>
             )}
 
-            {/* Error State */}
             {observationsError && (
               <div className="glass-card rounded-xl p-4 border-destructive/50 bg-destructive/5">
                 <div className="flex items-center gap-3">
@@ -119,20 +119,17 @@ const Index = () => {
               </div>
             )}
 
-            {/* Selected Station Info */}
             {selectedStation && (
               <div className="glass-card rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="font-display font-semibold text-lg">{selectedStation.name}</h2>
                     <p className="text-sm text-muted-foreground">
-                      {selectedStation.distance} km desde Barcelona •
-                      {selectedStation.elevation != null && ` ${selectedStation.elevation} m altitud`}
+                      {selectedStation.distance} km desde Barcelona
+                      {selectedStation.elevation != null && ` · ${selectedStation.elevation} m altitud`}
                     </p>
                     {dataSourceLabel && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {dataSourceLabel}
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{dataSourceLabel}</p>
                     )}
                   </div>
                   {(observationsLoading || observationsFetching) && (
@@ -142,10 +139,8 @@ const Index = () => {
               </div>
             )}
 
-            {/* KPIs */}
             <WeatherKPIs stats={stats} isLoading={observationsLoading} />
 
-            {/* Charts */}
             <WeatherCharts
               observations={observations}
               granularity={granularity}
@@ -154,7 +149,6 @@ const Index = () => {
               stationName={selectedStation?.name}
             />
 
-            {/* Data Table */}
             <DataTable
               observations={observations}
               granularity={granularity}
