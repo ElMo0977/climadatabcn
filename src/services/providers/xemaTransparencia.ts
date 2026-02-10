@@ -32,7 +32,7 @@ interface SubdailyRow {
   codi_estat?: string;
 }
 
-interface DailyRow {
+export interface DailyRow {
   codi_estacio: string;
   nom_estacio?: string;
   data_lectura: string;
@@ -277,8 +277,18 @@ async function fetchDailyObservations(
     $limit: 50000,
   });
 
+  return mapDailyRowsToObservations(rows);
+}
+
+/**
+ * Maps 7bvh-jvq2 daily rows to app observations.
+ * Contract:
+ * - windSpeed: daily mean wind (VVM10 / 1503) only.
+ * - windSpeedMax: daily maximum gust (VVX10 / 1512) only.
+ */
+export function mapDailyRowsToObservations(rows: DailyRow[]): Observation[] {
   // Inspect first row to detect field names
-  if (import.meta.env.DEV && rows.length > 0) {
+  if (import.meta.env.DEV && import.meta.env.MODE !== 'test' && rows.length > 0) {
     console.log('[XEMA daily] sample row fields:', Object.keys(rows[0]), rows[0]);
   }
 
@@ -319,6 +329,7 @@ async function fetchDailyObservations(
         row.precipitation = Math.round(val * 10) / 10;
         break;
       case DAILY_CODES.VVM10:
+        // Keep windSpeed strictly as daily mean (never as max gust).
         row.windSpeed = Math.round(val * 10) / 10;
         break;
       case DAILY_CODES.VVX10:

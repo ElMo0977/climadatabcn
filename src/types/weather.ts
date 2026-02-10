@@ -17,8 +17,10 @@ export interface Observation {
   timestamp: string; // ISO 8601
   temperature: number | null;
   humidity: number | null;
+  /** Wind speed mean/regular value (daily: VVM10 avg, 30min: VV10). Never stores gust max. */
   windSpeed: number | null;
-  windSpeedMax: number | null; // racha máxima (gust)
+  /** Wind gust maximum (daily: VVX10, 30min: VVx10). */
+  windSpeedMax: number | null;
   windDirection: number | null; // grados (solo detalle 30min)
   precipitation: number | null;
   /** Hora local de la racha máxima diaria (solo diario) */

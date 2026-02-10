@@ -2,6 +2,7 @@ import { Thermometer, Droplets, Wind, BarChart3, CloudRain } from 'lucide-react'
 import type { WeatherStats } from '@/types/weather';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { getWindKpiDisplay } from '@/lib/windKpi';
 
 interface WeatherKPIsProps {
   stats: WeatherStats | null;
@@ -23,11 +24,7 @@ export function WeatherKPIs({ stats, isLoading }: WeatherKPIsProps) {
       ? stats.dataPoints
       : 0;
 
-  const windValue = isFiniteNumber(avgWindSpeed) && isFiniteNumber(maxWindSpeed)
-    ? `${avgWindSpeed} / ${maxWindSpeed} m/s`
-    : isFiniteNumber(avgWindSpeed)
-      ? `${avgWindSpeed} m/s`
-      : '—';
+  const windKpi = getWindKpiDisplay(avgWindSpeed, maxWindSpeed);
 
   const kpis = [
     {
@@ -45,8 +42,8 @@ export function WeatherKPIs({ stats, isLoading }: WeatherKPIsProps) {
       bgClass: 'bg-humidity/10',
     },
     {
-      label: 'Viento media / racha',
-      value: windValue,
+      label: windKpi.label,
+      value: windKpi.value,
       icon: Wind,
       colorClass: 'text-wind',
       bgClass: 'bg-wind/10',
