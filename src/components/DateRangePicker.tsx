@@ -28,12 +28,6 @@ export function DateRangePicker({
     onDateRangeChange(buildQuickRangeExcludingToday(days));
   };
 
-  const applyPresetByKey = (key: string) => {
-    const preset = QUICK_RANGE_PRESETS.find((p) => p.key === key);
-    if (!preset) return;
-    applyPreset(preset.days);
-  };
-
   const daysDiff = Math.floor(
     (startOfDay(dateRange.to).getTime() - startOfDay(dateRange.from).getTime()) / (1000 * 60 * 60 * 24),
   ) + 1;
@@ -41,17 +35,25 @@ export function DateRangePicker({
 
   return (
     <div className="glass-card rounded-xl p-4 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="font-display font-semibold text-sm">Rango de fechas</h3>
-        <Tabs value={activePreset ?? '__custom__'} onValueChange={applyPresetByKey}>
-          <TabsList className="h-8">
-            {QUICK_RANGE_PRESETS.map((preset) => (
-              <TabsTrigger key={preset.key} value={preset.key} className="text-xs px-3 h-6">
-                {preset.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="ml-2 flex gap-1">
+          {QUICK_RANGE_PRESETS.map((preset) => (
+            <button
+              key={preset.key}
+              type="button"
+              onClick={() => applyPreset(preset.days)}
+              className={cn(
+                'station-item !mb-0 !rounded-md !px-2 !py-1 !text-xs font-medium',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                activePreset === preset.key && 'active',
+              )}
+              aria-pressed={activePreset === preset.key}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-2">
