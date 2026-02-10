@@ -188,13 +188,13 @@ describe('Index export and query behavior', () => {
 
   it('keeps KPI "Datos" aligned with chart observations length in daily view', async () => {
     const dailyObservations: Observation[] = [
-      { ...TEST_OBSERVATION, timestamp: '2025-01-01T00:00:00' },
-      { ...TEST_OBSERVATION, timestamp: '2025-01-02T00:00:00' },
-      { ...TEST_OBSERVATION, timestamp: '2025-01-03T00:00:00' },
-      { ...TEST_OBSERVATION, timestamp: '2025-01-04T00:00:00' },
-      { ...TEST_OBSERVATION, timestamp: '2025-01-05T00:00:00' },
-      { ...TEST_OBSERVATION, timestamp: '2025-01-06T00:00:00' },
-      { ...TEST_OBSERVATION, timestamp: '2025-01-07T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-03' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-04' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-05' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-06' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-07' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-08' },
+      { ...TEST_OBSERVATION, timestamp: '2026-02-09' },
     ];
 
     mockUseObservations.mockImplementation((params: unknown) => {
@@ -222,6 +222,49 @@ describe('Index export and query behavior', () => {
       expect(uiConsistency.chartLength).toBe(dailyObservations.length);
       expect(uiConsistency.kpiDataPoints).toBe(dailyObservations.length);
       expect(uiConsistency.kpiDataPoints).toBe(uiConsistency.chartLength);
+    });
+  });
+
+  it('shows a missing-days warning when daily data has gaps in selected range', async () => {
+    const dayKey = (date: Date) => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    const now = new Date();
+    const from = new Date(now);
+    from.setDate(from.getDate() - 6);
+    const observationsWithGaps: Observation[] = Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(from);
+      d.setDate(d.getDate() + i);
+      return { ...TEST_OBSERVATION, timestamp: dayKey(d) };
+    });
+
+    mockUseObservations.mockImplementation((params: unknown) => {
+      const p = params as { station: Station | null; granularity: '30min' | 'daily'; enabled?: boolean };
+      const hasStation = !!p.station;
+      const data = hasStation && p.granularity === 'daily' ? observationsWithGaps : [];
+      return {
+        data,
+        dataSourceLabel: hasStation ? 'Fuente: XEMA - Estación: Fabra' : null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn().mockResolvedValue({
+          data: { data, dataSourceLabel: 'Fuente: XEMA - Estación: Fabra' },
+          error: null,
+        }),
+        isFetching: false,
+      } as ReturnType<typeof useObservations>;
+    });
+
+    render(<Index />);
+    fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
+    fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Datos disponibles para 5 de 7 días\./i)).toBeInTheDocument();
     });
   });
 });

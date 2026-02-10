@@ -324,7 +324,24 @@ async function fetchDailyObservations(
   });
 
   const mapped = mapDailyRowsToObservations(rows);
-  return filterDailyObservationsByRange(mapped, bounds);
+  const final = filterDailyObservationsByRange(mapped, bounds);
+
+  if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+    const mappedUniqueDays = Array.from(new Set(mapped.map((o) => o.timestamp.slice(0, 10)))).sort();
+    const finalUniqueDays = Array.from(new Set(final.map((o) => o.timestamp.slice(0, 10)))).sort();
+    console.debug('[XEMA daily] fetch diagnostics', {
+      stationId,
+      fromDay: bounds.fromDay,
+      toDay: bounds.toDay,
+      queryFrom: bounds.fromDateTime,
+      queryToExclusive: bounds.toExclusiveDateTime,
+      apiRowsCount: rows.length,
+      mappedUniqueDays,
+      finalUniqueDays,
+    });
+  }
+
+  return final;
 }
 
 /**
@@ -336,7 +353,7 @@ async function fetchDailyObservations(
 export function mapDailyRowsToObservations(rows: DailyRow[]): Observation[] {
   // Inspect first row to detect field names
   if (import.meta.env.DEV && import.meta.env.MODE !== 'test' && rows.length > 0) {
-    console.log('[XEMA daily] sample row fields:', Object.keys(rows[0]), rows[0]);
+    console.debug('[XEMA daily] sample row fields:', Object.keys(rows[0]), rows[0]);
   }
 
   const byDay = new Map<string, {

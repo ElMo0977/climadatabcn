@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
-import { subDays } from 'date-fns';
+import { useEffect, useMemo, useState } from 'react';
+import { format, parseISO, subDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Header } from '@/components/Header';
 import { StationSelector } from '@/components/StationSelector';
 import { DateRangePicker } from '@/components/DateRangePicker';
@@ -10,6 +11,7 @@ import { DownloadButtons } from '@/components/DownloadButtons';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
 import { calculateStats } from '@/lib/weatherUtils';
+import { computeDailyCoverage } from '@/lib/dailyCoverage';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -55,6 +57,40 @@ const Index = () => {
     if (observations.length === 0) return null;
     return calculateStats(observations);
   }, [observations]);
+
+  const dailyCoverage = useMemo(() => {
+    if (granularity !== 'daily') return null;
+    return computeDailyCoverage(dateRange, observations);
+  }, [dateRange, granularity, observations]);
+
+  const missingDaysText = useMemo(() => {
+    if (!dailyCoverage || dailyCoverage.missingCount === 0) return '';
+    return dailyCoverage.missingDays
+      .map((day) => {
+        try {
+          return format(parseISO(day), 'd MMM', { locale: es });
+        } catch {
+          return day;
+        }
+      })
+      .join(', ');
+  }, [dailyCoverage]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || import.meta.env.MODE === 'test' || granularity !== 'daily' || !selectedStation) return;
+    console.debug('[Index daily] observations diagnostics', {
+      granularity,
+      stationId: selectedStation.id,
+      observationsLength: observations.length,
+      firstTimestamp: observations[0]?.timestamp ?? null,
+      lastTimestamp: observations[observations.length - 1]?.timestamp ?? null,
+      firstDay: dailyCoverage?.availableDays[0] ?? null,
+      lastDay: dailyCoverage?.availableDays[dailyCoverage.availableDays.length - 1] ?? null,
+      expectedDays: dailyCoverage?.expectedCount ?? 0,
+      availableDays: dailyCoverage?.availableCount ?? 0,
+      missingDays: dailyCoverage?.missingDays ?? [],
+    });
+  }, [dailyCoverage, granularity, observations, selectedStation]);
 
   const handleRefresh = () => {
     refetchStations();
@@ -165,6 +201,17 @@ const Index = () => {
                     <Loader2 className="h-5 w-5 animate-spin text-primary" />
                   )}
                 </div>
+              </div>
+            )}
+
+            {granularity === 'daily' && dailyCoverage && dailyCoverage.missingCount > 0 && !observationsLoading && (
+              <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
+                <p className="text-sm font-medium">
+                  Datos disponibles para {dailyCoverage.availableCount} de {dailyCoverage.expectedCount} días.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Faltan datos para {dailyCoverage.missingCount} día{dailyCoverage.missingCount === 1 ? '' : 's'}: {missingDaysText}
+                </p>
               </div>
             )}
 
