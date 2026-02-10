@@ -77,6 +77,15 @@ const Index = () => {
       .join(', ');
   }, [dailyCoverage]);
 
+  const showDailyCoverageAlert =
+    !!selectedStation &&
+    granularity === 'daily' &&
+    !!dailyCoverage &&
+    dailyCoverage.missingCount > 0 &&
+    !observationsLoading &&
+    !observationsFetching &&
+    !observationsError;
+
   useEffect(() => {
     if (!isXemaDebugEnabled() || granularity !== 'daily' || !selectedStation) return;
     console.debug('[Index daily] observations diagnostics', {
@@ -205,7 +214,7 @@ const Index = () => {
               </div>
             )}
 
-            {granularity === 'daily' && dailyCoverage && dailyCoverage.missingCount > 0 && !observationsLoading && (
+            {showDailyCoverageAlert && dailyCoverage && (
               <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
                 <p className="text-sm font-medium">
                   Datos disponibles para {dailyCoverage.availableCount} de {dailyCoverage.expectedCount} días.

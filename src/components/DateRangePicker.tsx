@@ -4,7 +4,6 @@ import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { DateRange, Granularity } from '@/types/weather';
 import { cn } from '@/lib/utils';
 import { QUICK_RANGE_PRESETS, buildQuickRangeExcludingToday, getActiveQuickRangeKey } from '@/lib/quickDateRanges';
@@ -22,6 +21,9 @@ export function DateRangePicker({
   granularity,
   onGranularityChange,
 }: DateRangePickerProps) {
+  const selectableButtonClass =
+    'station-item !mb-0 !rounded-md !px-2 !py-1 !text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+
   const activePreset = getActiveQuickRangeKey(dateRange);
 
   const applyPreset = (days: number) => {
@@ -44,8 +46,7 @@ export function DateRangePicker({
               type="button"
               onClick={() => applyPreset(preset.days)}
               className={cn(
-                'station-item !mb-0 !rounded-md !px-2 !py-1 !text-xs font-medium',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                selectableButtonClass,
                 activePreset === preset.key && 'active',
               )}
               aria-pressed={activePreset === preset.key}
@@ -106,17 +107,29 @@ export function DateRangePicker({
         </Popover>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-4 w-4" />
           <span>Vista</span>
         </div>
-        <Tabs value={granularity} onValueChange={(v) => onGranularityChange(v as Granularity)}>
-          <TabsList className="h-8">
-            <TabsTrigger value="30min" className="text-xs px-3 h-6">Por horas</TabsTrigger>
-            <TabsTrigger value="daily" className="text-xs px-3 h-6">Diario</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="ml-2 flex gap-1" role="group" aria-label="Granularidad temporal">
+          <button
+            type="button"
+            onClick={() => onGranularityChange('30min')}
+            className={cn(selectableButtonClass, granularity === '30min' && 'active')}
+            aria-pressed={granularity === '30min'}
+          >
+            Por horas
+          </button>
+          <button
+            type="button"
+            onClick={() => onGranularityChange('daily')}
+            className={cn(selectableButtonClass, granularity === 'daily' && 'active')}
+            aria-pressed={granularity === 'daily'}
+          >
+            Diario
+          </button>
+        </div>
       </div>
 
       {show30minWarning && (

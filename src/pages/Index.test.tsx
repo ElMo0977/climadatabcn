@@ -225,6 +225,31 @@ describe('Index export and query behavior', () => {
     });
   });
 
+  it('does not show daily coverage warning when no station is selected', async () => {
+    mockUseObservations.mockImplementation((params: unknown) => {
+      const p = params as { station: Station | null };
+      const hasStation = !!p.station;
+      return {
+        data: [],
+        dataSourceLabel: hasStation ? 'Fuente: XEMA - Estación: Fabra' : null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn().mockResolvedValue({
+          data: { data: [], dataSourceLabel: hasStation ? 'Fuente: XEMA - Estación: Fabra' : '' },
+          error: null,
+        }),
+        isFetching: false,
+      } as ReturnType<typeof useObservations>;
+    });
+
+    render(<Index />);
+    fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Datos disponibles para/i)).not.toBeInTheDocument();
+    });
+  });
+
   it('shows a missing-days warning when daily data has gaps in selected range', async () => {
     const dayKey = (date: Date) => {
       const y = date.getFullYear();
