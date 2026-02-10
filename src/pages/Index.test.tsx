@@ -7,6 +7,11 @@ import { useObservations } from '@/hooks/useObservations';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
 import { toast } from 'sonner';
 
+const uiConsistency = vi.hoisted(() => ({
+  kpiDataPoints: null as number | null,
+  chartLength: null as number | null,
+}));
+
 vi.mock('@/hooks/useStations', () => ({
   useStations: vi.fn(),
 }));
@@ -42,11 +47,17 @@ vi.mock('@/components/DateRangePicker', () => ({
 }));
 
 vi.mock('@/components/WeatherKPIs', () => ({
-  WeatherKPIs: () => <div>kpis</div>,
+  WeatherKPIs: ({ stats }: { stats: { dataPoints?: number } | null }) => {
+    uiConsistency.kpiDataPoints = typeof stats?.dataPoints === 'number' ? stats.dataPoints : null;
+    return <div>kpis</div>;
+  },
 }));
 
 vi.mock('@/components/WeatherCharts', () => ({
-  WeatherCharts: () => <div>charts</div>,
+  WeatherCharts: ({ observations }: { observations: Observation[] }) => {
+    uiConsistency.chartLength = observations.length;
+    return <div>charts</div>;
+  },
 }));
 
 vi.mock('@/components/DataTable', () => ({
@@ -81,6 +92,8 @@ const TEST_OBSERVATION: Observation = {
 describe('Index export and query behavior', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    uiConsistency.kpiDataPoints = null;
+    uiConsistency.chartLength = null;
     mockUseStations.mockReturnValue({
       data: [TEST_STATION],
       isLoading: false,
@@ -170,6 +183,45 @@ describe('Index export and query behavior', () => {
       expect(refetchSecondary).toHaveBeenCalledTimes(1);
       expect(mockToastError).toHaveBeenCalledTimes(1);
       expect(mockBuildAndDownloadExcel).not.toHaveBeenCalled();
+    });
+  });
+
+  it('keeps KPI "Datos" aligned with chart observations length in daily view', async () => {
+    const dailyObservations: Observation[] = [
+      { ...TEST_OBSERVATION, timestamp: '2025-01-01T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2025-01-02T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2025-01-03T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2025-01-04T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2025-01-05T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2025-01-06T00:00:00' },
+      { ...TEST_OBSERVATION, timestamp: '2025-01-07T00:00:00' },
+    ];
+
+    mockUseObservations.mockImplementation((params: unknown) => {
+      const p = params as { station: Station | null; granularity: '30min' | 'daily'; enabled?: boolean };
+      const hasStation = !!p.station;
+      const data = hasStation && p.granularity === 'daily' ? dailyObservations : [];
+      return {
+        data,
+        dataSourceLabel: hasStation ? 'Fuente: XEMA - Estación: Fabra' : null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn().mockResolvedValue({
+          data: { data, dataSourceLabel: 'Fuente: XEMA - Estación: Fabra' },
+          error: null,
+        }),
+        isFetching: false,
+      } as ReturnType<typeof useObservations>;
+    });
+
+    render(<Index />);
+    fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
+    fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
+
+    await waitFor(() => {
+      expect(uiConsistency.chartLength).toBe(dailyObservations.length);
+      expect(uiConsistency.kpiDataPoints).toBe(dailyObservations.length);
+      expect(uiConsistency.kpiDataPoints).toBe(uiConsistency.chartLength);
     });
   });
 });

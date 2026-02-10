@@ -150,6 +150,53 @@ function parseApiDate(s: string): Date {
   return new Date(s.endsWith('Z') ? s : s + 'Z');
 }
 
+function toLocalDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addLocalDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export interface DailyRangeBounds {
+  fromDay: string;
+  toDay: string;
+  fromDateTime: string;
+  toExclusiveDateTime: string;
+}
+
+/**
+ * Build daily query bounds in local calendar dates.
+ * The range is [fromDay 00:00:00, nextDayAfterTo 00:00:00), i.e. inclusive of `toDay`.
+ */
+export function buildDailyRangeBounds(from: Date, to: Date): DailyRangeBounds {
+  const fromDay = toLocalDateKey(from);
+  const toDay = toLocalDateKey(to);
+  const toExclusiveDay = toLocalDateKey(addLocalDays(to, 1));
+
+  return {
+    fromDay,
+    toDay,
+    fromDateTime: `${fromDay}T00:00:00`,
+    toExclusiveDateTime: `${toExclusiveDay}T00:00:00`,
+  };
+}
+
+export function filterDailyObservationsByRange(
+  observations: Observation[],
+  bounds: Pick<DailyRangeBounds, 'fromDay' | 'toDay'>,
+): Observation[] {
+  return observations.filter((obs) => {
+    const day = obs.timestamp.slice(0, 10);
+    return day >= bounds.fromDay && day <= bounds.toDay;
+  });
+}
+
 /**
  * Convert a UTC hour string (e.g. "14:30Z" or "1430") to Europe/Madrid local time.
  */
@@ -265,11 +312,10 @@ async function fetchDailyObservations(
   from: Date,
   to: Date,
 ): Promise<Observation[]> {
-  const fromStr = from.toISOString().slice(0, 10) + 'T00:00:00';
-  const toStr = to.toISOString().slice(0, 10) + 'T23:59:59';
+  const bounds = buildDailyRangeBounds(from, to);
   const vars = [DAILY_CODES.TM, DAILY_CODES.HRM, DAILY_CODES.PPT, DAILY_CODES.VVM10, DAILY_CODES.VVX10];
   const varsIn = vars.map((v) => `'${v}'`).join(',');
-  const where = `codi_estacio = '${stationId}' and data_lectura >= '${fromStr}' and data_lectura <= '${toStr}' and codi_variable in (${varsIn})`;
+  const where = `codi_estacio = '${stationId}' and data_lectura >= '${bounds.fromDateTime}' and data_lectura < '${bounds.toExclusiveDateTime}' and codi_variable in (${varsIn})`;
 
   const rows = await fetchSocrata<DailyRow[]>(RESOURCE_DAILY, {
     $where: where,
@@ -277,7 +323,8 @@ async function fetchDailyObservations(
     $limit: 50000,
   });
 
-  return mapDailyRowsToObservations(rows);
+  const mapped = mapDailyRowsToObservations(rows);
+  return filterDailyObservationsByRange(mapped, bounds);
 }
 
 /**

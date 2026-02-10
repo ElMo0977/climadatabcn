@@ -1,5 +1,5 @@
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { endOfDay, format, startOfDay, subDays } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -7,12 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { DateRange, Granularity } from '@/types/weather';
 import { cn } from '@/lib/utils';
-
-const QUICK_RANGE_PRESETS = [
-  { label: '7 días', days: 7 },
-  { label: '14 días', days: 14 },
-  { label: '30 días', days: 30 },
-] as const;
+import { QUICK_RANGE_PRESETS, buildQuickRangeExcludingToday } from '@/lib/quickDateRanges';
 
 interface DateRangePickerProps {
   dateRange: DateRange;
@@ -28,10 +23,7 @@ export function DateRangePicker({
   onGranularityChange,
 }: DateRangePickerProps) {
   const applyPreset = (days: number) => {
-    const today = startOfDay(new Date());
-    const to = endOfDay(subDays(today, 1));
-    const from = startOfDay(subDays(today, days));
-    onDateRangeChange({ from, to });
+    onDateRangeChange(buildQuickRangeExcludingToday(days));
   };
 
   const daysDiff = Math.floor(
