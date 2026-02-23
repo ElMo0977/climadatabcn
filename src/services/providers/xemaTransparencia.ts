@@ -11,7 +11,7 @@ import type {
   Station,
 } from '@/domain/types';
 import type { Observation } from '@/types/weather';
-import { DAILY_CODES } from './xemaVariableMap';
+import { DAILY_CODES, SUBDAILY_CODES } from './xemaVariableMap';
 import { fetchSocrata, fetchSocrataAll } from '@/services/http/socrata';
 
 /**
@@ -28,6 +28,14 @@ export interface DailyRow {
   codi_variable: string;
   valor_lectura: string;
   hora_extrem?: string;
+}
+
+interface SubdailyRow {
+  codi_estacio: string;
+  data_lectura: string;
+  codi_variable: string;
+  valor_lectura: string;
+  codi_estat?: string;
 }
 
 /**
@@ -219,9 +227,28 @@ export async function getObservations(params: {
   to: Date;
   granularity: '30min' | 'day';
 }): Promise<Observation[]> {
-  // The real implementation should fetch timeseries from Socrata.
-  // For now return an empty array so the app can compile and tests pass.
-  return [];
+  const fromDay = params.from.toISOString().slice(0, 10);
+  const toDay = params.to.toISOString().slice(0, 10);
+
+  if (params.granularity === 'day') {
+    const rows = await fetchSocrataAll<DailyRow>('7bvh-jvq2', {
+      $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,hora_extrem',
+      $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
+      $order: 'data_lectura ASC',
+      $limit: 5000,
+    });
+
+    return mapDailyRowsToObservations(rows);
+  }
+
+  const rows = await fetchSocrataAll<SubdailyRow>('nzvn-apee', {
+    $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat',
+    $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${SUBDAILY_CODES.T}','${SUBDAILY_CODES.HR}','${SUBDAILY_CODES.PPT}','${SUBDAILY_CODES.VV10}','${SUBDAILY_CODES.DV10}','${SUBDAILY_CODES.VVx10}') AND codi_estat = 'V'`,
+    $order: 'data_lectura ASC',
+    $limit: 50000,
+  });
+
+  return mapSubdailyRowsToObservations(rows);
 }
 
 /**
@@ -259,23 +286,95 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
   const byDate: Record<
     string,
     {
+      temperature: number | null;
+      humidity: number | null;
+      precipitation: number | null;
       windSpeed: number | null;
       windSpeedMax: number | null;
+      windGustTime: string | null;
     }
   > = {};
   rows.forEach((row) => {
     const date = row.data_lectura.slice(0, 10);
     if (!byDate[date]) {
-      byDate[date] = { windSpeed: null, windSpeedMax: null };
+      byDate[date] = {
+        temperature: null,
+        humidity: null,
+        precipitation: null,
+        windSpeed: null,
+        windSpeedMax: null,
+        windGustTime: null,
+      };
     }
-    if (row.codi_variable === DAILY_CODES.VVM10) {
-      byDate[date].windSpeed = parseFloat(row.valor_lectura);
+
+    const value = Number.parseFloat(row.valor_lectura);
+    const parsedValue = Number.isFinite(value) ? value : null;
+
+    if (row.codi_variable === DAILY_CODES.TM) {
+      byDate[date].temperature = parsedValue;
+    } else if (row.codi_variable === DAILY_CODES.HRM) {
+      byDate[date].humidity = parsedValue;
+    } else if (row.codi_variable === DAILY_CODES.PPT) {
+      byDate[date].precipitation = parsedValue;
+    } else if (row.codi_variable === DAILY_CODES.VVM10) {
+      byDate[date].windSpeed = parsedValue;
     } else if (row.codi_variable === DAILY_CODES.VVX10) {
-      byDate[date].windSpeedMax = parseFloat(row.valor_lectura);
+      byDate[date].windSpeedMax = parsedValue;
+      byDate[date].windGustTime = normalizeHourExtrem(row.hora_extrem);
     }
   });
   return Object.entries(byDate).map(([timestamp, values]) => ({
     timestamp,
+    temperature: values.temperature,
+    humidity: values.humidity,
     ...values,
+    windDirection: null,
   }));
+}
+
+export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {
+  const byTimestamp: Record<string, Observation> = {};
+
+  rows.forEach((row) => {
+    const ts = row.data_lectura;
+    if (!byTimestamp[ts]) {
+      byTimestamp[ts] = {
+        timestamp: ts,
+        temperature: null,
+        humidity: null,
+        windSpeed: null,
+        windSpeedMax: null,
+        windDirection: null,
+        precipitation: null,
+      };
+    }
+
+    const value = Number.parseFloat(row.valor_lectura);
+    const parsedValue = Number.isFinite(value) ? value : null;
+    const base = byTimestamp[ts];
+
+    if (row.codi_variable === SUBDAILY_CODES.T) {
+      base.temperature = parsedValue;
+    } else if (row.codi_variable === SUBDAILY_CODES.HR) {
+      base.humidity = parsedValue;
+    } else if (row.codi_variable === SUBDAILY_CODES.PPT) {
+      base.precipitation = parsedValue;
+    } else if (row.codi_variable === SUBDAILY_CODES.VV10) {
+      base.windSpeed = parsedValue;
+    } else if (row.codi_variable === SUBDAILY_CODES.DV10) {
+      base.windDirection = parsedValue;
+    } else if (row.codi_variable === SUBDAILY_CODES.VVx10) {
+      base.windSpeedMax = parsedValue;
+    }
+  });
+
+  return Object.values(byTimestamp).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
+function normalizeHourExtrem(value?: string): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!/^\d{3,4}$/.test(trimmed)) return null;
+  const padded = trimmed.padStart(4, '0');
+  return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
 }

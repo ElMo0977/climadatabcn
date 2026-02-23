@@ -1,11 +1,26 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_CODES } from './xemaVariableMap';
 import {
   buildDailyRangeBounds,
   filterDailyObservationsByRange,
+  getObservations,
   mapDailyRowsToObservations,
+  mapSubdailyRowsToObservations,
   type DailyRow,
 } from './xemaTransparencia';
+
+vi.mock('@/services/http/socrata', () => ({
+  fetchSocrata: vi.fn(),
+  fetchSocrataAll: vi.fn(),
+}));
+
+import { fetchSocrataAll } from '@/services/http/socrata';
+
+const fetchSocrataAllMock = vi.mocked(fetchSocrataAll);
+
+beforeEach(() => {
+  fetchSocrataAllMock.mockReset();
+});
 
 describe('mapDailyRowsToObservations', () => {
   it('maps daily avg and daily max wind to different fields', () => {
@@ -29,8 +44,12 @@ describe('mapDailyRowsToObservations', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].timestamp).toBe('2024-01-05');
+    expect(result[0].temperature).toBeNull();
+    expect(result[0].humidity).toBeNull();
+    expect(result[0].precipitation).toBeNull();
     expect(result[0].windSpeed).toBe(3.4);
     expect(result[0].windSpeedMax).toBe(11.2);
+    expect(result[0].windGustTime).toBe('14:30');
   });
 
   it('does not backfill windSpeed with max when daily avg is missing', () => {
@@ -92,5 +111,97 @@ describe('mapDailyRowsToObservations', () => {
       '2026-02-03',
       '2026-02-09',
     ]);
+  });
+});
+
+describe('mapSubdailyRowsToObservations', () => {
+  it('maps all configured subdaily variables by timestamp', () => {
+    const result = mapSubdailyRowsToObservations([
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '32', valor_lectura: '13.5' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '33', valor_lectura: '72' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '35', valor_lectura: '0.2' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '30', valor_lectura: '3.1' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '31', valor_lectura: '290' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '50', valor_lectura: '9.7' },
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      timestamp: '2024-01-05T10:00:00',
+      temperature: 13.5,
+      humidity: 72,
+      precipitation: 0.2,
+      windSpeed: 3.1,
+      windDirection: 290,
+      windSpeedMax: 9.7,
+    });
+  });
+});
+
+describe('getObservations', () => {
+  it('queries daily resource and maps rows to observations', async () => {
+    fetchSocrataAllMock.mockResolvedValueOnce([
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T00:00:00',
+        codi_variable: DAILY_CODES.TM,
+        valor_lectura: '11.2',
+      },
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T00:00:00',
+        codi_variable: DAILY_CODES.VVM10,
+        valor_lectura: '2.3',
+      },
+    ] as any);
+
+    const result = await getObservations({
+      stationId: 'X4',
+      from: new Date('2024-01-01T00:00:00Z'),
+      to: new Date('2024-01-07T00:00:00Z'),
+      granularity: 'day',
+    });
+
+    expect(fetchSocrataAllMock).toHaveBeenCalledWith(
+      '7bvh-jvq2',
+      expect.objectContaining({
+        $where: expect.stringContaining("codi_estacio = 'X4'"),
+      }),
+    );
+    expect(result[0]).toMatchObject({
+      timestamp: '2024-01-05',
+      temperature: 11.2,
+      windSpeed: 2.3,
+    });
+  });
+
+  it('queries subdaily resource for 30min granularity', async () => {
+    fetchSocrataAllMock.mockResolvedValueOnce([
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T10:00:00',
+        codi_variable: '32',
+        valor_lectura: '12.1',
+        codi_estat: 'V',
+      },
+    ] as any);
+
+    const result = await getObservations({
+      stationId: 'X4',
+      from: new Date('2024-01-01T00:00:00Z'),
+      to: new Date('2024-01-07T00:00:00Z'),
+      granularity: '30min',
+    });
+
+    expect(fetchSocrataAllMock).toHaveBeenCalledWith(
+      'nzvn-apee',
+      expect.objectContaining({
+        $where: expect.stringContaining("codi_estat = 'V'"),
+      }),
+    );
+    expect(result[0]).toMatchObject({
+      timestamp: '2024-01-05T10:00:00',
+      temperature: 12.1,
+    });
   });
 });
