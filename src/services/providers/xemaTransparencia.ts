@@ -163,16 +163,23 @@ export async function fetchStationsFromSocrata(): Promise<
     // Limit to a large number to get all stations in one call.  Socrata defaults
     // to 1000 rows; 2000 is safe for the current network size.
     const rows = await fetchSocrata<any[]>(RESOURCE_ID, { $limit: 2000 });
-    const stations = rows.map((row) => ({
-      id: row.codi_estacio,
-      name: row.nom_estacio,
-      latitude: Number(row.latitud),
-      longitude: Number(row.longitud),
-      elevation: row.altitud ? Number(row.altitud) : undefined,
-      municipality: row.municipi,
-    }));
-    // If the call returns no stations, fall back to the static list to ensure
-    // the UI always has at least some data【330959716576808†L15-L30】.
+    // Only consider rows that contain station fields.  The variable metadata
+    // resource (4fb2-n3yi) does not include codi_estacio/latitud/longitud; if we
+    // accidentally query it, rows will be filtered out and we will fall back
+    // below.
+    const stations = rows
+      .filter((row) => row.codi_estacio && row.latitud && row.longitud)
+      .map((row) => ({
+        id: row.codi_estacio,
+        name: row.nom_estacio,
+        latitude: Number(row.latitud),
+        longitude: Number(row.longitud),
+        elevation: row.altitud ? Number(row.altitud) : undefined,
+        municipality: row.municipi,
+      }));
+    // If the call returns no stations (or we queried a wrong resource), fall
+    // back to the static list to ensure the UI always has at least some data
+    //【330959716576808†L15-L30】.
     if (stations.length === 0) {
       return listStations().map((s) => ({
         id: s.id,
