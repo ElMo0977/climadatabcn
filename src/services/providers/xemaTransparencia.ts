@@ -9,8 +9,8 @@
 
 import type {
   Station,
-  TimeseriesResponse,
 } from '@/domain/types';
+import type { Observation } from '@/types/weather';
 import { DAILY_CODES } from './xemaVariableMap';
 import { fetchSocrata, fetchSocrataAll } from '@/services/http/socrata';
 
@@ -36,7 +36,9 @@ export interface DailyRow {
  * compiles.  In a future iteration this should call fetchStationsFromSocrata()
  * and persist the results in a cache【393582075062202†L309-L316】.
  */
-export async function listStations(): Promise<Station[]> {
+export function listStations(): Station[] {
+  // Note: this stub returns synchronously because dataService
+  // expects a plain array (not a Promise) and calls .map() on it【330959716576808†L15-L30】.
   return [
     {
       id: 'bcn-raval',
@@ -99,15 +101,11 @@ export async function getObservations(params: {
   stationId: string;
   from: Date;
   to: Date;
-  granularity: 'hour' | 'day';
-}): Promise<TimeseriesResponse> {
-  return {
-    stationId: params.stationId,
-    provider: 'xema-transparencia',
-    variable: 'temperature',
-    aggregation: params.granularity,
-    points: [],
-  };
+  granularity: '30min' | 'day';
+}): Promise<Observation[]> {
+  // The real implementation should fetch timeseries from Socrata.
+  // For now return an empty array so the app can compile and tests pass.
+  return [];
 }
 
 /**
