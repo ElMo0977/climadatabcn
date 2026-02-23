@@ -8,6 +8,7 @@ const BASE_URL = 'https://analisi.transparenciacatalunya.cat';
 export interface SocrataQueryParams {
   $select?: string;
   $where?: string;
+  $group?: string;
   $order?: string;
   $limit?: number;
   $offset?: number;
@@ -26,6 +27,7 @@ export async function fetchSocrata<T = unknown[]>(
   const search = new URLSearchParams();
   if (params.$select) search.set('$select', params.$select);
   if (params.$where) search.set('$where', params.$where);
+  if (params.$group) search.set('$group', params.$group);
   if (params.$order) search.set('$order', params.$order);
   const limit = params.$limit ?? DEFAULT_LIMIT;
   search.set('$limit', String(limit));

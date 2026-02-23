@@ -44,7 +44,7 @@ export async function getObservations(params: {
       }),
       fetchSocrataAll<SubdailyGustRow>('nzvn-apee', {
         $select: 'data_lectura,valor_lectura',
-        $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable = '${SUBDAILY_CODES.VVx10}' AND codi_estat in ('V','T')`,
+        $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable = '${SUBDAILY_CODES.VVx10}'`,
         $order: 'data_lectura ASC',
         $limit: 50000,
       }),
@@ -53,9 +53,25 @@ export async function getObservations(params: {
     return attachDailyGustTimes(mapDailyRowsToObservations(rows), gustRows);
   }
 
+  if (import.meta.env.VITE_DEBUG_XEMA === '1') {
+    const statusRows = await fetchSocrataAll<{ codi_estat?: string; n?: string }>('nzvn-apee', {
+      $select: 'codi_estat, count(*) as n',
+      $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59'`,
+      $group: 'codi_estat',
+      $order: 'n DESC',
+      $limit: 100,
+    });
+    console.log('[xema] codi_estat distribution', {
+      stationId: params.stationId,
+      fromDay,
+      toDay,
+      statusRows,
+    });
+  }
+
   const rows = await fetchSocrataAll<SubdailyRow>('nzvn-apee', {
     $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat',
-    $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${SUBDAILY_CODES.T}','${SUBDAILY_CODES.HR}','${SUBDAILY_CODES.PPT}','${SUBDAILY_CODES.VV10}','${SUBDAILY_CODES.DV10}','${SUBDAILY_CODES.VVx10}') AND codi_estat in ('V','T')`,
+    $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${SUBDAILY_CODES.T}','${SUBDAILY_CODES.HR}','${SUBDAILY_CODES.PPT}','${SUBDAILY_CODES.VV10}','${SUBDAILY_CODES.DV10}','${SUBDAILY_CODES.VVx10}')`,
     $order: 'data_lectura ASC',
     $limit: 50000,
   });
