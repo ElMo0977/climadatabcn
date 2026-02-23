@@ -25,8 +25,8 @@ export async function getObservations(params: {
   to: Date;
   granularity: '30min' | 'day';
 }): Promise<Observation[]> {
-  const fromDay = params.from.toISOString().slice(0, 10);
-  const toDay = params.to.toISOString().slice(0, 10);
+  const fromDay = toLocalDayKey(params.from);
+  const toDay = toLocalDayKey(params.to);
 
   if (params.granularity === 'day') {
     const rows = await fetchSocrataAll<DailyRow>('7bvh-jvq2', {
@@ -50,8 +50,8 @@ export async function getObservations(params: {
 }
 
 export function buildDailyRangeBounds(from: Date, to: Date) {
-  const fromDay = from.toISOString().slice(0, 10);
-  const toDay = to.toISOString().slice(0, 10);
+  const fromDay = toLocalDayKey(from);
+  const toDay = toLocalDayKey(to);
   return { fromDay, toDay };
 }
 
@@ -121,6 +121,13 @@ function parseRowNumericValue(row: { valor?: string; valor_lectura?: string }): 
 function parseNumericOrNull(row: { valor?: string; valor_lectura?: string }): number | null {
   const value = parseRowNumericValue(row);
   return Number.isFinite(value) ? value : null;
+}
+
+function toLocalDayKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {
