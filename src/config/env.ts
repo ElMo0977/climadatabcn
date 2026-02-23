@@ -26,17 +26,23 @@ function getEnvVar(key: string): string | null {
   return value;
 }
 
+export function parseBooleanEnv(value?: string): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return ['1', 'true', 'yes', 'on'].includes(normalized);
+}
+
 export const env: EnvConfig = {
   dataMode: (getEnvVar('VITE_DATA_MODE') as DataMode) || 'live',
   apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
   supabaseUrl: getEnvVar('VITE_SUPABASE_URL') || '',
   supabaseKey: getEnvVar('VITE_SUPABASE_PUBLISHABLE_KEY') || '',
-  xemaDebug: getEnvVar('VITE_DEBUG_XEMA') === 'true',
+  xemaDebug: parseBooleanEnv(getEnvVar('VITE_DEBUG_XEMA') ?? undefined),
 };
 
 /**
  * XEMA debug logs are opt-in and only available in development.
- * Enable with: VITE_DEBUG_XEMA=true
+ * Enable with: VITE_DEBUG_XEMA=true (or 1)
  */
 export function isXemaDebugEnabled(): boolean {
   return import.meta.env.DEV && env.xemaDebug;
