@@ -1,12 +1,12 @@
-import ExcelJS from 'exceljs';
+import type { Cell, Fill } from 'exceljs';
 import type { Observation } from '@/types/weather';
 import { downloadFileBuffer } from '@/lib/weatherUtils';
 
 const WIND_LIMIT_ACOUSTIC = 5;
-const HEADER_FILL: ExcelJS.Fill = {
+const HEADER_FILL: Fill = {
   type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' },
 };
-const SAFETY_FILL: ExcelJS.Fill = {
+const SAFETY_FILL: Fill = {
   type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0E6' },
 };
 
@@ -15,12 +15,12 @@ function roundWind(v: number | null): number | '' {
   return Math.round(v * 10) / 10;
 }
 
-function styleHeaderCell(cell: ExcelJS.Cell): void {
+function styleHeaderCell(cell: Cell): void {
   cell.font = { bold: true };
   cell.fill = HEADER_FILL;
 }
 
-function styleSafetyCell(cell: ExcelJS.Cell): void {
+function styleSafetyCell(cell: Cell): void {
   cell.fill = SAFETY_FILL;
   cell.font = { bold: true };
 }
@@ -53,7 +53,8 @@ export async function buildAndDownloadExcel(
   stationName: string,
   dataSourceLabel?: string,
 ): Promise<void> {
-  const workbook = new ExcelJS.Workbook();
+  const { Workbook } = await import('exceljs');
+  const workbook = new Workbook();
 
   // ── Sheet 1: 30min ──
   const sheet30 = workbook.addWorksheet('30min', { pageSetup: { fitToPage: true } });

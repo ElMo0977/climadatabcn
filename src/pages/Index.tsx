@@ -17,6 +17,7 @@ import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isXemaDebugEnabled } from '@/config/env';
+import { buildAndDownloadExcel } from '@/lib/exportExcel';
 
 const Index = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
@@ -148,8 +149,6 @@ const Index = () => {
       if (obs30min.length === 0 || obsDaily.length === 0) {
         throw new Error('No hay datos suficientes para generar las hojas de detalle y diario.');
       }
-
-      const { buildAndDownloadExcel } = await import('@/lib/exportExcel');
 
       await buildAndDownloadExcel(
         obs30min,
