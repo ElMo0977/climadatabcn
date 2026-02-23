@@ -14,7 +14,8 @@ interface SubdailyRow {
   codi_estacio: string;
   data_lectura: string;
   codi_variable: string;
-  valor_lectura: string;
+  valor?: string;
+  valor_lectura?: string;
   codi_estat?: string;
 }
 
@@ -88,8 +89,7 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
       };
     }
 
-    const value = parseRowNumericValue(row);
-    const parsedValue = Number.isFinite(value) ? value : null;
+    const parsedValue = parseNumericOrNull(row);
 
     if (row.codi_variable === DAILY_CODES.TM) {
       byDate[date].temperature = parsedValue;
@@ -118,6 +118,11 @@ function parseRowNumericValue(row: { valor?: string; valor_lectura?: string }): 
   return Number.parseFloat(raw);
 }
 
+function parseNumericOrNull(row: { valor?: string; valor_lectura?: string }): number | null {
+  const value = parseRowNumericValue(row);
+  return Number.isFinite(value) ? value : null;
+}
+
 export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {
   const byTimestamp: Record<string, Observation> = {};
 
@@ -135,8 +140,7 @@ export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[
       };
     }
 
-    const value = Number.parseFloat(row.valor_lectura);
-    const parsedValue = Number.isFinite(value) ? value : null;
+    const parsedValue = parseNumericOrNull(row);
     const base = byTimestamp[ts];
 
     if (row.codi_variable === SUBDAILY_CODES.T) {

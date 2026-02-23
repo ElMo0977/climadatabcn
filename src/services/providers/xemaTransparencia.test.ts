@@ -139,6 +139,15 @@ describe('mapSubdailyRowsToObservations', () => {
       windSpeedMax: 9.7,
     });
   });
+
+  it('parses numeric value from valor when valor_lectura is absent', () => {
+    const result = mapSubdailyRowsToObservations([
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T11:00:00', codi_variable: '32', valor: '14.2' },
+    ] as any);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].temperature).toBe(14.2);
+  });
 });
 
 describe('getObservations', () => {
