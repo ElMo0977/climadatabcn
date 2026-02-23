@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_CODES } from './xemaVariableMap';
 import {
   buildDailyRangeBounds,
-  fetchStationsFromSocrata,
   filterDailyObservationsByRange,
   getObservations,
   mapDailyRowsToObservations,
@@ -15,13 +14,11 @@ vi.mock('@/services/http/socrata', () => ({
   fetchSocrataAll: vi.fn(),
 }));
 
-import * as socrataClient from '@/services/http/socrata';
+import { fetchSocrataAll } from '@/services/http/socrata';
 
-const fetchSocrataMock = vi.mocked(socrataClient.fetchSocrata);
-const fetchSocrataAllMock = vi.mocked(socrataClient.fetchSocrataAll);
+const fetchSocrataAllMock = vi.mocked(fetchSocrataAll);
 
 beforeEach(() => {
-  fetchSocrataMock.mockReset();
   fetchSocrataAllMock.mockReset();
 });
 
@@ -205,39 +202,5 @@ describe('getObservations', () => {
       timestamp: '2024-01-05T10:00:00',
       temperature: 12.1,
     });
-  });
-});
-
-describe('fetchStationsFromSocrata', () => {
-  it('uses stations metadata resource and maps station fields', async () => {
-    fetchSocrataMock.mockResolvedValueOnce([
-      {
-        codi_estacio: 'X4',
-        nom_estacio: 'Barcelona - el Raval',
-        latitud: '41.38',
-        longitud: '2.17',
-        altitud: '33',
-        nom_municipi: 'Barcelona',
-      },
-    ] as any);
-
-    const result = await fetchStationsFromSocrata();
-
-    expect(fetchSocrataMock).toHaveBeenCalledWith(
-      'yqwd-vj5e',
-      expect.objectContaining({
-        $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
-      }),
-    );
-    expect(result).toEqual([
-      {
-        id: 'X4',
-        name: 'Barcelona - el Raval',
-        latitude: 41.38,
-        longitude: 2.17,
-        elevation: 33,
-        municipality: 'Barcelona',
-      },
-    ]);
   });
 });
