@@ -15,10 +15,10 @@ vi.mock('@/services/http/socrata', () => ({
   fetchSocrataAll: vi.fn(),
 }));
 
-import { fetchSocrata, fetchSocrataAll } from '@/services/http/socrata';
+import * as socrataClient from '@/services/http/socrata';
 
-const fetchSocrataMock = vi.mocked(fetchSocrata);
-const fetchSocrataAllMock = vi.mocked(fetchSocrataAll);
+const fetchSocrataMock = vi.mocked(socrataClient.fetchSocrata);
+const fetchSocrataAllMock = vi.mocked(socrataClient.fetchSocrataAll);
 
 beforeEach(() => {
   fetchSocrataMock.mockReset();

@@ -151,9 +151,8 @@ export function listStations(): Station[] {
 }
 
 /**
- * Fetch station metadata from Socrata.  Transparència Catalunya exposes
- * XEMA metadata through a resource (identifier `4fb2-n3yi`, according to the
- * project documentation).  This function queries that resource and returns
+ * Fetch station metadata from Socrata. Transparència Catalunya exposes
+ * XEMA stations metadata through resource `yqwd-vj5e`. This function returns
  * an array of objects containing the fields used by listStations().  Missing
  * numeric values are converted to numbers when present.
  */
@@ -216,11 +215,8 @@ export async function fetchStationsFromSocrata(): Promise<
 }
 
 /**
- * Fetch time series observations for a station between two dates.  The
- * implementation here is a stub that returns an empty timeseries.  When
- * implemented, this function should call Socrata resources for hourly
- * observations (`nzvn-apee`) or daily observations (`7bvh-jvq2`) depending
- * on the requested granularity.  See documentation for guidance【393582075062202†L337-L344】.
+ * Fetch time series observations for a station between two dates from
+ * Transparència Socrata resources: subdaily (`nzvn-apee`) and daily (`7bvh-jvq2`).
  */
 export async function getObservations(params: {
   stationId: string;
