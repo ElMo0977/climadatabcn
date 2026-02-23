@@ -334,14 +334,6 @@ function parseRowNumericValue(row: { valor?: string; valor_lectura?: string }): 
   return Number.parseFloat(raw);
 }
 
-function normalizeHourExtrem(value?: string): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!/^\d{3,4}$/.test(trimmed)) return null;
-  const padded = trimmed.padStart(4, '0');
-  return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
-}
-
 export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {
   const byTimestamp: Record<string, Observation> = {};
 
@@ -379,4 +371,12 @@ export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[
   });
 
   return Object.values(byTimestamp).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
+function normalizeHourExtrem(value?: string): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!/^\d{3,4}$/.test(trimmed)) return null;
+  const padded = trimmed.padStart(4, '0');
+  return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
 }
