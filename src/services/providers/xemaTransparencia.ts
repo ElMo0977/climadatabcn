@@ -26,7 +26,8 @@ export interface DailyRow {
   codi_estacio: string;
   data_lectura: string;
   codi_variable: string;
-  valor_lectura: string;
+  valor?: string;
+  valor_lectura?: string;
   hora_extrem?: string;
 }
 
@@ -150,9 +151,8 @@ export function listStations(): Station[] {
 }
 
 /**
- * Fetch station metadata from Socrata.  Transparència Catalunya exposes
- * XEMA metadata through a resource (identifier `4fb2-n3yi`, according to the
- * project documentation).  This function queries that resource and returns
+ * Fetch station metadata from Socrata. Transparència Catalunya exposes
+ * XEMA stations metadata through resource `yqwd-vj5e`. This function returns
  * an array of objects containing the fields used by listStations().  Missing
  * numeric values are converted to numbers when present.
  */
@@ -166,15 +166,15 @@ export async function fetchStationsFromSocrata(): Promise<
     municipality?: string;
   }[]
 > {
-  const RESOURCE_ID = '4fb2-n3yi';
+  const RESOURCE_ID = 'yqwd-vj5e';
   try {
-    // Limit to a large number to get all stations in one call.  Socrata defaults
-    // to 1000 rows; 2000 is safe for the current network size.
-    const rows = await fetchSocrata<any[]>(RESOURCE_ID, { $limit: 2000 });
-    // Only consider rows that contain station fields.  The variable metadata
-    // resource (4fb2-n3yi) does not include codi_estacio/latitud/longitud; if we
-    // accidentally query it, rows will be filtered out and we will fall back
-    // below.
+    const rows = await fetchSocrata<any[]>(RESOURCE_ID, {
+      $select: 'codi_estacio,nom_estacio,latitud,longitud,altitud,nom_municipi,codi_estat_ema,nom_xarxa',
+      $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
+      $limit: 2000,
+      $order: 'nom_estacio ASC',
+    });
+
     const stations = rows
       .filter((row) => row.codi_estacio && row.latitud && row.longitud)
       .map((row) => ({
@@ -183,7 +183,7 @@ export async function fetchStationsFromSocrata(): Promise<
         latitude: Number(row.latitud),
         longitude: Number(row.longitud),
         elevation: row.altitud ? Number(row.altitud) : undefined,
-        municipality: row.municipi,
+        municipality: row.nom_municipi,
       }));
     // If the call returns no stations (or we queried a wrong resource), fall
     // back to the static list to ensure the UI always has at least some data
@@ -215,11 +215,8 @@ export async function fetchStationsFromSocrata(): Promise<
 }
 
 /**
- * Fetch time series observations for a station between two dates.  The
- * implementation here is a stub that returns an empty timeseries.  When
- * implemented, this function should call Socrata resources for hourly
- * observations (`nzvn-apee`) or daily observations (`7bvh-jvq2`) depending
- * on the requested granularity.  See documentation for guidance【393582075062202†L337-L344】.
+ * Fetch time series observations for a station between two dates from
+ * Transparència Socrata resources: subdaily (`nzvn-apee`) and daily (`7bvh-jvq2`).
  */
 export async function getObservations(params: {
   stationId: string;
@@ -232,7 +229,7 @@ export async function getObservations(params: {
 
   if (params.granularity === 'day') {
     const rows = await fetchSocrataAll<DailyRow>('7bvh-jvq2', {
-      $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,hora_extrem',
+      $select: 'codi_estacio,data_lectura,codi_variable,valor,hora_extrem',
       $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
       $order: 'data_lectura ASC',
       $limit: 5000,
@@ -307,7 +304,7 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
       };
     }
 
-    const value = Number.parseFloat(row.valor_lectura);
+    const value = parseRowNumericValue(row);
     const parsedValue = Number.isFinite(value) ? value : null;
 
     if (row.codi_variable === DAILY_CODES.TM) {
@@ -330,6 +327,11 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
     ...values,
     windDirection: null,
   }));
+}
+
+function parseRowNumericValue(row: { valor?: string; valor_lectura?: string }): number {
+  const raw = row.valor ?? row.valor_lectura ?? '';
+  return Number.parseFloat(raw);
 }
 
 export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_CODES } from './xemaVariableMap';
 import {
   buildDailyRangeBounds,
+  fetchStationsFromSocrata,
   filterDailyObservationsByRange,
   getObservations,
   mapDailyRowsToObservations,
@@ -14,11 +15,13 @@ vi.mock('@/services/http/socrata', () => ({
   fetchSocrataAll: vi.fn(),
 }));
 
-import { fetchSocrataAll } from '@/services/http/socrata';
+import * as socrataClient from '@/services/http/socrata';
 
-const fetchSocrataAllMock = vi.mocked(fetchSocrataAll);
+const fetchSocrataMock = vi.mocked(socrataClient.fetchSocrata);
+const fetchSocrataAllMock = vi.mocked(socrataClient.fetchSocrataAll);
 
 beforeEach(() => {
+  fetchSocrataMock.mockReset();
   fetchSocrataAllMock.mockReset();
 });
 
@@ -29,13 +32,13 @@ describe('mapDailyRowsToObservations', () => {
         codi_estacio: 'X4',
         data_lectura: '2024-01-05T00:00:00',
         codi_variable: DAILY_CODES.VVM10,
-        valor_lectura: '3.4',
+        valor: '3.4',
       },
       {
         codi_estacio: 'X4',
         data_lectura: '2024-01-05T00:00:00',
         codi_variable: DAILY_CODES.VVX10,
-        valor_lectura: '11.2',
+        valor: '11.2',
         hora_extrem: '1430',
       },
     ];
@@ -58,7 +61,7 @@ describe('mapDailyRowsToObservations', () => {
         codi_estacio: 'X4',
         data_lectura: '2024-01-06T00:00:00',
         codi_variable: DAILY_CODES.VVX10,
-        valor_lectura: '8.6',
+        valor: '8.6',
       },
     ];
 
@@ -80,25 +83,25 @@ describe('mapDailyRowsToObservations', () => {
         codi_estacio: 'X4',
         data_lectura: '2026-02-02T00:00:00',
         codi_variable: DAILY_CODES.VVM10,
-        valor_lectura: '1.0',
+        valor: '1.0',
       },
       {
         codi_estacio: 'X4',
         data_lectura: '2026-02-03T00:00:00',
         codi_variable: DAILY_CODES.VVM10,
-        valor_lectura: '2.0',
+        valor: '2.0',
       },
       {
         codi_estacio: 'X4',
         data_lectura: '2026-02-09T00:00:00',
         codi_variable: DAILY_CODES.VVM10,
-        valor_lectura: '3.0',
+        valor: '3.0',
       },
       {
         codi_estacio: 'X4',
         data_lectura: '2026-02-10T00:00:00',
         codi_variable: DAILY_CODES.VVM10,
-        valor_lectura: '4.0',
+        valor: '4.0',
       },
     ];
 
@@ -145,13 +148,13 @@ describe('getObservations', () => {
         codi_estacio: 'X4',
         data_lectura: '2024-01-05T00:00:00',
         codi_variable: DAILY_CODES.TM,
-        valor_lectura: '11.2',
+        valor: '11.2',
       },
       {
         codi_estacio: 'X4',
         data_lectura: '2024-01-05T00:00:00',
         codi_variable: DAILY_CODES.VVM10,
-        valor_lectura: '2.3',
+        valor: '2.3',
       },
     ] as any);
 
@@ -203,5 +206,39 @@ describe('getObservations', () => {
       timestamp: '2024-01-05T10:00:00',
       temperature: 12.1,
     });
+  });
+});
+
+describe('fetchStationsFromSocrata', () => {
+  it('uses stations metadata resource and maps station fields', async () => {
+    fetchSocrataMock.mockResolvedValueOnce([
+      {
+        codi_estacio: 'X4',
+        nom_estacio: 'Barcelona - el Raval',
+        latitud: '41.38',
+        longitud: '2.17',
+        altitud: '33',
+        nom_municipi: 'Barcelona',
+      },
+    ] as any);
+
+    const result = await fetchStationsFromSocrata();
+
+    expect(fetchSocrataMock).toHaveBeenCalledWith(
+      'yqwd-vj5e',
+      expect.objectContaining({
+        $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
+      }),
+    );
+    expect(result).toEqual([
+      {
+        id: 'X4',
+        name: 'Barcelona - el Raval',
+        latitude: 41.38,
+        longitude: 2.17,
+        elevation: 33,
+        municipality: 'Barcelona',
+      },
+    ]);
   });
 });
