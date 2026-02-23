@@ -38,6 +38,14 @@ interface SubdailyRow {
   codi_estat?: string;
 }
 
+interface SubdailyRow {
+  codi_estacio: string;
+  data_lectura: string;
+  codi_variable: string;
+  valor_lectura: string;
+  codi_estat?: string;
+}
+
 /**
  * Return a list of XEMA stations with minimal metadata.  This is a stub
  * implementation that returns a hard-coded list so that the application

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_CODES } from './xemaVariableMap';
 import {
   buildDailyRangeBounds,
+  fetchStationsFromSocrata,
   filterDailyObservationsByRange,
   getObservations,
   mapDailyRowsToObservations,
