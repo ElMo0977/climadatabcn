@@ -1,6 +1,7 @@
 import type { Observation } from '@/types/weather';
 import { DAILY_CODES, SUBDAILY_CODES } from './xemaVariableMap';
 import { fetchSocrataAll } from '@/services/http/socrata';
+import { parseBooleanEnv } from '@/config/env';
 
 export interface DailyRow {
   codi_estacio: string;
@@ -53,7 +54,7 @@ export async function getObservations(params: {
     return attachDailyGustTimes(mapDailyRowsToObservations(rows), gustRows);
   }
 
-  if (import.meta.env.VITE_DEBUG_XEMA === '1') {
+  if (parseBooleanEnv(import.meta.env.VITE_DEBUG_XEMA)) {
     const statusRows = await fetchSocrataAll<{ codi_estat?: string; n?: string }>('nzvn-apee', {
       $select: 'codi_estat, count(*) as n',
       $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59'`,
