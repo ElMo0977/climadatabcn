@@ -209,7 +209,7 @@ describe('getObservations', () => {
     expect(fetchSocrataAllMock).toHaveBeenCalledWith(
       'nzvn-apee',
       expect.objectContaining({
-        $where: expect.stringContaining("codi_estat = 'V'"),
+        $where: expect.stringContaining("codi_estat in ('V','T')"),
       }),
     );
     expect(result[0]).toMatchObject({

@@ -12,6 +12,7 @@ import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
 import { calculateStats } from '@/lib/weatherUtils';
 import { computeDailyCoverage } from '@/lib/dailyCoverage';
+import { computeSubdailyCoverage } from '@/lib/subdailyCoverage';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -64,6 +65,11 @@ const Index = () => {
     return computeDailyCoverage(dateRange, observations);
   }, [dateRange, granularity, observations]);
 
+  const subdailyCoverage = useMemo(() => {
+    if (granularity !== '30min') return null;
+    return computeSubdailyCoverage(dateRange, observations);
+  }, [dateRange, granularity, observations]);
+
   const missingDaysText = useMemo(() => {
     if (!dailyCoverage || dailyCoverage.missingCount === 0) return '';
     return dailyCoverage.missingDays
@@ -82,6 +88,15 @@ const Index = () => {
     granularity === 'daily' &&
     !!dailyCoverage &&
     dailyCoverage.missingCount > 0 &&
+    !observationsLoading &&
+    !observationsFetching &&
+    !observationsError;
+
+  const showSubdailyCoverageAlert =
+    !!selectedStation &&
+    granularity === '30min' &&
+    !!subdailyCoverage &&
+    subdailyCoverage.missingCount > 0 &&
     !observationsLoading &&
     !observationsFetching &&
     !observationsError;
@@ -221,6 +236,19 @@ const Index = () => {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   Faltan datos para {dailyCoverage.missingCount} día{dailyCoverage.missingCount === 1 ? '' : 's'}: {missingDaysText}
+                </p>
+              </div>
+            )}
+
+            {showSubdailyCoverageAlert && subdailyCoverage && (
+              <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
+                <p className="text-sm font-medium">
+                  Datos disponibles para {subdailyCoverage.availableCount} de {subdailyCoverage.expectedCount} franjas de 30 min.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {subdailyCoverage.availableCount === 0
+                    ? 'No hay datos subdiarios para el rango seleccionado en la estación.'
+                    : `Faltan ${subdailyCoverage.missingCount} franja${subdailyCoverage.missingCount === 1 ? '' : 's'} en el rango seleccionado.`}
                 </p>
               </div>
             )}
