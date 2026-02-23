@@ -39,7 +39,6 @@ describe('mapDailyRowsToObservations', () => {
         data_lectura: '2024-01-05T00:00:00',
         codi_variable: DAILY_CODES.VVX10,
         valor: '11.2',
-        hora_extrem: '1430',
       },
     ];
 
@@ -52,7 +51,7 @@ describe('mapDailyRowsToObservations', () => {
     expect(result[0].precipitation).toBeNull();
     expect(result[0].windSpeed).toBe(3.4);
     expect(result[0].windSpeedMax).toBe(11.2);
-    expect(result[0].windGustTime).toBe('14:30');
+    expect(result[0].windGustTime).toBeNull();
   });
 
   it('does not backfill windSpeed with max when daily avg is missing', () => {
@@ -169,6 +168,7 @@ describe('getObservations', () => {
       '7bvh-jvq2',
       expect.objectContaining({
         $where: expect.stringContaining("codi_estacio = 'X4'"),
+        $select: 'codi_estacio,data_lectura,codi_variable,valor',
       }),
     );
     expect(result[0]).toMatchObject({
