@@ -28,7 +28,14 @@ export interface DailyRow {
   codi_variable: string;
   valor?: string;
   valor_lectura?: string;
-  hora_extrem?: string;
+}
+
+interface SubdailyRow {
+  codi_estacio: string;
+  data_lectura: string;
+  codi_variable: string;
+  valor_lectura: string;
+  codi_estat?: string;
 }
 
 interface SubdailyRow {
@@ -229,7 +236,7 @@ export async function getObservations(params: {
 
   if (params.granularity === 'day') {
     const rows = await fetchSocrataAll<DailyRow>('7bvh-jvq2', {
-      $select: 'codi_estacio,data_lectura,codi_variable,valor,hora_extrem',
+      $select: 'codi_estacio,data_lectura,codi_variable,valor',
       $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
       $order: 'data_lectura ASC',
       $limit: 5000,
@@ -317,7 +324,7 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
       byDate[date].windSpeed = parsedValue;
     } else if (row.codi_variable === DAILY_CODES.VVX10) {
       byDate[date].windSpeedMax = parsedValue;
-      byDate[date].windGustTime = normalizeHourExtrem(row.hora_extrem);
+      byDate[date].windGustTime = null;
     }
   });
   return Object.entries(byDate).map(([timestamp, values]) => ({
@@ -371,12 +378,4 @@ export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[
   });
 
   return Object.values(byTimestamp).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
-}
-
-function normalizeHourExtrem(value?: string): string | null {
-  if (!value) return null;
-  const trimmed = value.trim();
-  if (!/^\d{3,4}$/.test(trimmed)) return null;
-  const padded = trimmed.padStart(4, '0');
-  return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
 }

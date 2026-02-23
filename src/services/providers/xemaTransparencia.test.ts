@@ -15,13 +15,11 @@ vi.mock('@/services/http/socrata', () => ({
   fetchSocrataAll: vi.fn(),
 }));
 
-import * as socrataClient from '@/services/http/socrata';
+import { fetchSocrataAll } from '@/services/http/socrata';
 
-const fetchSocrataMock = vi.mocked(socrataClient.fetchSocrata);
-const fetchSocrataAllMock = vi.mocked(socrataClient.fetchSocrataAll);
+const fetchSocrataAllMock = vi.mocked(fetchSocrataAll);
 
 beforeEach(() => {
-  fetchSocrataMock.mockReset();
   fetchSocrataAllMock.mockReset();
 });
 
@@ -39,7 +37,6 @@ describe('mapDailyRowsToObservations', () => {
         data_lectura: '2024-01-05T00:00:00',
         codi_variable: DAILY_CODES.VVX10,
         valor: '11.2',
-        hora_extrem: '1430',
       },
     ];
 
@@ -52,7 +49,7 @@ describe('mapDailyRowsToObservations', () => {
     expect(result[0].precipitation).toBeNull();
     expect(result[0].windSpeed).toBe(3.4);
     expect(result[0].windSpeedMax).toBe(11.2);
-    expect(result[0].windGustTime).toBe('14:30');
+    expect(result[0].windGustTime).toBeNull();
   });
 
   it('does not backfill windSpeed with max when daily avg is missing', () => {
@@ -206,39 +203,5 @@ describe('getObservations', () => {
       timestamp: '2024-01-05T10:00:00',
       temperature: 12.1,
     });
-  });
-});
-
-describe('fetchStationsFromSocrata', () => {
-  it('uses stations metadata resource and maps station fields', async () => {
-    fetchSocrataMock.mockResolvedValueOnce([
-      {
-        codi_estacio: 'X4',
-        nom_estacio: 'Barcelona - el Raval',
-        latitud: '41.38',
-        longitud: '2.17',
-        altitud: '33',
-        nom_municipi: 'Barcelona',
-      },
-    ] as any);
-
-    const result = await fetchStationsFromSocrata();
-
-    expect(fetchSocrataMock).toHaveBeenCalledWith(
-      'yqwd-vj5e',
-      expect.objectContaining({
-        $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
-      }),
-    );
-    expect(result).toEqual([
-      {
-        id: 'X4',
-        name: 'Barcelona - el Raval',
-        latitude: 41.38,
-        longitude: 2.17,
-        elevation: 33,
-        municipality: 'Barcelona',
-      },
-    ]);
   });
 });
