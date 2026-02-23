@@ -1,5 +1,5 @@
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { format, startOfDay } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,18 @@ interface DateRangePickerProps {
   onDateRangeChange: (range: DateRange) => void;
   granularity: Granularity;
   onGranularityChange: (granularity: Granularity) => void;
+}
+
+function startOfDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function endOfDay(date: Date): Date {
+  const normalized = new Date(date);
+  normalized.setHours(23, 59, 59, 999);
+  return normalized;
 }
 
 export function DateRangePicker({
@@ -75,7 +87,7 @@ export function DateRangePicker({
             <Calendar
               mode="single"
               selected={dateRange.from}
-              onSelect={(date) => date && onDateRangeChange({ ...dateRange, from: date })}
+              onSelect={(date) => date && onDateRangeChange({ ...dateRange, from: startOfDay(date) })}
               disabled={(date) => date > new Date() || date > dateRange.to}
               initialFocus
             />
@@ -99,7 +111,7 @@ export function DateRangePicker({
             <Calendar
               mode="single"
               selected={dateRange.to}
-              onSelect={(date) => date && onDateRangeChange({ ...dateRange, to: date })}
+              onSelect={(date) => date && onDateRangeChange({ ...dateRange, to: endOfDay(date) })}
               disabled={(date) => date > new Date() || date < dateRange.from}
               initialFocus
             />

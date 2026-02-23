@@ -44,4 +44,14 @@ describe('subdailyCoverage', () => {
     expect(coverage.missingCount).toBe(1);
     expect(coverage.missingSlots).toEqual(['2026-02-17 00:30']);
   });
+
+  it('counts full-day ranges as 48 slots per day', () => {
+    const from = new Date(2026, 1, 17, 0, 0, 0, 0);
+    const to = new Date(2026, 1, 19, 23, 59, 59, 999);
+    const keys = buildExpectedHalfHourKeys({ from, to });
+
+    expect(keys.length).toBe(48 * 3);
+    expect(keys[0]).toBe('2026-02-17 00:00');
+    expect(keys[keys.length - 1]).toBe('2026-02-19 23:30');
+  });
 });
