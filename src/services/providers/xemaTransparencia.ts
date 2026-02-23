@@ -28,6 +28,7 @@ export interface DailyRow {
   codi_variable: string;
   valor?: string;
   valor_lectura?: string;
+  hora_extrem?: string;
 }
 
 interface SubdailyRow {
@@ -316,7 +317,7 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
       byDate[date].windSpeed = parsedValue;
     } else if (row.codi_variable === DAILY_CODES.VVX10) {
       byDate[date].windSpeedMax = parsedValue;
-      byDate[date].windGustTime = null;
+      byDate[date].windGustTime = normalizeHourExtrem(row.hora_extrem);
     }
   });
   return Object.entries(byDate).map(([timestamp, values]) => ({
@@ -331,6 +332,14 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
 function parseRowNumericValue(row: { valor?: string; valor_lectura?: string }): number {
   const raw = row.valor ?? row.valor_lectura ?? '';
   return Number.parseFloat(raw);
+}
+
+function normalizeHourExtrem(value?: string): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!/^\d{3,4}$/.test(trimmed)) return null;
+  const padded = trimmed.padStart(4, '0');
+  return `${padded.slice(0, 2)}:${padded.slice(2, 4)}`;
 }
 
 export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {
