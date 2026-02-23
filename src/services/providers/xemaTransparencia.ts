@@ -229,6 +229,7 @@ export async function getObservations(params: {
 
   if (params.granularity === 'day') {
     const rows = await fetchSocrataAll<DailyRow>('7bvh-jvq2', {
+      // Keep daily select aligned with live schema; `hora_extrem` is not present here.
       $select: 'codi_estacio,data_lectura,codi_variable,valor',
       $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
       $order: 'data_lectura ASC',
