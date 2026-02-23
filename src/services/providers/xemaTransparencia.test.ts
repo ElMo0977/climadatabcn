@@ -228,12 +228,24 @@ describe('getObservations', () => {
       granularity: '30min',
     });
 
+    expect(fetchSocrataAllMock).toHaveBeenCalledTimes(1);
     expect(fetchSocrataAllMock).toHaveBeenCalledWith(
       'nzvn-apee',
       expect.objectContaining({
-        $where: expect.stringContaining("codi_estat in ('V','T')"),
+        $select: expect.stringContaining('codi_estat'),
+        $where: expect.stringContaining("codi_estacio = 'X4'"),
       }),
     );
+    const [, query] = fetchSocrataAllMock.mock.calls[0] as [
+      string,
+      { $select?: string; $where?: string },
+    ];
+    expect(query.$select).toContain('codi_estat');
+    expect(query.$where).toContain("data_lectura >= '2024-01-01T00:00:00'");
+    expect(query.$where).toContain("data_lectura <= '2024-01-07T23:59:59'");
+    expect(query.$where).toContain("codi_variable in ('32','33','35','30','31','50')");
+    expect(query.$where).not.toContain("codi_estat in ('V','T')");
+
     expect(result[0]).toMatchObject({
       timestamp: '2024-01-05T10:00:00',
       temperature: 12.1,
