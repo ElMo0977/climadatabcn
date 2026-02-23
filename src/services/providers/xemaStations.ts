@@ -3,21 +3,20 @@ import { fetchSocrata } from '@/services/http/socrata';
 
 /**
  * Static fallback list used when live metadata is unavailable.
+ *
+ * IMPORTANT: ids must match real `codi_estacio` values from `yqwd-vj5e`
+ * so observations queries keep working even in fallback mode.
  */
 export function listStations(): Station[] {
   return [
-    { id: 'bcn-raval', name: 'Barcelona - El Raval', provider: 'xema-transparencia', latitude: 41.3797, longitude: 2.1682, elevation: 33 },
-    { id: 'bcn-zoo', name: 'Barcelona - Zona Universitària', provider: 'xema-transparencia', latitude: 41.3870, longitude: 2.1130, elevation: 85 },
-    { id: 'bcn-fabra', name: 'Observatori Fabra', provider: 'xema-transparencia', latitude: 41.4184, longitude: 2.1239, elevation: 411 },
-    { id: 'bcn-port', name: 'Barcelona - Port Olímpic', provider: 'xema-transparencia', latitude: 41.3850, longitude: 2.2010, elevation: 5 },
-    { id: 'bcn-eixample', name: 'Barcelona - Eixample', provider: 'xema-transparencia', latitude: 41.3930, longitude: 2.1620, elevation: 45 },
-    { id: 'bcn-gracia', name: 'Barcelona - Gràcia', provider: 'xema-transparencia', latitude: 41.4036, longitude: 2.1532, elevation: 120 },
-    { id: 'bcn-airport', name: 'Aeropuerto El Prat', provider: 'xema-transparencia', latitude: 41.2974, longitude: 2.0833, elevation: 4 },
-    { id: 'badalona', name: 'Badalona', provider: 'xema-transparencia', latitude: 41.4500, longitude: 2.2474, elevation: 20 },
-    { id: 'hospitalet', name: "L'Hospitalet de Llobregat", provider: 'xema-transparencia', latitude: 41.3596, longitude: 2.1000, elevation: 25 },
-    { id: 'sant-cugat', name: 'Sant Cugat del Vallès', provider: 'xema-transparencia', latitude: 41.4722, longitude: 2.0864, elevation: 180 },
-    { id: 'montjuic', name: 'Barcelona - Montjuïc', provider: 'xema-transparencia', latitude: 41.3639, longitude: 2.1586, elevation: 173 },
-    { id: 'tibidabo', name: 'Barcelona - Tibidabo', provider: 'xema-transparencia', latitude: 41.4225, longitude: 2.1189, elevation: 512 },
+    { id: 'X4', name: 'Barcelona - el Raval', provider: 'xema-transparencia', latitude: 41.3839, longitude: 2.16775, elevation: 33 },
+    { id: 'X8', name: 'Barcelona - Zona Universitària', provider: 'xema-transparencia', latitude: 41.37919, longitude: 2.1054, elevation: 79 },
+    { id: 'D5', name: 'Barcelona - Observatori Fabra', provider: 'xema-transparencia', latitude: 41.41864, longitude: 2.12379, elevation: 411 },
+    { id: 'WU', name: 'Badalona - Museu', provider: 'xema-transparencia', latitude: 41.45215, longitude: 2.24757, elevation: 42 },
+    { id: 'Y7', name: 'Port de Barcelona - Bocana Sud', provider: 'xema-transparencia', latitude: 41.31725, longitude: 2.16537, elevation: 3 },
+    { id: 'YQ', name: 'Port de Barcelona - ZAL Prat', provider: 'xema-transparencia', latitude: 41.31928, longitude: 2.1372, elevation: 6 },
+    { id: 'XL', name: 'el Prat de Llobregat', provider: 'xema-transparencia', latitude: 41.34045, longitude: 2.08022, elevation: 8 },
+    { id: 'XV', name: 'Sant Cugat del Vallès - CAR', provider: 'xema-transparencia', latitude: 41.48311, longitude: 2.07956, elevation: 158 },
   ];
 }
 

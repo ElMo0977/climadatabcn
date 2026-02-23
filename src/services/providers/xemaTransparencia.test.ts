@@ -5,6 +5,7 @@ import {
   fetchStationsFromSocrata,
   filterDailyObservationsByRange,
   getObservations,
+  listStations,
   mapDailyRowsToObservations,
   mapSubdailyRowsToObservations,
   type DailyRow,
@@ -240,5 +241,15 @@ describe('fetchStationsFromSocrata', () => {
         municipality: 'Barcelona',
       },
     ]);
+  });
+});
+
+describe('listStations fallback ids', () => {
+  it('uses real XEMA station codes so observations can still be fetched in fallback mode', () => {
+    const ids = listStations().map((s) => s.id);
+    expect(ids).toContain('X4');
+    expect(ids).toContain('X8');
+    expect(ids).toContain('D5');
+    expect(ids).not.toContain('bcn-raval');
   });
 });
