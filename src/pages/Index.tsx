@@ -19,6 +19,27 @@ import { toast } from 'sonner';
 import { isXemaDebugEnabled } from '@/config/env';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
 
+function isChunkLoadError(error: unknown): boolean {
+  if (error instanceof Error) {
+    return (
+      error.name === 'ChunkLoadError' ||
+      error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('Loading chunk') ||
+      error.message.includes('ChunkLoadError')
+    );
+  }
+
+  if (typeof error === 'string') {
+    return (
+      error.includes('Failed to fetch dynamically imported module') ||
+      error.includes('Loading chunk') ||
+      error.includes('ChunkLoadError')
+    );
+  }
+
+  return false;
+}
+
 const Index = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -157,6 +178,12 @@ const Index = () => {
         dataSourceLabel ?? undefined,
       );
     } catch (error) {
+      console.error(error);
+      if (isChunkLoadError(error)) {
+        toast.error('No se pudo cargar el módulo de exportación (posible caché). Recarga con Ctrl/Cmd+Shift+R y vuelve a intentar.');
+        return;
+      }
+
       const message = error instanceof Error
         ? error.message
         : 'Error inesperado preparando la exportación.';

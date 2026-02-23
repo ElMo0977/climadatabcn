@@ -10,9 +10,27 @@ const SAFETY_FILL: Fill = {
   type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0E6' },
 };
 
-function roundWind(v: number | null): number | '' {
-  if (v === null) return '';
-  return Math.round(v * 10) / 10;
+function normalizeNumber(v: number | null | undefined): number | null {
+  return Number.isFinite(v) ? (v as number) : null;
+}
+
+function normalizeText(v: string | null | undefined): string {
+  return v ?? '';
+}
+
+function isValidDate(year: number, month: number, day: number): boolean {
+  const dt = new Date(Date.UTC(year, month - 1, day));
+  return (
+    dt.getUTCFullYear() === year &&
+    dt.getUTCMonth() === month - 1 &&
+    dt.getUTCDate() === day
+  );
+}
+
+function roundWind(v: number | null | undefined): number | null {
+  const normalized = normalizeNumber(v);
+  if (normalized === null) return null;
+  return Math.round(normalized * 10) / 10;
 }
 
 function styleHeaderCell(cell: Cell): void {
@@ -25,20 +43,28 @@ function styleSafetyCell(cell: Cell): void {
   cell.font = { bold: true };
 }
 
-function formatLocalDateTime(ts: string): string {
+function formatLocalDateTime(ts: string): string | null {
   // Timestamps already in Europe/Madrid local from provider
   // Format: dd/MM/yyyy HH:mm
-  const match = ts.match(/(\d{4})-(\d{2})-(\d{2})T?(\d{2})?:?(\d{2})?/);
-  if (!match) return ts;
+  const match = ts.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!match) return null;
   const [, y, m, d, hh, mm] = match;
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+  if (!isValidDate(year, month, day)) return null;
   if (hh && mm) return `${d}/${m}/${y} ${hh}:${mm}`;
   return `${d}/${m}/${y}`;
 }
 
-function formatLocalDate(ts: string): string {
-  const match = ts.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return ts;
+function formatLocalDate(ts: string): string | null {
+  const match = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
   const [, y, m, d] = match;
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+  if (!isValidDate(year, month, day)) return null;
   return `${d}/${m}/${y}`;
 }
 
@@ -75,19 +101,21 @@ export async function buildAndDownloadExcel(
   sheet30.getRow(hdr30Row).eachCell(styleHeaderCell);
 
   for (const obs of obs30min) {
+    const windSpeed = normalizeNumber(obs.windSpeed);
+    const windSpeedMax = normalizeNumber(obs.windSpeedMax);
     const r = sheet30.addRow({
       ts: formatLocalDateTime(obs.timestamp),
-      temp: obs.temperature ?? '',
-      hr: obs.humidity ?? '',
-      ppt: obs.precipitation ?? '',
-      vv: roundWind(obs.windSpeed),
-      dv: obs.windDirection ?? '',
-      vvx: roundWind(obs.windSpeedMax),
+      temp: normalizeNumber(obs.temperature),
+      hr: normalizeNumber(obs.humidity),
+      ppt: normalizeNumber(obs.precipitation),
+      vv: roundWind(windSpeed),
+      dv: normalizeNumber(obs.windDirection),
+      vvx: roundWind(windSpeedMax),
     });
     // Highlight wind > 5 m/s
     [5, 7].forEach((col) => {
       const cell = sheet30.getCell(r.number, col);
-      const val = col === 5 ? obs.windSpeed : obs.windSpeedMax;
+      const val = col === 5 ? windSpeed : windSpeedMax;
       if (val !== null && val > WIND_LIMIT_ACOUSTIC) styleSafetyCell(cell);
     });
   }
@@ -111,18 +139,20 @@ export async function buildAndDownloadExcel(
   sheetDaily.getRow(hdrDailyRow).eachCell(styleHeaderCell);
 
   for (const obs of obsDaily) {
+    const windSpeed = normalizeNumber(obs.windSpeed);
+    const windSpeedMax = normalizeNumber(obs.windSpeedMax);
     const r = sheetDaily.addRow({
       date: formatLocalDate(obs.timestamp),
-      tm: obs.temperature ?? '',
-      hrm: obs.humidity ?? '',
-      ppt: obs.precipitation ?? '',
-      vvm: roundWind(obs.windSpeed),
-      vvx: roundWind(obs.windSpeedMax),
-      vvxTime: obs.windGustTime ?? '',
+      tm: normalizeNumber(obs.temperature),
+      hrm: normalizeNumber(obs.humidity),
+      ppt: normalizeNumber(obs.precipitation),
+      vvm: roundWind(windSpeed),
+      vvx: roundWind(windSpeedMax),
+      vvxTime: normalizeText(obs.windGustTime),
     });
     [5, 6].forEach((col) => {
       const cell = sheetDaily.getCell(r.number, col);
-      const val = col === 5 ? obs.windSpeed : obs.windSpeedMax;
+      const val = col === 5 ? windSpeed : windSpeedMax;
       if (val !== null && val > WIND_LIMIT_ACOUSTIC) styleSafetyCell(cell);
     });
   }
