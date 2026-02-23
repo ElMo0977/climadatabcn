@@ -37,24 +37,106 @@ export interface DailyRow {
  * and persist the results in a cache【393582075062202†L309-L316】.
  */
 export function listStations(): Station[] {
-  // Note: this stub returns synchronously because dataService
-  // expects a plain array (not a Promise) and calls .map() on it【330959716576808†L15-L30】.
+  // This stub returns a static list of stations in and around Barcelona.  When
+  // the Socrata metadata API becomes stable we should fetch and cache the
+  // result instead.  Returning a synchronous array is important because
+  // dataService.getStations() expects to synchronously map over the list【330959716576808†L15-L30】.
   return [
     {
       id: 'bcn-raval',
-      name: 'El Raval',
+      name: 'Barcelona - El Raval',
       provider: 'xema-transparencia',
       latitude: 41.3797,
       longitude: 2.1682,
       elevation: 33,
     },
     {
-      id: 'bcn-eixample',
-      name: 'Eixample',
+      id: 'bcn-zoo',
+      name: 'Barcelona - Zona Universitària',
       provider: 'xema-transparencia',
-      latitude: 41.3891,
-      longitude: 2.1611,
+      latitude: 41.3870,
+      longitude: 2.1130,
+      elevation: 85,
+    },
+    {
+      id: 'bcn-fabra',
+      name: 'Observatori Fabra',
+      provider: 'xema-transparencia',
+      latitude: 41.4184,
+      longitude: 2.1239,
+      elevation: 411,
+    },
+    {
+      id: 'bcn-port',
+      name: 'Barcelona - Port Olímpic',
+      provider: 'xema-transparencia',
+      latitude: 41.3850,
+      longitude: 2.2010,
+      elevation: 5,
+    },
+    {
+      id: 'bcn-eixample',
+      name: 'Barcelona - Eixample',
+      provider: 'xema-transparencia',
+      latitude: 41.3930,
+      longitude: 2.1620,
       elevation: 45,
+    },
+    {
+      id: 'bcn-gracia',
+      name: 'Barcelona - Gràcia',
+      provider: 'xema-transparencia',
+      latitude: 41.4036,
+      longitude: 2.1532,
+      elevation: 120,
+    },
+    {
+      id: 'bcn-airport',
+      name: 'Aeropuerto El Prat',
+      provider: 'xema-transparencia',
+      latitude: 41.2974,
+      longitude: 2.0833,
+      elevation: 4,
+    },
+    {
+      id: 'badalona',
+      name: 'Badalona',
+      provider: 'xema-transparencia',
+      latitude: 41.4500,
+      longitude: 2.2474,
+      elevation: 20,
+    },
+    {
+      id: 'hospitalet',
+      name: "L'Hospitalet de Llobregat",
+      provider: 'xema-transparencia',
+      latitude: 41.3596,
+      longitude: 2.1000,
+      elevation: 25,
+    },
+    {
+      id: 'sant-cugat',
+      name: 'Sant Cugat del Vallès',
+      provider: 'xema-transparencia',
+      latitude: 41.4722,
+      longitude: 2.0864,
+      elevation: 180,
+    },
+    {
+      id: 'montjuic',
+      name: 'Barcelona - Montjuïc',
+      provider: 'xema-transparencia',
+      latitude: 41.3639,
+      longitude: 2.1586,
+      elevation: 173,
+    },
+    {
+      id: 'tibidabo',
+      name: 'Barcelona - Tibidabo',
+      provider: 'xema-transparencia',
+      latitude: 41.4225,
+      longitude: 2.1189,
+      elevation: 512,
     },
   ];
 }
