@@ -152,20 +152,31 @@ describe('mapSubdailyRowsToObservations', () => {
 
 describe('getObservations', () => {
   it('queries daily resource and maps rows to observations', async () => {
-    fetchSocrataAllMock.mockResolvedValueOnce([
-      {
-        codi_estacio: 'X4',
-        data_lectura: '2024-01-05T00:00:00',
-        codi_variable: DAILY_CODES.TM,
-        valor: '11.2',
-      },
-      {
-        codi_estacio: 'X4',
-        data_lectura: '2024-01-05T00:00:00',
-        codi_variable: DAILY_CODES.VVM10,
-        valor: '2.3',
-      },
-    ] as any);
+    fetchSocrataAllMock
+      .mockResolvedValueOnce([
+        {
+          codi_estacio: 'X4',
+          data_lectura: '2024-01-05T00:00:00',
+          codi_variable: DAILY_CODES.TM,
+          valor: '11.2',
+        },
+        {
+          codi_estacio: 'X4',
+          data_lectura: '2024-01-05T00:00:00',
+          codi_variable: DAILY_CODES.VVM10,
+          valor: '2.3',
+        },
+        {
+          codi_estacio: 'X4',
+          data_lectura: '2024-01-05T00:00:00',
+          codi_variable: DAILY_CODES.VVX10,
+          valor: '10.7',
+        },
+      ] as any)
+      .mockResolvedValueOnce([
+        { data_lectura: '2024-01-05T04:30:00', valor_lectura: '9.2' },
+        { data_lectura: '2024-01-05T16:00:00', valor_lectura: '10.7' },
+      ] as any);
 
     const result = await getObservations({
       stationId: 'X4',
@@ -181,10 +192,21 @@ describe('getObservations', () => {
         $select: 'codi_estacio,data_lectura,codi_variable,valor',
       }),
     );
+    expect(fetchSocrataAllMock).toHaveBeenNthCalledWith(
+      2,
+      'nzvn-apee',
+      expect.objectContaining({
+        $select: 'data_lectura,valor_lectura',
+        $where: expect.stringContaining(`codi_variable = '50'`),
+      }),
+    );
+
     expect(result[0]).toMatchObject({
       timestamp: '2024-01-05',
       temperature: 11.2,
       windSpeed: 2.3,
+      windSpeedMax: 10.7,
+      windGustTime: '16:00',
     });
   });
 

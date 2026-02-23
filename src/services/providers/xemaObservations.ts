@@ -19,6 +19,12 @@ interface SubdailyRow {
   codi_estat?: string;
 }
 
+interface SubdailyGustRow {
+  data_lectura: string;
+  valor?: string;
+  valor_lectura?: string;
+}
+
 export async function getObservations(params: {
   stationId: string;
   from: Date;
@@ -29,14 +35,22 @@ export async function getObservations(params: {
   const toDay = toLocalDayKey(params.to);
 
   if (params.granularity === 'day') {
-    const rows = await fetchSocrataAll<DailyRow>('7bvh-jvq2', {
-      $select: 'codi_estacio,data_lectura,codi_variable,valor',
-      $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
-      $order: 'data_lectura ASC',
-      $limit: 5000,
-    });
+    const [rows, gustRows] = await Promise.all([
+      fetchSocrataAll<DailyRow>('7bvh-jvq2', {
+        $select: 'codi_estacio,data_lectura,codi_variable,valor',
+        $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
+        $order: 'data_lectura ASC',
+        $limit: 5000,
+      }),
+      fetchSocrataAll<SubdailyGustRow>('nzvn-apee', {
+        $select: 'data_lectura,valor_lectura',
+        $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable = '${SUBDAILY_CODES.VVx10}' AND codi_estat in ('V','T')`,
+        $order: 'data_lectura ASC',
+        $limit: 50000,
+      }),
+    ]);
 
-    return mapDailyRowsToObservations(rows);
+    return attachDailyGustTimes(mapDailyRowsToObservations(rows), gustRows);
   }
 
   const rows = await fetchSocrataAll<SubdailyRow>('nzvn-apee', {
@@ -166,4 +180,32 @@ export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[
   });
 
   return Object.values(byTimestamp).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
+
+function extractLocalTimeFromTimestamp(ts: string): string | null {
+  const m = ts.match(/T(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return `${m[1]}:${m[2]}`;
+}
+
+export function attachDailyGustTimes(
+  daily: Observation[],
+  gustRows: SubdailyGustRow[],
+): Observation[] {
+  const byDay: Record<string, { speed: number; time: string | null }> = {};
+  for (const row of gustRows) {
+    const speed = parseNumericOrNull(row);
+    if (speed === null) continue;
+    const day = row.data_lectura.slice(0, 10);
+    const time = extractLocalTimeFromTimestamp(row.data_lectura);
+    const current = byDay[day];
+    if (!current || speed > current.speed) {
+      byDay[day] = { speed, time };
+    }
+  }
+
+  return daily.map((obs) => ({
+    ...obs,
+    windGustTime: byDay[obs.timestamp]?.time ?? obs.windGustTime ?? null,
+  }));
 }
