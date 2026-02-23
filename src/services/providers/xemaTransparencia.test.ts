@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_CODES } from './xemaVariableMap';
+import type { RawSocrataStation } from './xemaStations';
 import {
   buildDailyRangeBounds,
   fetchStationsFromSocrata,
@@ -20,6 +21,20 @@ import * as socrataClient from '@/services/http/socrata';
 
 const fetchSocrataMock = vi.mocked(socrataClient.fetchSocrata);
 const fetchSocrataAllMock = vi.mocked(socrataClient.fetchSocrataAll);
+
+interface RawSubdailyValueRow {
+  codi_estacio: string;
+  data_lectura: string;
+  codi_variable: string;
+  valor?: string;
+  valor_lectura?: string;
+  codi_estat?: string;
+}
+
+interface RawSubdailyGustRow {
+  data_lectura: string;
+  valor_lectura: string;
+}
 
 beforeEach(() => {
   fetchSocrataMock.mockReset();
@@ -143,7 +158,7 @@ describe('mapSubdailyRowsToObservations', () => {
   it('parses numeric value from valor when valor_lectura is absent', () => {
     const result = mapSubdailyRowsToObservations([
       { codi_estacio: 'X4', data_lectura: '2024-01-05T11:00:00', codi_variable: '32', valor: '14.2' },
-    ] as any);
+    ]);
 
     expect(result).toHaveLength(1);
     expect(result[0].temperature).toBe(14.2);
@@ -152,31 +167,34 @@ describe('mapSubdailyRowsToObservations', () => {
 
 describe('getObservations', () => {
   it('queries daily resource and maps rows to observations', async () => {
+    const dailyRows: DailyRow[] = [
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T00:00:00',
+        codi_variable: DAILY_CODES.TM,
+        valor: '11.2',
+      },
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T00:00:00',
+        codi_variable: DAILY_CODES.VVM10,
+        valor: '2.3',
+      },
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T00:00:00',
+        codi_variable: DAILY_CODES.VVX10,
+        valor: '10.7',
+      },
+    ];
+    const gustRows: RawSubdailyGustRow[] = [
+      { data_lectura: '2024-01-05T04:30:00', valor_lectura: '9.2' },
+      { data_lectura: '2024-01-05T16:00:00', valor_lectura: '10.7' },
+    ];
+
     fetchSocrataAllMock
-      .mockResolvedValueOnce([
-        {
-          codi_estacio: 'X4',
-          data_lectura: '2024-01-05T00:00:00',
-          codi_variable: DAILY_CODES.TM,
-          valor: '11.2',
-        },
-        {
-          codi_estacio: 'X4',
-          data_lectura: '2024-01-05T00:00:00',
-          codi_variable: DAILY_CODES.VVM10,
-          valor: '2.3',
-        },
-        {
-          codi_estacio: 'X4',
-          data_lectura: '2024-01-05T00:00:00',
-          codi_variable: DAILY_CODES.VVX10,
-          valor: '10.7',
-        },
-      ] as any)
-      .mockResolvedValueOnce([
-        { data_lectura: '2024-01-05T04:30:00', valor_lectura: '9.2' },
-        { data_lectura: '2024-01-05T16:00:00', valor_lectura: '10.7' },
-      ] as any);
+      .mockResolvedValueOnce(dailyRows)
+      .mockResolvedValueOnce(gustRows);
 
     const result = await getObservations({
       stationId: 'X4',
@@ -211,7 +229,7 @@ describe('getObservations', () => {
   });
 
   it('queries subdaily resource for 30min granularity', async () => {
-    fetchSocrataAllMock.mockResolvedValueOnce([
+    const subdailyRows: RawSubdailyValueRow[] = [
       {
         codi_estacio: 'X4',
         data_lectura: '2024-01-05T10:00:00',
@@ -219,7 +237,8 @@ describe('getObservations', () => {
         valor_lectura: '12.1',
         codi_estat: 'V',
       },
-    ] as any);
+    ];
+    fetchSocrataAllMock.mockResolvedValueOnce(subdailyRows);
 
     const result = await getObservations({
       stationId: 'X4',
@@ -255,7 +274,7 @@ describe('getObservations', () => {
 
 describe('fetchStationsFromSocrata', () => {
   it('uses stations metadata resource and maps station fields', async () => {
-    fetchSocrataMock.mockResolvedValueOnce([
+    const rows: RawSocrataStation[] = [
       {
         codi_estacio: 'X4',
         nom_estacio: 'Barcelona - el Raval',
@@ -264,7 +283,8 @@ describe('fetchStationsFromSocrata', () => {
         altitud: '33',
         nom_municipi: 'Barcelona',
       },
-    ] as any);
+    ];
+    fetchSocrataMock.mockResolvedValueOnce(rows);
 
     const result = await fetchStationsFromSocrata();
 

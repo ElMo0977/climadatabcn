@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchStationsFromSocrata } from './xemaTransparencia';
+import type { RawSocrataStation } from './xemaStations';
 
 vi.mock('@/services/http/socrata', () => ({
   fetchSocrata: vi.fn(),
@@ -16,7 +17,7 @@ beforeEach(() => {
 
 describe('fetchStationsFromSocrata', () => {
   it('uses stations metadata resource and maps station fields', async () => {
-    fetchSocrataMock.mockResolvedValueOnce([
+    const rows: RawSocrataStation[] = [
       {
         codi_estacio: 'X4',
         nom_estacio: 'Barcelona - el Raval',
@@ -25,7 +26,8 @@ describe('fetchStationsFromSocrata', () => {
         altitud: '33',
         nom_municipi: 'Barcelona',
       },
-    ] as any);
+    ];
+    fetchSocrataMock.mockResolvedValueOnce(rows);
 
     const result = await fetchStationsFromSocrata();
 

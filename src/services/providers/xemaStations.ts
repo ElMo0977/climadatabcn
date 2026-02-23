@@ -1,6 +1,17 @@
 import type { Station } from '@/domain/types';
 import { fetchSocrata } from '@/services/http/socrata';
 
+export interface RawSocrataStation {
+  codi_estacio: string;
+  nom_estacio: string;
+  latitud: string;
+  longitud: string;
+  altitud?: string;
+  nom_municipi?: string;
+  codi_estat_ema?: string;
+  nom_xarxa?: string;
+}
+
 /**
  * Static fallback list used when live metadata is unavailable.
  *
@@ -32,7 +43,7 @@ export async function fetchStationsFromSocrata(): Promise<
 > {
   const RESOURCE_ID = 'yqwd-vj5e';
   try {
-    const rows = await fetchSocrata<any[]>(RESOURCE_ID, {
+    const rows = await fetchSocrata<RawSocrataStation[]>(RESOURCE_ID, {
       $select: 'codi_estacio,nom_estacio,latitud,longitud,altitud,nom_municipi,codi_estat_ema,nom_xarxa',
       $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
       $limit: 2000,
