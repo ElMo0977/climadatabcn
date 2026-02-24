@@ -98,4 +98,6 @@ Fecha: 24-02-2026\
 - `index.html` actualizado con metadatos reales de Meteo BCN (sin referencias a "Lovable App" y sin TODOs).\
 - `README.md` reescrito para reflejar el estado real: fuente XEMA/Socrata y exportacion Excel.\
 - Eliminados archivos sin uso: `src/App.css` y `src/components/NavLink.tsx`.\
-- Actualizado `GUIA PROYECTO.md` en el apartado "5. Estado actual" para marcar estas inconsistencias como resueltas.}
+- Actualizado `GUIA PROYECTO.md` en el apartado "5. Estado actual" para marcar estas inconsistencias como resueltas.\
+- Texto de granularidad unificado en la interfaz a "Datos 30 min".\
+- Comportamiento de fechas corregido: hoy nunca seleccionable, presets desde ayer incluido, selector manual en dias completos e intervalo de un solo dia valido.}

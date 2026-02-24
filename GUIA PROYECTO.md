@@ -95,18 +95,18 @@ Notas:
 - Integracion de datos XEMA/Socrata activa.
 - Exportacion Excel implementada.
 - Avisos de datos faltantes (diario y subdiario).
-- Suite de tests pasando (55 tests).
+- Suite de tests pasando (56 tests).
 - Build y lint en verde.
 - Metadatos y SEO base actualizados en `index.html` para Meteo BCN.
 - `README.md` reescrito y alineado con el estado real del proyecto.
 - Limpieza de restos de plantilla ya aplicada (`src/App.css` y `src/components/NavLink.tsx` eliminados).
+- Texto de granularidad unificado en la UI a `Datos 30 min`.
+- Logica de fechas corregida: hoy no seleccionable, presets desde ayer, dias completos en selector manual y rango de un solo dia valido.
 
 ### Partes incompletas o inconsistentes
 
 - `supabase/functions/*` usa Open-Meteo y parece legado.
 - Hay muchos componentes UI no usados en la app actual.
-- Mezcla de convenciones de granularidad en texto (`30min` vs "por horas").
-- Comportamiento desigual en fechas: rango inicial incluye hoy, presets lo excluyen.
 
 ### Patrones mezclados / duplicidad
 
