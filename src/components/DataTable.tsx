@@ -55,7 +55,7 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
     <div className="glass-card rounded-xl overflow-hidden animate-fade-in">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h4 className="font-display font-semibold text-sm">
-          {isDetail ? 'Datos por horas' : 'Resumen diario'}
+          {isDetail ? 'Datos 30 min' : 'Resumen diario'}
         </h4>
         <span className="text-xs text-muted-foreground">
           {observations.length} {isDetail ? 'registros' : 'días'}

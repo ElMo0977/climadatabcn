@@ -295,12 +295,12 @@ const Index = () => {
             {showSubdailyCoverageAlert && subdailyCoverage && (
               <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
                 <p className="text-sm font-medium">
-                  Datos disponibles para {subdailyCoverage.availableCount} de {subdailyCoverage.expectedCount} franjas de 30 min.
+                  Datos 30 min disponibles para {subdailyCoverage.availableCount} de {subdailyCoverage.expectedCount} franjas.
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {subdailyCoverage.availableCount === 0
-                    ? 'No hay datos subdiarios para el rango seleccionado en la estación.'
-                    : `Faltan ${subdailyCoverage.missingCount} franja${subdailyCoverage.missingCount === 1 ? '' : 's'} en el rango seleccionado.`}
+                    ? 'No hay Datos 30 min para el rango seleccionado en la estación.'
+                    : `Faltan ${subdailyCoverage.missingCount} registro${subdailyCoverage.missingCount === 1 ? '' : 's'} de Datos 30 min en el rango seleccionado.`}
                 </p>
                 {showLargestSubdailyGap && subdailyCoverage.largestGap && (
                   <>

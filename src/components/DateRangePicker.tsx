@@ -131,7 +131,7 @@ export function DateRangePicker({
             className={cn(selectableButtonClass, granularity === '30min' && 'active')}
             aria-pressed={granularity === '30min'}
           >
-            Por horas
+            Datos 30 min
           </button>
           <button
             type="button"
