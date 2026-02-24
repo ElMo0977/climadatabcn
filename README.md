@@ -1,72 +1,66 @@
 # Meteo BCN
 
-Aplicación web para visualizar y descargar datos meteorológicos históricos de Barcelona.
+Aplicacion web para consultar datos meteorologicos historicos de Barcelona y su area metropolitana.
 
-## Características
+## Que hace
 
-- **Selector de estaciones**: Lista de estaciones meteorológicas cercanas a Barcelona con búsqueda
-- **Rango de fechas**: Selector con presets (7, 14, 30 días) y granularidad horaria/diaria
-- **KPIs**: Temperatura media, humedad media, velocidad del viento media
-- **Gráficos interactivos**: Series temporales con zoom para temperatura, humedad y viento
-- **Tabla paginada**: Datos detallados con timestamps locales (Europe/Madrid)
-- **Descarga**: Exportación a CSV y Excel
+- Seleccion de estaciones meteorologicas cercanas a Barcelona.
+- Seleccion de rango de fechas.
+- Vista en dos modos: `30min` y `diario`.
+- KPIs de temperatura, humedad, viento y precipitacion.
+- Graficas y tabla de datos.
+- Exportacion a Excel (hoja de detalle y hoja diaria).
+- Avisos cuando faltan datos en el rango seleccionado.
 
-## Tecnologías
+## Fuente de datos
 
-- **Frontend**: React + TypeScript + Vite + Tailwind CSS + Recharts
-- **Backend**: Supabase Edge Functions (Deno)
-- **Fuente de datos**:
-  - **XEMA (Transparència Catalunya / Meteocat-Socrata)** – fuente única
+La fuente activa del proyecto es:
 
-## Configuración
+- **XEMA (Transparencia Catalunya / Socrata)**
 
-### Ejecutar localmente
+## Tecnologias principales
+
+- React + TypeScript
+- Vite
+- Tailwind CSS
+- React Query
+- Recharts
+- Leaflet
+- ExcelJS
+- Vitest + Testing Library
+
+## Ejecutar en local
 
 ```bash
 npm install
 npm run dev
 ```
 
-### Variables de entorno
+La app abre en entorno Vite (puerto configurado en `vite.config.ts`).
 
-Copia `.env.example` a `.env` y rellena:
+## Variables de entorno
 
-- `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (si usas integración Supabase en otras partes del proyecto).
-- `VITE_DEBUG_DATA=1` (opcional) para diagnóstico en consola.
+Copiar `.env.example` a `.env`.
 
-## Fuente mostrada en la app
+Variables utiles:
 
-En gráficos y Excel se muestra *"Fuente: XEMA (Transparència Catalunya) - Estación: [nombre]"*.
+- `VITE_DEBUG_DATA=1` para ver diagnostico de datos en consola.
+- `VITE_DEBUG_XEMA=true` para logs de depuracion del proveedor XEMA.
+- `VITE_API_PROXY_URL` es opcional (si se configura proxy).
 
-## Formato de datos (referencia)
+## Comandos utiles
 
-```typescript
-// Estación (types/weather)
-interface Station {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  elevation: number | null;
-  distance: number; // km
-  source?: 'xema-transparencia';
-}
-
-// Observación
-interface Observation {
-  timestamp: string; // ISO 8601
-  temperature: number | null; // °C
-  humidity: number | null; // %
-  windSpeed: number | null; // m/s
-  dataSourceLabel?: string; // "Fuente: X - Estación: Y"
-}
+```bash
+npm run dev
+npm test
+npm run lint
+npm run build
 ```
 
-## API Interna
+## Estado actual (resumen)
 
-- `GET /api/stations?lat=..&lon=..&radiusKm=..` – Lista estaciones cercanas
-- `GET /api/observations?stationId=..&from=YYYY-MM-DD&to=YYYY-MM-DD&granularity=hourly|daily` – Datos meteorológicos
-
-## Caché
-
-Los datos se cachean en memoria durante 15 minutos por combinación de parámetros.
+- Flujo principal funcional y estable.
+- Integracion XEMA/Socrata activa.
+- Exportacion Excel funcionando.
+- Tests y build en verde.
+- Existen carpetas/archivos heredados (por ejemplo `supabase/functions`) que no son la ruta principal actual.
