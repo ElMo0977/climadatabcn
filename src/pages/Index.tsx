@@ -19,6 +19,8 @@ import { toast } from 'sonner';
 import { isXemaDebugEnabled } from '@/config/env';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
 
+const LARGE_SUBDAILY_GAP_MIN_SLOTS = 4;
+
 function isChunkLoadError(error: unknown): boolean {
   if (error instanceof Error) {
     return (
@@ -38,6 +40,26 @@ function isChunkLoadError(error: unknown): boolean {
   }
 
   return false;
+}
+
+function formatGapSlot(slot: string): string {
+  const isoLike = slot.replace(' ', 'T');
+  try {
+    return format(parseISO(isoLike), 'HH:mm');
+  } catch {
+    return slot;
+  }
+}
+
+function formatGapInterval(startSlot: string, endSlot: string): string {
+  const startDay = startSlot.slice(0, 10);
+  const endDay = endSlot.slice(0, 10);
+
+  if (startDay === endDay) {
+    return `${formatGapSlot(startSlot)} y ${formatGapSlot(endSlot)}`;
+  }
+
+  return `${startSlot} y ${endSlot}`;
 }
 
 const Index = () => {
@@ -122,6 +144,10 @@ const Index = () => {
     !observationsLoading &&
     !observationsFetching &&
     !observationsError;
+
+  const showLargestSubdailyGap =
+    !!subdailyCoverage?.largestGap &&
+    subdailyCoverage.largestGap.missingCount >= LARGE_SUBDAILY_GAP_MIN_SLOTS;
 
   useEffect(() => {
     if (!isXemaDebugEnabled() || granularity !== 'daily' || !selectedStation) return;
@@ -276,6 +302,16 @@ const Index = () => {
                     ? 'No hay datos subdiarios para el rango seleccionado en la estación.'
                     : `Faltan ${subdailyCoverage.missingCount} franja${subdailyCoverage.missingCount === 1 ? '' : 's'} en el rango seleccionado.`}
                 </p>
+                {showLargestSubdailyGap && subdailyCoverage.largestGap && (
+                  <>
+                    <p className="text-xs text-muted-foreground">
+                      Faltan datos entre {formatGapInterval(subdailyCoverage.largestGap.start, subdailyCoverage.largestGap.end)} ({subdailyCoverage.largestGap.missingCount} franjas).
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      La fuente de dades obertes (Socrata) no publica algunas franjas. Meteocat puede mostrar datos aún en control de calidad.
+                    </p>
+                  </>
+                )}
               </div>
             )}
 

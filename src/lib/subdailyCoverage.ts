@@ -5,8 +5,16 @@ export interface SubdailyCoverage {
   expectedSlots: string[];
   availableSlots: string[];
   missingSlots: string[];
+  missingIntervals: MissingInterval[];
+  largestGap: MissingInterval | null;
   expectedCount: number;
   availableCount: number;
+  missingCount: number;
+}
+
+export interface MissingInterval {
+  start: string;
+  end: string;
   missingCount: number;
 }
 
@@ -50,17 +58,60 @@ export function getObservedHalfHourKeys(observations: Observation[]): string[] {
   return Array.from(new Set(out)).sort();
 }
 
+export function buildMissingIntervals(
+  expectedSlots: string[],
+  availableSet: Set<string>,
+): MissingInterval[] {
+  const intervals: MissingInterval[] = [];
+  let idx = 0;
+
+  while (idx < expectedSlots.length) {
+    if (availableSet.has(expectedSlots[idx])) {
+      idx += 1;
+      continue;
+    }
+
+    const startIdx = idx;
+    while (idx + 1 < expectedSlots.length && !availableSet.has(expectedSlots[idx + 1])) {
+      idx += 1;
+    }
+    const endIdx = idx;
+
+    intervals.push({
+      start: expectedSlots[startIdx],
+      end: expectedSlots[endIdx],
+      missingCount: endIdx - startIdx + 1,
+    });
+
+    idx += 1;
+  }
+
+  return intervals;
+}
+
 export function computeSubdailyCoverage(range: DateRange, observations: Observation[]): SubdailyCoverage {
   const expectedSlots = buildExpectedHalfHourKeys(range);
   const expectedSet = new Set(expectedSlots);
   const availableSlots = getObservedHalfHourKeys(observations).filter((s) => expectedSet.has(s));
   const availableSet = new Set(availableSlots);
   const missingSlots = expectedSlots.filter((s) => !availableSet.has(s));
+  const missingIntervals = buildMissingIntervals(expectedSlots, availableSet);
+  const largestGap = missingIntervals.reduce<MissingInterval | null>(
+    (currentLargest, interval) => {
+      if (!currentLargest || interval.missingCount > currentLargest.missingCount) {
+        return interval;
+      }
+      return currentLargest;
+    },
+    null,
+  );
 
   return {
     expectedSlots,
     availableSlots,
     missingSlots,
+    missingIntervals,
+    largestGap,
     expectedCount: expectedSlots.length,
     availableCount: availableSlots.length,
     missingCount: missingSlots.length,
