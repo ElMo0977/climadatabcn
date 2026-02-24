@@ -90,4 +90,12 @@ Principales:\
 - Se repiten utilidades parecidas en varios archivos (por ejemplo funciones de fecha y validaci\'f3n simple de n\'famero).\
 - Hay dos herramientas de diagn\'f3stico muy parecidas: [src/lib/dataDebug.ts](/Users/pablor/Documents/GitHub/climadatabcn/src/lib/dataDebug.ts) y [scripts/dataDiagnostics.js](/Users/pablor/Documents/GitHub/climadatabcn/scripts/dataDiagnostics.js).\
 - Hay definiciones de estaciones en m\'e1s de un sitio, con c\'f3digos distintos (viejos y nuevos).\
-- Hay mezcla de idioma en textos de interfaz (espa\'f1ol/catal\'e1n/ingl\'e9s en distintas partes).}
+- Hay mezcla de idioma en textos de interfaz (espa\'f1ol/catal\'e1n/ingl\'e9s en distintas partes).\
+\
+**Cambios aplicados**\
+Fecha: 24-02-2026\
+\
+- `index.html` actualizado con metadatos reales de Meteo BCN (sin referencias a "Lovable App" y sin TODOs).\
+- `README.md` reescrito para reflejar el estado real: fuente XEMA/Socrata y exportacion Excel.\
+- Eliminados archivos sin uso: `src/App.css` y `src/components/NavLink.tsx`.\
+- Actualizado `GUIA PROYECTO.md` en el apartado "5. Estado actual" para marcar estas inconsistencias como resueltas.}

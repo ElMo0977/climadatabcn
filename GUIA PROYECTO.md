@@ -97,14 +97,14 @@ Notas:
 - Avisos de datos faltantes (diario y subdiario).
 - Suite de tests pasando (55 tests).
 - Build y lint en verde.
+- Metadatos y SEO base actualizados en `index.html` para Meteo BCN.
+- `README.md` reescrito y alineado con el estado real del proyecto.
+- Limpieza de restos de plantilla ya aplicada (`src/App.css` y `src/components/NavLink.tsx` eliminados).
 
 ### Partes incompletas o inconsistentes
 
-- `index.html` mantiene metadatos de plantilla ("Lovable App") y TODOs.
-- `README.md` tiene partes desactualizadas respecto al runtime real.
 - `supabase/functions/*` usa Open-Meteo y parece legado.
 - Hay muchos componentes UI no usados en la app actual.
-- Quedan restos de plantilla (`src/App.css`, algunos archivos auxiliares).
 - Mezcla de convenciones de granularidad en texto (`30min` vs "por horas").
 - Comportamiento desigual en fechas: rango inicial incluye hoy, presets lo excluyen.
 
