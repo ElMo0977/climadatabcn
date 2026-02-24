@@ -33,7 +33,8 @@ interface RawSubdailyValueRow {
 
 interface RawSubdailyGustRow {
   data_lectura: string;
-  valor_lectura: string;
+  valor?: string;
+  valor_lectura?: string;
 }
 
 beforeEach(() => {
@@ -155,13 +156,26 @@ describe('mapSubdailyRowsToObservations', () => {
     });
   });
 
-  it('parses numeric value from valor when valor_lectura is absent', () => {
+  it('parses numeric value from valor when valor_lectura is absent or empty', () => {
     const result = mapSubdailyRowsToObservations([
-      { codi_estacio: 'X4', data_lectura: '2024-01-05T11:00:00', codi_variable: '32', valor: '14.2' },
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T11:00:00',
+        codi_variable: '32',
+        valor: '14.2',
+        valor_lectura: '',
+      },
+      {
+        codi_estacio: 'X4',
+        data_lectura: '2024-01-05T11:00:00',
+        codi_variable: '33',
+        valor: '67',
+      },
     ]);
 
     expect(result).toHaveLength(1);
     expect(result[0].temperature).toBe(14.2);
+    expect(result[0].humidity).toBe(67);
   });
 });
 
@@ -189,7 +203,7 @@ describe('getObservations', () => {
     ];
     const gustRows: RawSubdailyGustRow[] = [
       { data_lectura: '2024-01-05T04:30:00', valor_lectura: '9.2' },
-      { data_lectura: '2024-01-05T16:00:00', valor_lectura: '10.7' },
+      { data_lectura: '2024-01-05T16:00:00', valor: '10.7' },
     ];
 
     fetchSocrataAllMock
@@ -214,7 +228,7 @@ describe('getObservations', () => {
       2,
       'nzvn-apee',
       expect.objectContaining({
-        $select: 'data_lectura,valor_lectura',
+        $select: 'data_lectura,valor,valor_lectura',
         $where: expect.stringContaining(`codi_variable = '50'`),
       }),
     );
@@ -260,6 +274,7 @@ describe('getObservations', () => {
       { $select?: string; $where?: string },
     ];
     expect(query.$select).toContain('codi_estat');
+    expect(query.$select).toContain('valor,valor_lectura');
     expect(query.$where).toContain("data_lectura >= '2024-01-01T00:00:00'");
     expect(query.$where).toContain("data_lectura <= '2024-01-07T23:59:59'");
     expect(query.$where).toContain("codi_variable in ('32','33','35','30','31','50')");
