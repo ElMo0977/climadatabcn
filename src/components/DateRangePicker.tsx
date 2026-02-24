@@ -37,6 +37,7 @@ export function DateRangePicker({
     'station-item !mb-0 !rounded-md !px-2 !py-1 !text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
   const activePreset = getActiveQuickRangeKey(dateRange);
+  const maxSelectableDate = endOfDay(buildQuickRangeExcludingToday(1).to);
 
   const applyPreset = (days: number) => {
     onDateRangeChange(buildQuickRangeExcludingToday(days));
@@ -88,7 +89,7 @@ export function DateRangePicker({
               mode="single"
               selected={dateRange.from}
               onSelect={(date) => date && onDateRangeChange({ ...dateRange, from: startOfDay(date) })}
-              disabled={(date) => date > new Date() || date > dateRange.to}
+              disabled={(date) => date > maxSelectableDate || date > endOfDay(dateRange.to)}
               initialFocus
             />
           </PopoverContent>
@@ -112,7 +113,7 @@ export function DateRangePicker({
               mode="single"
               selected={dateRange.to}
               onSelect={(date) => date && onDateRangeChange({ ...dateRange, to: endOfDay(date) })}
-              disabled={(date) => date > new Date() || date < dateRange.from}
+              disabled={(date) => date > maxSelectableDate || date < startOfDay(dateRange.from)}
               initialFocus
             />
           </PopoverContent>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { format, parseISO, subDays } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Header } from '@/components/Header';
 import { StationSelector } from '@/components/StationSelector';
@@ -18,6 +18,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isXemaDebugEnabled } from '@/config/env';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
+import { buildQuickRangeExcludingToday } from '@/lib/quickDateRanges';
 
 const LARGE_SUBDAILY_GAP_MIN_SLOTS = 4;
 
@@ -64,10 +65,7 @@ function formatGapInterval(startSlot: string, endSlot: string): string {
 
 const Index = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: subDays(new Date(), 6),
-    to: new Date(),
-  });
+  const [dateRange, setDateRange] = useState<DateRange>(() => buildQuickRangeExcludingToday(7));
   const [granularity, setGranularity] = useState<Granularity>('30min');
 
   const { 
