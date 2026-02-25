@@ -2,7 +2,7 @@
  * HTTP client with timeout, retries, and typed errors
  */
 
-import { ProviderError, type ApiError, type ApiErrorCode, type DataProvider } from '@/domain/types';
+import { ProviderError, type ApiError, type ApiErrorCode, type DataSource } from '@/types/weather';
 
 interface FetchOptions extends RequestInit {
   /** Timeout in milliseconds (default: 10000) */
@@ -12,7 +12,7 @@ interface FetchOptions extends RequestInit {
   /** Base delay for exponential backoff in ms (default: 1000) */
   retryDelay?: number;
   /** Provider for error context */
-  provider?: DataProvider;
+  provider?: DataSource;
 }
 
 interface FetchResult<T> {
@@ -73,7 +73,7 @@ export async function fetchJson<T>(
 async function fetchWithTimeout<T>(
   url: string,
   options: FetchOptions & { timeout: number },
-  provider?: DataProvider
+  provider?: DataSource
 ): Promise<FetchResult<T>> {
   const { timeout, ...fetchOptions } = options;
   
@@ -132,7 +132,7 @@ async function fetchWithTimeout<T>(
   }
 }
 
-function createErrorFromResponse(response: Response, provider?: DataProvider): ProviderError {
+function createErrorFromResponse(response: Response, provider?: DataSource): ProviderError {
   const status = response.status;
 
   let code: ApiErrorCode;
