@@ -118,3 +118,19 @@ Revisé todo el código propio del repositorio (sin contar `node_modules`, que s
   - `.env.example` limpiado de las tres variables VITE_SUPABASE_*.
   - Dependencia `@supabase/supabase-js` desinstalada (9 paquetes eliminados).
 - Verificación post-limpieza: 56 tests pasando, build en verde.
+
+### 25-02-2026 (sesión 2)
+
+- Unificados los dos archivos de tipos en uno solo (`src/types/weather.ts`):
+  - Migrados a `weather.ts`: `ProviderError`, `ApiError`, `ApiErrorCode`.
+  - `DataProvider` unificado con `DataSource` (ya existente en `weather.ts`).
+  - `DataMode` inlineado en `EnvConfig` (eliminada dependencia externa).
+  - `src/domain/types.ts` eliminado.
+- Eliminada la capa de abstracción de multi-proveedor (ya sin uso tras quitar Open-Meteo):
+  - `src/services/dataService.ts` eliminado.
+  - `src/services/providers/mockData.ts` y su test eliminados.
+  - `src/services/providers/index.ts` eliminado.
+  - Directorio `src/domain/` eliminado.
+- `useStations.ts`: fallback simplificado para llamar directamente a `listStations()`.
+- `env.ts`: eliminadas funciones sin uso `isProviderConfigured` y `getMissingConfigMessage`.
+- Verificación post-limpieza: 54 tests pasando (−2 por test de mockData eliminado), build en verde.
