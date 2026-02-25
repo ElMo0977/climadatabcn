@@ -159,3 +159,13 @@ Revisé todo el código propio del repositorio (sin contar `node_modules`, que s
     `src/services/providers/xemaObservations.ts`.
   - Ambos archivos actualizados para importar desde `dailyCoverage`.
 - Verificación post-limpieza: 54 tests pasando, build en verde.
+
+### 25-02-2026 (sesión 4)
+
+- Optimizado el bundle de producción:
+  - Añadido `manualChunks` en `vite.config.ts` para separar vendors grandes.
+  - `chunkSizeWarningLimit` subido a 1000 kB (exceljs se carga lazy, sin impacto en carga inicial).
+  - Chunk `index` reducido de 840K a 268K (−68%).
+  - Warnings de Vite eliminados.
+  - Nuevos chunks separados: `vendor-react`, `vendor-query`, `vendor-charts`, `vendor-date`.
+- Verificación post-optimización: 54 tests pasando, build limpio sin warnings.
