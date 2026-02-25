@@ -49,7 +49,6 @@ export async function fetchStationsFromSocrata(): Promise<
       $select: 'codi_estacio,nom_estacio,latitud,longitud,altitud,nom_municipi,codi_estat_ema,nom_xarxa',
       $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
       $limit: 2000,
-      $order: 'nom_estacio ASC',
     });
 
     const stations = rows

@@ -48,13 +48,11 @@ export async function getObservations(params: {
       fetchSocrataAll<DailyRow>('7bvh-jvq2', {
         $select: 'codi_estacio,data_lectura,codi_variable,valor',
         $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
-        $order: 'data_lectura ASC',
         $limit: 5000,
       }),
       fetchSocrataAll<SubdailyGustRow>('nzvn-apee', {
         $select: 'data_lectura,valor_lectura',
         $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable = '${SUBDAILY_CODES.VVx10}'`,
-        $order: 'data_lectura ASC',
         $limit: 50000,
       }),
     ]);
@@ -69,7 +67,6 @@ export async function getObservations(params: {
   const rows = await fetchSocrataAll<SubdailyRow>('nzvn-apee', {
     $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat',
     $where: subdailyWhere,
-    $order: 'data_lectura ASC',
     $limit: 50000,
   });
 
@@ -164,13 +161,13 @@ export function mapDailyRowsToObservations(rows: DailyRow[]) {
       byDate[date].windGustTime = null;
     }
   });
-  return Object.entries(byDate).map(([timestamp, values]) => ({
-    timestamp,
-    temperature: values.temperature,
-    humidity: values.humidity,
-    ...values,
-    windDirection: null,
-  }));
+  return Object.entries(byDate)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([timestamp, values]) => ({
+      timestamp,
+      ...values,
+      windDirection: null,
+    }));
 }
 
 function parseRowNumericValue(row: { valor?: string; valor_lectura?: string }): number {
