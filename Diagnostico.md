@@ -108,3 +108,13 @@ Revisé todo el código propio del repositorio (sin contar `node_modules`, que s
 - `GUIA_PROYECTO.md` actualizado en el apartado "5. Estado actual".
 - Texto de granularidad unificado en toda la interfaz a "Datos 30 min".
 - Comportamiento de fechas corregido: hoy nunca seleccionable, presets desde ayer incluido, selector manual en días completos, intervalo de un solo día válido.
+
+### 25-02-2026
+
+- Eliminado todo el legado Open-Meteo / Supabase:
+  - `supabase/functions/observations/` y `supabase/functions/stations/` borrados.
+  - `src/integrations/supabase/` (client.ts y types.ts) borrado.
+  - `src/config/env.ts` limpiado de claves supabaseUrl y supabaseKey.
+  - `.env.example` limpiado de las tres variables VITE_SUPABASE_*.
+  - Dependencia `@supabase/supabase-js` desinstalada (9 paquetes eliminados).
+- Verificación post-limpieza: 56 tests pasando, build en verde.

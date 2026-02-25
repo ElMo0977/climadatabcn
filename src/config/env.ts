@@ -10,10 +10,6 @@ interface EnvConfig {
   dataMode: DataMode;
   /** Base URL for API proxy (to avoid CORS / hide keys) */
   apiProxyBaseUrl: string | null;
-  /** Supabase URL for edge functions */
-  supabaseUrl: string;
-  /** Supabase publishable key */
-  supabaseKey: string;
   /** Enable verbose XEMA diagnostics in development only */
   xemaDebug: boolean;
 }
@@ -35,8 +31,6 @@ export function parseBooleanEnv(value?: string): boolean {
 export const env: EnvConfig = {
   dataMode: (getEnvVar('VITE_DATA_MODE') as DataMode) || 'live',
   apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
-  supabaseUrl: getEnvVar('VITE_SUPABASE_URL') || '',
-  supabaseKey: getEnvVar('VITE_SUPABASE_PUBLISHABLE_KEY') || '',
   xemaDebug: parseBooleanEnv(getEnvVar('VITE_DEBUG_XEMA') ?? undefined),
 };
 
