@@ -3,14 +3,9 @@
  * Reads from Vite environment variables
  */
 
-import type { DataMode, DataProvider } from '@/domain/types';
-
 interface EnvConfig {
-  /** Data mode: 'live' for real API calls, 'mock' for development data */
-  dataMode: DataMode;
-  /** Base URL for API proxy (to avoid CORS / hide keys) */
+  dataMode: 'live' | 'mock';
   apiProxyBaseUrl: string | null;
-  /** Enable verbose XEMA diagnostics in development only */
   xemaDebug: boolean;
 }
 
@@ -29,7 +24,7 @@ export function parseBooleanEnv(value?: string): boolean {
 }
 
 export const env: EnvConfig = {
-  dataMode: (getEnvVar('VITE_DATA_MODE') as DataMode) || 'live',
+  dataMode: (getEnvVar('VITE_DATA_MODE') as 'live' | 'mock') || 'live',
   apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
   xemaDebug: parseBooleanEnv(getEnvVar('VITE_DEBUG_XEMA') ?? undefined),
 };
@@ -40,20 +35,6 @@ export const env: EnvConfig = {
  */
 export function isXemaDebugEnabled(): boolean {
   return import.meta.env.DEV && env.xemaDebug;
-}
-
-/**
- * Check if provider configuration is valid
- */
-export function isProviderConfigured(_provider: DataProvider): boolean {
-  return true;
-}
-
-/**
- * Get a human-readable message for missing configuration
- */
-export function getMissingConfigMessage(_provider: DataProvider): string | null {
-  return null;
 }
 
 export default env;
