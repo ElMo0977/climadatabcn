@@ -1,5 +1,7 @@
-import type { Station } from '@/domain/types';
+import type { Station } from '@/types/weather';
 import { fetchSocrata } from '@/services/http/socrata';
+
+type StationSeed = Omit<Station, 'distance' | 'source'>;
 
 export interface RawSocrataStation {
   codi_estacio: string;
@@ -18,16 +20,16 @@ export interface RawSocrataStation {
  * IMPORTANT: ids must match real `codi_estacio` values from `yqwd-vj5e`
  * so observations queries keep working even in fallback mode.
  */
-export function listStations(): Station[] {
+export function listStations(): StationSeed[] {
   return [
-    { id: 'X4', name: 'Barcelona - el Raval', provider: 'xema-transparencia', latitude: 41.3839, longitude: 2.16775, elevation: 33 },
-    { id: 'X8', name: 'Barcelona - Zona Universitària', provider: 'xema-transparencia', latitude: 41.37919, longitude: 2.1054, elevation: 79 },
-    { id: 'D5', name: 'Barcelona - Observatori Fabra', provider: 'xema-transparencia', latitude: 41.41864, longitude: 2.12379, elevation: 411 },
-    { id: 'WU', name: 'Badalona - Museu', provider: 'xema-transparencia', latitude: 41.45215, longitude: 2.24757, elevation: 42 },
-    { id: 'Y7', name: 'Port de Barcelona - Bocana Sud', provider: 'xema-transparencia', latitude: 41.31725, longitude: 2.16537, elevation: 3 },
-    { id: 'YQ', name: 'Port de Barcelona - ZAL Prat', provider: 'xema-transparencia', latitude: 41.31928, longitude: 2.1372, elevation: 6 },
-    { id: 'XL', name: 'el Prat de Llobregat', provider: 'xema-transparencia', latitude: 41.34045, longitude: 2.08022, elevation: 8 },
-    { id: 'XV', name: 'Sant Cugat del Vallès - CAR', provider: 'xema-transparencia', latitude: 41.48311, longitude: 2.07956, elevation: 158 },
+    { id: 'X4', name: 'Barcelona - el Raval', latitude: 41.3839, longitude: 2.16775, elevation: 33 },
+    { id: 'X8', name: 'Barcelona - Zona Universitària', latitude: 41.37919, longitude: 2.1054, elevation: 79 },
+    { id: 'D5', name: 'Barcelona - Observatori Fabra', latitude: 41.41864, longitude: 2.12379, elevation: 411 },
+    { id: 'WU', name: 'Badalona - Museu', latitude: 41.45215, longitude: 2.24757, elevation: 42 },
+    { id: 'Y7', name: 'Port de Barcelona - Bocana Sud', latitude: 41.31725, longitude: 2.16537, elevation: 3 },
+    { id: 'YQ', name: 'Port de Barcelona - ZAL Prat', latitude: 41.31928, longitude: 2.1372, elevation: 6 },
+    { id: 'XL', name: 'el Prat de Llobregat', latitude: 41.34045, longitude: 2.08022, elevation: 8 },
+    { id: 'XV', name: 'Sant Cugat del Vallès - CAR', latitude: 41.48311, longitude: 2.07956, elevation: 158 },
   ];
 }
 
