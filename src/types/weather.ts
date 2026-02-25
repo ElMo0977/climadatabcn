@@ -44,3 +44,46 @@ export interface WeatherStats {
   totalPrecipitation: number | null;
   dataPoints: number;
 }
+
+// ============ Error Types ============
+
+export type ApiErrorCode =
+  | 'MISSING_API_KEY'
+  | 'INVALID_API_KEY'
+  | 'RATE_LIMITED'
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'PROVIDER_ERROR'
+  | 'NOT_FOUND'
+  | 'INVALID_PARAMS'
+  | 'UNKNOWN';
+
+export interface ApiError {
+  code: ApiErrorCode;
+  message: string;
+  provider?: DataSource;
+  details?: Record<string, unknown>;
+}
+
+export class ProviderError extends Error {
+  public readonly code: ApiErrorCode;
+  public readonly provider?: DataSource;
+  public readonly details?: Record<string, unknown>;
+
+  constructor(error: ApiError) {
+    super(error.message);
+    this.name = 'ProviderError';
+    this.code = error.code;
+    this.provider = error.provider;
+    this.details = error.details;
+  }
+
+  toApiError(): ApiError {
+    return {
+      code: this.code,
+      message: this.message,
+      provider: this.provider,
+      details: this.details,
+    };
+  }
+}
