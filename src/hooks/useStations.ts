@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { dataService } from '@/services/dataService';
 import type { Station } from '@/types/weather';
-import { fetchStationsFromSocrata } from '@/services/providers/xemaTransparencia';
+import { fetchStationsFromSocrata, listStations } from '@/services/providers/xemaTransparencia';
 
 const BARCELONA_LAT = 41.3851;
 const BARCELONA_LON = 2.1734;
@@ -48,24 +47,19 @@ export function useStations() {
         console.warn('[useStations] Socrata fetch failed:', e);
       }
 
-      // Fallback: dataService
-      const result = await dataService.getStations();
-      if (result.data && result.data.length > 0) {
-        return result.data
-          .map((s) => ({
-            id: s.id,
-            name: s.name,
-            latitude: s.latitude,
-            longitude: s.longitude,
-            elevation: s.elevation ?? null,
-            distance: haversineDistanceKm(BARCELONA_LAT, BARCELONA_LON, s.latitude, s.longitude),
-            source: 'xema-transparencia' as const,
-          }))
-          .filter((s) => s.distance <= DEFAULT_RADIUS_KM)
-          .sort((a, b) => a.distance - b.distance);
-      }
-
-      throw new Error('No se pudieron cargar estaciones XEMA.');
+      // Fallback: lista estática XEMA
+      return listStations()
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          elevation: s.elevation ?? null,
+          distance: haversineDistanceKm(BARCELONA_LAT, BARCELONA_LON, s.latitude, s.longitude),
+          source: 'xema-transparencia' as const,
+        }))
+        .filter((s) => s.distance <= DEFAULT_RADIUS_KM)
+        .sort((a, b) => a.distance - b.distance);
     },
     staleTime: 24 * 60 * 60 * 1000, // 24h
     retry: 2,
