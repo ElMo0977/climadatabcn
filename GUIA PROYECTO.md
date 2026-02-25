@@ -105,15 +105,18 @@ Notas:
 
 ### Partes incompletas o inconsistentes
 
-- `supabase/functions/*` usa Open-Meteo y parece legado.
-- Hay muchos componentes UI no usados en la app actual.
+- El warning de Vite por chunks > 500 kB es preexistente y no bloqueante.
+  Pendiente de abordar como tarea de optimización de bundle independiente.
 
 ### Patrones mezclados / duplicidad
 
-- Coexisten dos capas de tipos (`src/types` y `src/domain`).
-- Hay utilidades parecidas repetidas en varios archivos (fechas y validaciones simples).
-- Existen trazas de arquitectura antigua y nueva conviviendo.
-- Hay diagnostico de datos tanto en `src/lib/dataDebug.ts` como en `scripts/dataDiagnostics.js`.
+- Resuelto en sesiones de limpieza de febrero 2026:
+  - Tipos unificados en `src/types/weather.ts` (eliminado `src/domain/types.ts`).
+  - Capas de abstracción de multi-proveedor eliminadas (`dataService`, `mockData`, `domain/`).
+  - Función `toLocalDayKey` consolidada en `src/lib/dailyCoverage.ts`.
+- Pendiente menor: funciones de formateo de fecha repartidas entre `weatherUtils.ts`,
+  `exportExcel.ts` y capa de UI. Evaluado y descartado unificar: cada una sirve
+  un propósito distinto y la dispersión es intencionada.
 
 ---
 
@@ -175,5 +178,12 @@ npm run build
 
 ## 9. Resumen ejecutivo
 
-El proyecto esta **funcional y estable** en su flujo principal de consulta meteo + exportacion, con pruebas y build correctos.  
-El principal trabajo pendiente no es tanto "hacer que funcione", sino **limpiar y alinear** piezas heredadas para que el codigo sea mas simple de mantener.
+El proyecto está **funcional, estable y limpio** en su flujo principal de consulta
+meteo + exportación, con pruebas y build correctos.
+
+Las tareas de limpieza técnica iniciadas en febrero 2026 están completadas:
+fuente de datos única (XEMA/Socrata), capa de tipos unificada, abstracciones
+de multi-proveedor eliminadas y utilidades duplicadas consolidadas.
+
+El principal trabajo pendiente es optimización de bundle (chunks > 500 kB)
+y documentación de nuevas funcionalidades si se incorporan.

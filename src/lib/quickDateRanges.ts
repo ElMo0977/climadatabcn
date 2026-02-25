@@ -1,4 +1,5 @@
 import { endOfDay, startOfDay, subDays } from 'date-fns';
+import { toLocalDayKey } from '@/lib/dailyCoverage';
 import type { DateRange } from '@/types/weather';
 
 export type QuickRangeKey = '7d' | '14d' | '30d';
@@ -8,13 +9,6 @@ export const QUICK_RANGE_PRESETS = [
   { key: '14d', label: '14 días', days: 14 },
   { key: '30d', label: '30 días', days: 30 },
 ] as const;
-
-function toLocalDayKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 export function buildQuickRangeExcludingToday(
   days: number,
