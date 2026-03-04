@@ -105,7 +105,7 @@ export function useObservations({
     data: query.data?.data ?? [],
     dataSourceLabel: query.data?.dataSourceLabel ?? null,
     isLoading: query.isLoading,
-    error: query.error as Error | null,
+    error: query.error instanceof Error ? query.error : query.error ? new Error(String(query.error)) : null,
     refetch: query.refetch,
     isFetching: query.isFetching,
   };

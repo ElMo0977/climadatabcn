@@ -30,19 +30,17 @@ Resuelto: se extrajo la funcion helper `mapAndSortStations()` en `useStations.ts
 
 ## Prioridad baja
 
-### Limpiar componentes UI sin usar
+### ~~Limpiar componentes UI sin usar~~ ✔ Completado (2026-03-04)
 
-De ~40 componentes en `src/components/ui/`, solo se usan ~10 activamente. Los demas son shadcn/ui instalados por defecto que no se importan en ningun sitio. Eliminarlos reduce ruido en el repositorio.
+Resuelto: eliminados 36 componentes shadcn/ui sin usar de `src/components/ui/`. El CSS del bundle se redujo de 65 KB a 33 KB (-49%).
 
-### Unificar manejo de errores
+### ~~Unificar manejo de errores~~ ✔ Completado (2026-03-04)
 
-`socrata.ts` lanza errores genericos (`new Error()`), `fetchJson.ts` usa `ProviderError` tipado, y los hooks castean errores sin tipo. Unificar con `ProviderError` en toda la capa de servicios mejoraria los mensajes al usuario.
+Resuelto: `socrata.ts` migrado a `fetchJson()` (usa `ProviderError`). Validaciones en `xemaObservations.ts` ahora lanzan `ProviderError` con code `INVALID_PARAMS`. Narrowing seguro de errores en `useObservations.ts`.
 
-### Refactorizar Index.tsx
+### ~~Refactorizar Index.tsx~~ ✔ Completado (2026-03-04)
 
-`src/pages/Index.tsx` (338 lineas) mezcla estado de la app, logica de exportacion Excel, formateo de gaps y deteccion de errores de chunk. Se podria extraer:
-- Logica de exportacion a un custom hook `useExcelExport`.
-- Alertas de cobertura a un componente propio.
+Resuelto: logica de exportacion Excel extraida a hook `useExcelExport.ts`. Alertas de cobertura extraidas a componente `CoverageAlerts.tsx`. `Index.tsx` reducido de 338 a ~230 lineas.
 
 ---
 

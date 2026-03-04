@@ -20,6 +20,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - Eliminados parametros sin usar en `calendar.tsx`.
 - Cliente Socrata (`socrata.ts`) migrado de `fetch()` directo a `fetchJson()` con timeout (10s), reintentos (2) y backoff exponencial.
 - Duplicacion eliminada en `useStations.ts`: extraida funcion helper `mapAndSortStations()`.
+- Eliminados 36 componentes shadcn/ui sin usar de `src/components/ui/`. CSS del bundle reducido de 65 KB a 33 KB (-49%).
+- Validaciones de `stationId` y day keys migradas de `Error` generico a `ProviderError` con code `INVALID_PARAMS`.
+- Narrowing seguro de errores en `useObservations.ts` (elimina cast `as Error`).
+- Logica de exportacion Excel extraida de `Index.tsx` a hook `useExcelExport.ts`.
+- Alertas de cobertura extraidas de `Index.tsx` a componente `CoverageAlerts.tsx`.
 
 ---
 

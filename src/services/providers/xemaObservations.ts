@@ -1,4 +1,4 @@
-import type { Observation } from '@/types/weather';
+import { ProviderError, type Observation } from '@/types/weather';
 import { toLocalDayKey } from '@/lib/dailyCoverage';
 import { DAILY_CODES, SUBDAILY_CODES } from './xemaVariableMap';
 import { fetchSocrataAll } from '@/services/http/socrata';
@@ -9,13 +9,13 @@ const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertValidStationId(id: string): void {
   if (!STATION_ID_RE.test(id)) {
-    throw new Error(`Invalid stationId: ${id}`);
+    throw new ProviderError({ code: 'INVALID_PARAMS', message: `Invalid stationId: ${id}` });
   }
 }
 
 function assertValidDayKey(key: string): void {
   if (!DAY_KEY_RE.test(key)) {
-    throw new Error(`Invalid day key: ${key}`);
+    throw new ProviderError({ code: 'INVALID_PARAMS', message: `Invalid day key: ${key}` });
   }
 }
 

@@ -8,60 +8,19 @@ import { WeatherKPIs } from '@/components/WeatherKPIs';
 import { WeatherCharts } from '@/components/WeatherCharts';
 import { DataTable } from '@/components/DataTable';
 import { DownloadButtons } from '@/components/DownloadButtons';
+import { CoverageAlerts } from '@/components/CoverageAlerts';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
+import { useExcelExport } from '@/hooks/useExcelExport';
 import { calculateStats } from '@/lib/weatherUtils';
 import { computeDailyCoverage } from '@/lib/dailyCoverage';
 import { computeSubdailyCoverage } from '@/lib/subdailyCoverage';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { AlertCircle, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 import { isXemaDebugEnabled } from '@/config/env';
-import { buildAndDownloadExcel } from '@/lib/exportExcel';
 import { buildQuickRangeExcludingToday } from '@/lib/quickDateRanges';
 
 const LARGE_SUBDAILY_GAP_MIN_SLOTS = 4;
-
-function isChunkLoadError(error: unknown): boolean {
-  if (error instanceof Error) {
-    return (
-      error.name === 'ChunkLoadError' ||
-      error.message.includes('Failed to fetch dynamically imported module') ||
-      error.message.includes('Loading chunk') ||
-      error.message.includes('ChunkLoadError')
-    );
-  }
-
-  if (typeof error === 'string') {
-    return (
-      error.includes('Failed to fetch dynamically imported module') ||
-      error.includes('Loading chunk') ||
-      error.includes('ChunkLoadError')
-    );
-  }
-
-  return false;
-}
-
-function formatGapSlot(slot: string): string {
-  const isoLike = slot.replace(' ', 'T');
-  try {
-    return format(parseISO(isoLike), 'HH:mm');
-  } catch {
-    return slot;
-  }
-}
-
-function formatGapInterval(startSlot: string, endSlot: string): string {
-  const startDay = startSlot.slice(0, 10);
-  const endDay = endSlot.slice(0, 10);
-
-  if (startDay === endDay) {
-    return `${formatGapSlot(startSlot)} y ${formatGapSlot(endSlot)}`;
-  }
-
-  return `${startSlot} y ${endSlot}`;
-}
 
 const Index = () => {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
@@ -168,52 +127,16 @@ const Index = () => {
     if (selectedStation) refetchObservations();
   };
 
-  const handleExportExcel = async () => {
-    if (!selectedStation) {
-      toast.error('Selecciona una estación antes de exportar.');
-      return;
-    }
-
-    try {
-      const currentDataPromise = observationsLoading || observationsFetching
-        ? refetchObservations().then((result) => {
-            if (result.error) throw result.error;
-            return result.data?.data ?? [];
-          })
-        : Promise.resolve(observations);
-
-      const otherDataPromise = refetchOtherObservations().then((result) => {
-        if (result.error) throw result.error;
-        return result.data?.data ?? [];
-      });
-
-      const [currentData, otherData] = await Promise.all([currentDataPromise, otherDataPromise]);
-      const obs30min = granularity === '30min' ? currentData : otherData;
-      const obsDaily = granularity === 'daily' ? currentData : otherData;
-
-      if (obs30min.length === 0 || obsDaily.length === 0) {
-        throw new Error('No hay datos suficientes para generar las hojas de detalle y diario.');
-      }
-
-      await buildAndDownloadExcel(
-        obs30min,
-        obsDaily,
-        selectedStation.name || 'data',
-        dataSourceLabel ?? undefined,
-      );
-    } catch (error) {
-      console.error(error);
-      if (isChunkLoadError(error)) {
-        toast.error('No se pudo cargar el módulo de exportación (posible caché). Recarga con Ctrl/Cmd+Shift+R y vuelve a intentar.');
-        return;
-      }
-
-      const message = error instanceof Error
-        ? error.message
-        : 'Error inesperado preparando la exportación.';
-      toast.error(`No se pudo exportar el Excel: ${message}`);
-    }
-  };
+  const { handleExportExcel } = useExcelExport({
+    station: selectedStation,
+    granularity,
+    observations,
+    dataSourceLabel,
+    isLoading: observationsLoading,
+    isFetching: observationsFetching,
+    refetchObservations,
+    refetchOtherObservations,
+  });
 
   const isRefreshing = stationsFetching || observationsFetching;
 
@@ -279,39 +202,14 @@ const Index = () => {
               </div>
             )}
 
-            {showDailyCoverageAlert && dailyCoverage && (
-              <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
-                <p className="text-sm font-medium">
-                  Datos disponibles para {dailyCoverage.availableCount} de {dailyCoverage.expectedCount} días.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Faltan datos para {dailyCoverage.missingCount} día{dailyCoverage.missingCount === 1 ? '' : 's'}: {missingDaysText}
-                </p>
-              </div>
-            )}
-
-            {showSubdailyCoverageAlert && subdailyCoverage && (
-              <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
-                <p className="text-sm font-medium">
-                  Datos 30 min disponibles para {subdailyCoverage.availableCount} de {subdailyCoverage.expectedCount} franjas.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {subdailyCoverage.availableCount === 0
-                    ? 'No hay Datos 30 min para el rango seleccionado en la estación.'
-                    : `Faltan ${subdailyCoverage.missingCount} registro${subdailyCoverage.missingCount === 1 ? '' : 's'} de Datos 30 min en el rango seleccionado.`}
-                </p>
-                {showLargestSubdailyGap && subdailyCoverage.largestGap && (
-                  <>
-                    <p className="text-xs text-muted-foreground">
-                      Faltan datos entre {formatGapInterval(subdailyCoverage.largestGap.start, subdailyCoverage.largestGap.end)} ({subdailyCoverage.largestGap.missingCount} franjas).
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      La fuente de dades obertes (Socrata) no publica algunas franjas. Meteocat puede mostrar datos aún en control de calidad.
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
+            <CoverageAlerts
+              dailyCoverage={dailyCoverage}
+              subdailyCoverage={subdailyCoverage}
+              showDaily={showDailyCoverageAlert}
+              showSubdaily={showSubdailyCoverageAlert}
+              showLargestGap={showLargestSubdailyGap}
+              missingDaysText={missingDaysText}
+            />
 
             <WeatherKPIs stats={stats} isLoading={observationsLoading} />
 
