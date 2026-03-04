@@ -18,13 +18,13 @@ Resuelto: se activo `strict: true`, `noUnusedLocals: true`, `noUnusedParameters:
 
 ## Prioridad media
 
-### Timeout y reintentos en el cliente Socrata
+### ~~Timeout y reintentos en el cliente Socrata~~ ✔ Completado (2026-03-04)
 
-Existe `src/services/http/fetchJson.ts` con timeout, reintentos y backoff exponencial. Sin embargo, `socrata.ts` (el unico cliente activo) usa `fetch()` directamente sin timeout ni reintentos. Si la API de Socrata tarda o falla, no hay proteccion. Se deberia integrar `fetchJson` en `socrata.ts` o al menos anadir timeout.
+Resuelto: `socrata.ts` ahora usa `fetchJson()` en lugar de `fetch()` directo, ganando timeout (10s), reintentos (2) con backoff exponencial, y errores tipados con `ProviderError`.
 
-### Eliminar duplicacion en useStations
+### ~~Eliminar duplicacion en useStations~~ ✔ Completado (2026-03-04)
 
-`src/hooks/useStations.ts` tiene el bloque de mapeo de estaciones (`.map(s => {...}).filter(...).sort(...)`) duplicado para el path de Socrata y el fallback estatico. Extraer a una funcion helper `mapAndFilterStations()`.
+Resuelto: se extrajo la funcion helper `mapAndSortStations()` en `useStations.ts`, eliminando la duplicacion del bloque `.map().filter().sort()` entre el path de Socrata y el fallback estatico.
 
 ---
 

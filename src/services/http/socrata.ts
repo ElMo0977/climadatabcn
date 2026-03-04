@@ -3,6 +3,8 @@
  * Base: https://analisi.transparenciacatalunya.cat/
  */
 
+import { fetchJson } from '@/services/http/fetchJson';
+
 const BASE_URL = 'https://analisi.transparenciacatalunya.cat';
 
 export interface SocrataQueryParams {
@@ -34,14 +36,8 @@ export async function fetchSocrata<T = unknown[]>(
   if (params.$offset != null) search.set('$offset', String(params.$offset));
 
   const url = `${BASE_URL}/resource/${resourceId}.json?${search.toString()}`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Socrata ${resourceId}: ${response.status} ${text}`);
-  }
-
-  return response.json() as Promise<T>;
+  const { data } = await fetchJson<T>(url, { provider: 'xema-transparencia' });
+  return data;
 }
 
 /**

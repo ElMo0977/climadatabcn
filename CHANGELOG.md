@@ -18,6 +18,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - Eliminados imports sin usar en `DataTable.tsx` y `fetchJson.ts`.
 - Tipados explicitos en callbacks de Recharts (`chart.tsx`, `WeatherCharts.tsx`).
 - Eliminados parametros sin usar en `calendar.tsx`.
+- Cliente Socrata (`socrata.ts`) migrado de `fetch()` directo a `fetchJson()` con timeout (10s), reintentos (2) y backoff exponencial.
+- Duplicacion eliminada en `useStations.ts`: extraida funcion helper `mapAndSortStations()`.
 
 ---
 
