@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vitest run)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx vite build)",
+      "Bash(npm run build)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx tsc -p tsconfig.app.json --noEmit --strict)",
+      "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --noEmit --strict)",
+      "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --noEmit --strict --listFiles)",
+      "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --showConfig)",
+      "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --noEmit --strict --noImplicitAny --strictNullChecks --strictFunctionTypes --strictBindCallApply --strictPropertyInitialization --noImplicitThis --alwaysStrict --noUnusedLocals --noUnusedParameters --noFallthroughCasesInSwitch)",
+      "Bash(npx tsc -p tsconfig.app.json --noEmit)"
+    ]
+  }
+}

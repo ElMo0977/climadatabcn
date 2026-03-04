@@ -6,6 +6,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-04 — Seguridad y strict mode
+
+### Security
+
+- Validacion de `stationId` y day keys antes de interpolarlos en queries `$where` de Socrata (`xemaObservations.ts`). Previene inyecciones si en el futuro se acepta input del usuario.
+
+### Changed
+
+- TypeScript strict mode activado en `tsconfig.app.json` (`strict: true`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`).
+- Eliminados imports sin usar en `DataTable.tsx` y `fetchJson.ts`.
+- Tipados explicitos en callbacks de Recharts (`chart.tsx`, `WeatherCharts.tsx`).
+- Eliminados parametros sin usar en `calendar.tsx`.
+
+---
+
 ## 2026-02-25 — Limpieza y consolidacion
 
 ### Removed

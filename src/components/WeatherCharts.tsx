@@ -98,8 +98,8 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             <Tooltip
               contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number | null, name) => [value !== null ? `${Number(Number(value).toFixed(1))} m/s` : 'Sin datos', name]}
-              itemSorter={(a, b) => {
+              formatter={(value: number | null, name: string) => [value !== null ? `${Number(Number(value).toFixed(1))} m/s` : 'Sin datos', name]}
+              itemSorter={(a: { name?: string }, b: { name?: string }) => {
                 const order = ['Racha máx.', 'Viento media'];
                 return order.indexOf(String(a?.name ?? '')) - order.indexOf(String(b?.name ?? ''));
               }}

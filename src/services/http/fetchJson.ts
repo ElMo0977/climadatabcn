@@ -2,7 +2,7 @@
  * HTTP client with timeout, retries, and typed errors
  */
 
-import { ProviderError, type ApiError, type ApiErrorCode, type DataSource } from '@/types/weather';
+import { ProviderError, type ApiErrorCode, type DataSource } from '@/types/weather';
 
 interface FetchOptions extends RequestInit {
   /** Timeout in milliseconds (default: 10000) */

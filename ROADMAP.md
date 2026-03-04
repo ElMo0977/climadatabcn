@@ -6,19 +6,13 @@ Mejoras identificadas en el code review de marzo 2026, ordenadas por prioridad.
 
 ## Prioridad alta
 
-### Sanitizar queries Socrata
+### ~~Sanitizar queries Socrata~~ ✔ Completado (2026-03-04)
 
-Las consultas `$where` en `src/services/providers/xemaObservations.ts` interpolan parametros directamente en el string:
+Resuelto: se añadieron validaciones con regex para `stationId` (`/^[A-Za-z0-9]{1,10}$/`) y day keys (`/^\d{4}-\d{2}-\d{2}$/`) en `getObservations()` antes de interpolar en queries `$where`.
 
-```ts
-$where: `codi_estacio = '${params.stationId}' AND ...`
-```
+### ~~Habilitar TypeScript strict~~ ✔ Completado (2026-03-04)
 
-Hoy los valores vienen de datos controlados (lista estatica o respuesta de Socrata), pero es un patron peligroso ante futuros cambios. Se debe validar `stationId` con regex (ej: `/^[A-Z0-9]+$/`) y sanitizar fechas antes de interpolarlas.
-
-### Habilitar TypeScript strict
-
-`tsconfig.app.json` tiene `strict: false`, `noImplicitAny: false` y `noUnusedLocals: false`. Esto anula buena parte del valor de TypeScript. Activar `strict: true` de forma progresiva (archivo por archivo si es necesario) seria el cambio con mayor retorno a largo plazo.
+Resuelto: se activo `strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true` y `noFallthroughCasesInSwitch: true` en `tsconfig.app.json`. Se corrigieron 9 errores en 5 archivos (imports sin usar, parametros sin tipo, variables sin usar).
 
 ---
 

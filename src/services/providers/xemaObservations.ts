@@ -4,6 +4,21 @@ import { DAILY_CODES, SUBDAILY_CODES } from './xemaVariableMap';
 import { fetchSocrataAll } from '@/services/http/socrata';
 import { parseBooleanEnv } from '@/config/env';
 
+const STATION_ID_RE = /^[A-Za-z0-9]{1,10}$/;
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+function assertValidStationId(id: string): void {
+  if (!STATION_ID_RE.test(id)) {
+    throw new Error(`Invalid stationId: ${id}`);
+  }
+}
+
+function assertValidDayKey(key: string): void {
+  if (!DAY_KEY_RE.test(key)) {
+    throw new Error(`Invalid day key: ${key}`);
+  }
+}
+
 export interface DailyRow {
   codi_estacio: string;
   data_lectura: string;
@@ -40,8 +55,13 @@ export async function getObservations(params: {
   to: Date;
   granularity: '30min' | 'day';
 }): Promise<Observation[]> {
+  assertValidStationId(params.stationId);
+
   const fromDay = toLocalDayKey(params.from);
   const toDay = toLocalDayKey(params.to);
+
+  assertValidDayKey(fromDay);
+  assertValidDayKey(toDay);
 
   if (params.granularity === 'day') {
     const [rows, gustRows] = await Promise.all([
