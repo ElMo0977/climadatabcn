@@ -8,15 +8,16 @@ Este documento describe la integracion vigente entre Meteo BCN y los datasets pu
 
 | Archivo | Rol actual |
 |--------|------------|
-| `src/services/http/fetchJson.ts` | Cliente HTTP comun con timeout de 10 s, `retries = 2`, backoff exponencial y errores tipados |
-| `src/services/http/socrata.ts` | Cliente SODA (`fetchSocrata`, `fetchSocrataAll`) sobre `https://analisi.transparenciacatalunya.cat` |
+| `src/services/http/fetchJson.ts` | Cliente HTTP comun con timeout de 10 s, abort cooperativo y errores tipados |
+| `src/services/http/socrata.ts` | Cliente SODA (`fetchSocrata`, `fetchSocrataAll`) sobre `https://analisi.transparenciacatalunya.cat`, con propagacion de `signal` |
 | `src/services/providers/xemaTransparencia.ts` | Fachada fina que reexporta estaciones y observaciones |
-| `src/services/providers/xemaStations.ts` | Estaciones XEMA activas via `yqwd-vj5e` con fallback estatico |
-| `src/services/providers/xemaObservations.ts` | Observaciones `30min` y `day`, validacion de parametros y mapping a `Observation[]` |
+| `src/services/providers/xemaStations.ts` | Estaciones XEMA activas via `yqwd-vj5e`, con `metadataSource`, `warning` y fallback visible |
+| `src/services/providers/xemaObservations.ts` | Observaciones `30min` y `day`, validacion de parametros, propagacion de `signal` y mapping a `Observation[]` |
 | `src/services/providers/xemaVariableMap.ts` | Codigos de variables usados por daily y subdaily, mas helper opcional de metadata |
-| `src/hooks/useObservations.ts` | Traduce granularidad de UI a contrato del provider y ejecuta `logDataDebug()` |
+| `src/hooks/useStations.ts` | Consume metadata de estaciones y expone `warning` / `metadataSource` a la UI |
+| `src/hooks/useObservations.ts` | Traduce granularidad de UI a contrato del provider, propaga `ProviderError` y ejecuta `logDataDebug()` |
 | `src/lib/dataDebug.ts` | Auditoria opcional del dataset final (`VITE_DEBUG_DATA=1`) |
-| `src/config/env.ts` | Parseo de `VITE_API_PROXY_URL`, `VITE_DEBUG_XEMA` y `VITE_DATA_MODE` |
+| `src/config/env.ts` | Parseo de `VITE_DEBUG_XEMA` y `VITE_DATA_MODE` |
 
 ## Contratos vigentes
 
@@ -43,6 +44,7 @@ getObservations({
   from: Date,
   to: Date,
   granularity: '30min' | 'day',
+  signal?: AbortSignal,
 }): Promise<Observation[]>
 ```
 
@@ -64,7 +66,17 @@ Los errores invalidos se lanzan como `ProviderError` con `code: 'INVALID_PARAMS'
 - `nom_xarxa = 'XEMA'`
 - `codi_estat_ema = '2'`
 
-Si la consulta falla o no devuelve resultados, el hook cae al fallback estatico de `listStations()`.
+Contrato actual del resultado:
+
+```ts
+{
+  stations: StationSeed[],
+  metadataSource: 'live' | 'fallback',
+  warning: string | null,
+}
+```
+
+Si la consulta falla o no devuelve resultados, la app cae al fallback estatico de `listStations()`, marca `metadataSource: 'fallback'` y expone el warning estable `Lista de estaciones en modo degradado; las observaciones siguen disponibles.`.
 
 ### Observaciones 30 min: `nzvn-apee`
 
@@ -97,12 +109,21 @@ Ademas, hace una segunda consulta a `nzvn-apee` para `VVx10` y completa `windGus
 
 ## Flujo de datos actual
 
-1. `useStations()` carga metadata de estaciones y anade `source: 'xema-transparencia'`.
-2. `useObservations()` construye la query key y valida que la fuente seleccionada sea XEMA.
-3. `getObservations()` devuelve `Observation[]`.
-4. `useObservations()` anade `dataSourceLabel` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
-5. `Index.tsx` usa ese array para KPIs, graficas, tabla, coverage y exportacion.
-6. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`.
+1. `useStations()` carga metadata de estaciones, anade `source: 'xema-transparencia'` y expone `metadataSource` / `warning`.
+2. `StationSelector` muestra el warning de modo degradado sin bloquear la seleccion de estaciones fallback.
+3. `useObservations()` construye la query key, valida que la fuente seleccionada sea XEMA y usa la `signal` de React Query.
+4. `getObservations()` devuelve `Observation[]`.
+5. `useObservations()` anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
+6. `Index.tsx` usa ese array para KPIs, graficas, tabla, coverage y exportacion.
+7. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`.
+
+## Reintentos y cancelacion
+
+- `fetchJson()` no hace retries internos.
+- La politica de retry vive en React Query:
+  - `useStations()` no reintenta, porque el fallback estructurado ya resuelve el modo degradado.
+  - `useObservations()` solo reintenta errores transitorios (`NETWORK_ERROR`, `TIMEOUT`, `PROVIDER_ERROR`, `RATE_LIMITED`).
+- Si React Query aborta una consulta por cambio de estacion, rango o granularidad, la `signal` se propaga hasta `fetch()` y esa cancelacion no debe mostrarse como error visible.
 
 ## Debug y diagnostico
 
@@ -140,8 +161,12 @@ Notas:
 | Archivo | Cobertura |
 |--------|-----------|
 | `src/services/providers/xemaStations.test.ts` | Estaciones y fallback |
+| `src/services/http/fetchJson.test.ts` | Timeout, red, status mapping y cancelacion |
+| `src/services/http/socrata.test.ts` | Construccion de URL, paginacion y `signal` |
 | `src/services/providers/xemaTransparencia.test.ts` | Fachada y mapping principal |
 | `src/hooks/useObservations.test.ts` | Coordinacion del hook y contrato de consulta |
+| `src/hooks/useStations.test.tsx` | Warning de modo degradado y metadata source |
+| `src/hooks/useExcelExport.test.ts` | Flujo de exportacion con refetch tipado |
 | `src/lib/windVector.test.ts` | Utilidades de viento |
 | `src/lib/exceedance.test.ts` | Intervalos de exceedance |
 

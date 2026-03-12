@@ -54,6 +54,7 @@ export async function getObservations(params: {
   from: Date;
   to: Date;
   granularity: '30min' | 'day';
+  signal?: AbortSignal;
 }): Promise<Observation[]> {
   assertValidStationId(params.stationId);
 
@@ -69,12 +70,12 @@ export async function getObservations(params: {
         $select: 'codi_estacio,data_lectura,codi_variable,valor',
         $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable in ('${DAILY_CODES.TM}','${DAILY_CODES.HRM}','${DAILY_CODES.PPT}','${DAILY_CODES.VVM10}','${DAILY_CODES.VVX10}')`,
         $limit: 5000,
-      }),
+      }, { signal: params.signal }),
       fetchSocrataAll<SubdailyGustRow>('nzvn-apee', {
         $select: 'data_lectura,valor_lectura',
         $where: `codi_estacio = '${params.stationId}' AND data_lectura >= '${fromDay}T00:00:00' AND data_lectura <= '${toDay}T23:59:59' AND codi_variable = '${SUBDAILY_CODES.VVx10}'`,
         $limit: 50000,
-      }),
+      }, { signal: params.signal }),
     ]);
 
     return attachDailyGustTimes(mapDailyRowsToObservations(rows), gustRows);
@@ -88,7 +89,7 @@ export async function getObservations(params: {
     $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat',
     $where: subdailyWhere,
     $limit: 50000,
-  });
+  }, { signal: params.signal });
 
   if (parseBooleanEnv(import.meta.env.VITE_DEBUG_XEMA)) {
     const uniqueSortedTimestamps = Array.from(

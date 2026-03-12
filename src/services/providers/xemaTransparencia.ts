@@ -4,6 +4,9 @@
 export {
   listStations,
   fetchStationsFromSocrata,
+  STATIONS_FALLBACK_WARNING,
+  type StationMetadataSource,
+  type StationsMetadataResult,
 } from './xemaStations';
 
 export {

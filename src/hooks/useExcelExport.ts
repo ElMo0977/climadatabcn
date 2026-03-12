@@ -1,4 +1,5 @@
 import type { Observation, Granularity, Station } from '@/types/weather';
+import type { ObservationsRefetchFn } from '@/hooks/useObservations';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
 import { toast } from 'sonner';
 
@@ -30,8 +31,8 @@ interface UseExcelExportParams {
   dataSourceLabel: string | null;
   isLoading: boolean;
   isFetching: boolean;
-  refetchObservations: () => Promise<{ data?: { data: Observation[] }; error: Error | null }>;
-  refetchOtherObservations: () => Promise<{ data?: { data: Observation[] }; error: Error | null }>;
+  refetchObservations: ObservationsRefetchFn;
+  refetchOtherObservations: ObservationsRefetchFn;
 }
 
 export function useExcelExport({

@@ -1,6 +1,12 @@
 import { useQuery, type QueryObserverResult } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import type { Observation, Granularity, DateRange, Station } from '@/types/weather';
+import {
+  ProviderError,
+  type Observation,
+  type Granularity,
+  type DateRange,
+  type Station,
+} from '@/types/weather';
 import { buildDataSourceLabel } from '@/config/sources';
 import { logDataDebug } from '@/lib/dataDebug';
 import { getObservations as getObservationsXema } from '@/services/providers/xemaTransparencia';
@@ -21,10 +27,22 @@ export interface UseObservationsResult {
   data: Observation[];
   dataSourceLabel: string | null;
   isLoading: boolean;
-  error: Error | null;
-  refetch: () => Promise<QueryObserverResult<ObservationsQueryData, Error>>;
+  error: ProviderError | null;
+  refetch: ObservationsRefetchFn;
   isFetching: boolean;
 }
+
+export type ObservationsQueryKey = readonly [
+  'observations',
+  string | null,
+  string | null,
+  string,
+  string,
+  Granularity,
+];
+
+export type ObservationsRefetchResult = QueryObserverResult<ObservationsQueryData, ProviderError>;
+export type ObservationsRefetchFn = () => Promise<ObservationsRefetchResult>;
 
 export function getObservationsQueryKey(params: {
   stationId: string | null;
@@ -32,7 +50,7 @@ export function getObservationsQueryKey(params: {
   fromStr: string;
   toStr: string;
   granularity: Granularity;
-}): unknown[] {
+}): ObservationsQueryKey {
   return [
     'observations',
     params.stationId ?? null,
@@ -40,8 +58,15 @@ export function getObservationsQueryKey(params: {
     params.fromStr,
     params.toStr,
     params.granularity,
-  ];
+  ] as const;
 }
+
+const RETRYABLE_CODES = new Set([
+  'NETWORK_ERROR',
+  'TIMEOUT',
+  'PROVIDER_ERROR',
+  'RATE_LIMITED',
+]);
 
 export function useObservations({
   station,
@@ -60,9 +85,9 @@ export function useObservations({
     granularity,
   });
 
-  const query = useQuery({
+  const query = useQuery<ObservationsQueryData, ProviderError>({
     queryKey,
-    queryFn: async (): Promise<ObservationsQueryData> => {
+    queryFn: async ({ signal }): Promise<ObservationsQueryData> => {
       if (!station) {
         return { data: [], dataSourceLabel: '' };
       }
@@ -70,7 +95,10 @@ export function useObservations({
       const stationName = station.name;
       const source = station.source ?? 'xema-transparencia';
       if (source !== 'xema-transparencia') {
-        throw new Error('Fuente no soportada: solo XEMA está habilitada.');
+        throw new ProviderError({
+          code: 'INVALID_PARAMS',
+          message: 'Fuente no soportada: solo XEMA está habilitada.',
+        });
       }
 
       const xemaGranularity = granularity === 'daily' ? 'day' : '30min';
@@ -79,6 +107,7 @@ export function useObservations({
         from: dateRange.from,
         to: dateRange.to,
         granularity: xemaGranularity,
+        signal,
       });
       const dataSourceLabel = buildDataSourceLabel(source, stationName);
       const withLabel = data.map((obs) => ({ ...obs, dataSourceLabel }));
@@ -98,14 +127,15 @@ export function useObservations({
     },
     enabled: enabled && !!station,
     staleTime: 5 * 60 * 1000,
-    retry: 2,
+    retry: (failureCount, error) =>
+      failureCount < 2 && !!error && RETRYABLE_CODES.has(error.code),
   });
 
   return {
     data: query.data?.data ?? [],
     dataSourceLabel: query.data?.dataSourceLabel ?? null,
     isLoading: query.isLoading,
-    error: query.error instanceof Error ? query.error : query.error ? new Error(String(query.error)) : null,
+    error: query.error ?? null,
     refetch: query.refetch,
     isFetching: query.isFetching,
   };

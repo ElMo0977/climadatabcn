@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DAILY_CODES } from './xemaVariableMap';
-import type { RawSocrataStation } from './xemaStations';
+import { STATIONS_FALLBACK_WARNING, type RawSocrataStation } from './xemaStations';
+import { ProviderError } from '@/types/weather';
 import {
   buildDailyRangeBounds,
   fetchStationsFromSocrata,
@@ -219,6 +220,7 @@ describe('getObservations', () => {
         $where: expect.stringContaining("codi_estacio = 'X4'"),
         $select: 'codi_estacio,data_lectura,codi_variable,valor',
       }),
+      { signal: undefined },
     );
     expect(fetchSocrataAllMock).toHaveBeenNthCalledWith(
       2,
@@ -227,6 +229,7 @@ describe('getObservations', () => {
         $select: 'data_lectura,valor_lectura',
         $where: expect.stringContaining(`codi_variable = '50'`),
       }),
+      { signal: undefined },
     );
 
     expect(result[0]).toMatchObject({
@@ -264,6 +267,7 @@ describe('getObservations', () => {
         $select: expect.stringContaining('codi_estat'),
         $where: expect.stringContaining("codi_estacio = 'X4'"),
       }),
+      { signal: undefined },
     );
     const [, query] = fetchSocrataAllMock.mock.calls[0] as [
       string,
@@ -282,6 +286,49 @@ describe('getObservations', () => {
       timestamp: '2024-01-05T10:00:00',
       temperature: 12.1,
     });
+  });
+
+  it('rejects invalid params with ProviderError before hitting Socrata', async () => {
+    await expect(
+      getObservations({
+        stationId: 'X4!!',
+        from: new Date('2024-01-01T00:00:00Z'),
+        to: new Date('2024-01-07T00:00:00Z'),
+        granularity: '30min',
+      }),
+    ).rejects.toBeInstanceOf(ProviderError);
+
+    await expect(
+      getObservations({
+        stationId: 'X4!!',
+        from: new Date('2024-01-01T00:00:00Z'),
+        to: new Date('2024-01-07T00:00:00Z'),
+        granularity: '30min',
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_PARAMS' });
+
+    expect(fetchSocrataAllMock).not.toHaveBeenCalled();
+  });
+
+  it('forwards abort signal to Socrata pagination', async () => {
+    const controller = new AbortController();
+    fetchSocrataAllMock.mockResolvedValueOnce([]);
+
+    await getObservations({
+      stationId: 'X4',
+      from: new Date('2024-01-01T00:00:00Z'),
+      to: new Date('2024-01-07T00:00:00Z'),
+      granularity: '30min',
+      signal: controller.signal,
+    });
+
+    expect(fetchSocrataAllMock).toHaveBeenCalledWith(
+      'nzvn-apee',
+      expect.objectContaining({
+        $where: expect.stringContaining("codi_estacio = 'X4'"),
+      }),
+      { signal: controller.signal },
+    );
   });
 });
 
@@ -307,16 +354,30 @@ describe('fetchStationsFromSocrata', () => {
         $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
       }),
     );
-    expect(result).toEqual([
-      {
-        id: 'X4',
-        name: 'Barcelona - el Raval',
-        latitude: 41.38,
-        longitude: 2.17,
-        elevation: 33,
-        municipality: 'Barcelona',
-      },
-    ]);
+    expect(result).toEqual({
+      stations: [
+        {
+          id: 'X4',
+          name: 'Barcelona - el Raval',
+          latitude: 41.38,
+          longitude: 2.17,
+          elevation: 33,
+          municipality: 'Barcelona',
+        },
+      ],
+      metadataSource: 'live',
+      warning: null,
+    });
+  });
+
+  it('returns fallback metadata when live rows are empty', async () => {
+    fetchSocrataMock.mockResolvedValueOnce([]);
+
+    const result = await fetchStationsFromSocrata();
+
+    expect(result.metadataSource).toBe('fallback');
+    expect(result.warning).toBe(STATIONS_FALLBACK_WARNING);
+    expect(result.stations.length).toBeGreaterThan(0);
   });
 });
 

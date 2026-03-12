@@ -6,6 +6,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-12 — Estabilizacion del pipeline de datos
+
+### Changed
+
+- Eliminado `VITE_API_PROXY_URL` del contrato soportado, de `README.md`, de `.env.example` y del parseo runtime en `src/config/env.ts`.
+- `fetchStationsFromSocrata()` pasa a devolver metadata estructurada (`stations`, `metadataSource`, `warning`) y la UI muestra un aviso visible cuando la lista de estaciones entra en modo degradado.
+- `fetchJson()` deja de hacer retries internos; la politica de reintentos queda bajo control de React Query.
+- `useObservations()` propaga `ProviderError`, acepta cancelacion via `signal` y limita los retries a errores transitorios.
+- `fetchSocrata()` / `fetchSocrataAll()` y `xemaObservations.ts` propagan la cancelacion hasta `fetch()`.
+
+### Added
+
+- Nueva cobertura para `env.ts`, `fetchJson.ts`, `socrata.ts`, `useStations()`, `useObservations()` y `useExcelExport()`.
+- Validaciones adicionales del flujo de exportacion Excel y del warning visible de estaciones en modo degradado.
+
 ## 2026-03-12 — Reorganizacion documental
 
 ### Added

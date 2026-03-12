@@ -5,7 +5,6 @@
 
 interface EnvConfig {
   dataMode: 'live' | 'mock';
-  apiProxyBaseUrl: string | null;
   xemaDebug: boolean;
 }
 
@@ -23,9 +22,12 @@ export function parseBooleanEnv(value?: string): boolean {
   return ['1', 'true', 'yes', 'on'].includes(normalized);
 }
 
+function parseDataModeEnv(value: string | null): EnvConfig['dataMode'] {
+  return value === 'mock' ? 'mock' : 'live';
+}
+
 export const env: EnvConfig = {
-  dataMode: (getEnvVar('VITE_DATA_MODE') as 'live' | 'mock') || 'live',
-  apiProxyBaseUrl: getEnvVar('VITE_API_PROXY_URL'),
+  dataMode: parseDataModeEnv(getEnvVar('VITE_DATA_MODE')),
   xemaDebug: parseBooleanEnv(getEnvVar('VITE_DEBUG_XEMA') ?? undefined),
 };
 

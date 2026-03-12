@@ -40,7 +40,6 @@ Copia `.env.example` a `.env`. La configuracion habitual del proyecto solo neces
 
 | Variable | Uso |
 |----------|-----|
-| `VITE_API_PROXY_URL` | Base opcional para enrutar peticiones a Socrata a traves de un proxy |
 | `VITE_DEBUG_XEMA` | Diagnostico del provider XEMA y del fetch subdaily (`true` o `1`, solo en desarrollo) |
 | `VITE_DEBUG_DATA` | Auditoria del dataset final en consola (`1`) |
 

@@ -35,8 +35,19 @@ vi.mock('@/components/Header', () => ({
 }));
 
 vi.mock('@/components/StationSelector', () => ({
-  StationSelector: ({ stations, onSelectStation }: { stations: Station[]; onSelectStation: (station: Station) => void }) => (
-    <button onClick={() => onSelectStation(stations[0])}>select-station</button>
+  StationSelector: ({
+    stations,
+    onSelectStation,
+    warning,
+  }: {
+    stations: Station[];
+    onSelectStation: (station: Station) => void;
+    warning?: string | null;
+  }) => (
+    <div>
+      <button onClick={() => onSelectStation(stations[0])}>select-station</button>
+      {warning ? <div>{warning}</div> : null}
+    </div>
   ),
 }));
 
@@ -96,6 +107,8 @@ describe('Index export and query behavior', () => {
     uiConsistency.chartLength = null;
     mockUseStations.mockReturnValue({
       data: [TEST_STATION],
+      metadataSource: 'live',
+      warning: null,
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -291,5 +304,35 @@ describe('Index export and query behavior', () => {
     await waitFor(() => {
       expect(screen.getByText(/Datos disponibles para 5 de 7 días\./i)).toBeInTheDocument();
     });
+  });
+
+  it('shows degraded-mode stations warning when metadata falls back', async () => {
+    mockUseStations.mockReturnValue({
+      data: [TEST_STATION],
+      metadataSource: 'fallback',
+      warning: 'Lista de estaciones en modo degradado; las observaciones siguen disponibles.',
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      isFetching: false,
+    } as ReturnType<typeof useStations>);
+
+    mockUseObservations.mockReturnValue({
+      data: [],
+      dataSourceLabel: null,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn().mockResolvedValue({
+        data: { data: [], dataSourceLabel: '' },
+        error: null,
+      }),
+      isFetching: false,
+    } as ReturnType<typeof useObservations>);
+
+    render(<Index />);
+
+    expect(
+      screen.getByText('Lista de estaciones en modo degradado; las observaciones siguen disponibles.'),
+    ).toBeInTheDocument();
   });
 });

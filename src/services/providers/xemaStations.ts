@@ -2,6 +2,23 @@ import type { Station } from '@/types/weather';
 import { fetchSocrata } from '@/services/http/socrata';
 
 type StationSeed = Omit<Station, 'distance' | 'source'>;
+export type StationMetadataSource = 'live' | 'fallback';
+
+export interface StationsMetadataResult {
+  stations: {
+    id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    elevation?: number;
+    municipality?: string;
+  }[];
+  metadataSource: StationMetadataSource;
+  warning: string | null;
+}
+
+export const STATIONS_FALLBACK_WARNING =
+  'Lista de estaciones en modo degradado; las observaciones siguen disponibles.';
 
 export interface RawSocrataStation {
   codi_estacio: string;
@@ -33,16 +50,7 @@ export function listStations(): StationSeed[] {
   ];
 }
 
-export async function fetchStationsFromSocrata(): Promise<
-  {
-    id: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    elevation?: number;
-    municipality?: string;
-  }[]
-> {
+export async function fetchStationsFromSocrata(): Promise<StationsMetadataResult> {
   const RESOURCE_ID = 'yqwd-vj5e';
   try {
     const rows = await fetchSocrata<RawSocrataStation[]>(RESOURCE_ID, {
@@ -63,23 +71,31 @@ export async function fetchStationsFromSocrata(): Promise<
       }));
 
     if (stations.length === 0) {
-      return listStations().map((s) => ({
-        id: s.id,
-        name: s.name,
-        latitude: s.latitude,
-        longitude: s.longitude,
-        elevation: s.elevation ?? undefined,
-      }));
+      return buildFallbackStationsResult();
     }
-    return stations;
+
+    return {
+      stations,
+      metadataSource: 'live',
+      warning: null,
+    };
   } catch (error) {
     console.warn('[xemaStations] fetchStationsFromSocrata failed:', error);
-    return listStations().map((s) => ({
+    return buildFallbackStationsResult();
+  }
+}
+
+function buildFallbackStationsResult(): StationsMetadataResult {
+  return {
+    stations: listStations().map((s) => ({
       id: s.id,
       name: s.name,
       latitude: s.latitude,
       longitude: s.longitude,
       elevation: s.elevation ?? undefined,
-    }));
-  }
+      municipality: s.municipality,
+    })),
+    metadataSource: 'fallback',
+    warning: STATIONS_FALLBACK_WARNING,
+  };
 }

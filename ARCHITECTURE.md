@@ -50,8 +50,8 @@ src/
 ## Flujo de datos
 
 1. `Index.tsx` coordina estacion seleccionada, rango y granularidad (`30min` o `daily`).
-2. `useStations()` intenta leer estaciones activas desde `yqwd-vj5e` y, si falla, cae al fallback estatico definido en `xemaStations.ts`.
-3. `useObservations()` traduce la granularidad de UI a contrato de provider (`daily -> day`, `30min -> 30min`) y llama a `getObservations()` desde `xemaTransparencia.ts`.
+2. `useStations()` intenta leer estaciones activas desde `yqwd-vj5e` y, si falla o no hay metadata util, cae al fallback estatico definido en `xemaStations.ts`, marcando modo degradado visible.
+3. `useObservations()` traduce la granularidad de UI a contrato de provider (`daily -> day`, `30min -> 30min`), usa la cancelacion de React Query y llama a `getObservations()` desde `xemaTransparencia.ts`.
 4. `xemaObservations.ts` consulta Socrata:
    - `7bvh-jvq2` para el agregado diario
    - `nzvn-apee` para detalle 30 min y para completar `windGustTime` diario
@@ -63,7 +63,7 @@ src/
 | Modulo | Responsabilidad |
 |--------|-----------------|
 | `src/services/providers/xemaTransparencia.ts` | Fachada del dominio XEMA y punto de entrada para estaciones y observaciones |
-| `src/services/providers/xemaStations.ts` | Estaciones activas via Socrata y fallback estatico |
+| `src/services/providers/xemaStations.ts` | Estaciones activas via Socrata, `metadataSource`, `warning` y fallback estatico |
 | `src/services/providers/xemaObservations.ts` | Queries daily y 30 min, validacion de parametros y mapping a `Observation[]` |
 | `src/services/http/socrata.ts` | Cliente SODA con paginacion por offset |
 | `src/services/http/fetchJson.ts` | Fetch con timeout, retries y errores tipados |
@@ -77,7 +77,7 @@ src/
 | TanStack React Query para carga | Cache, retry y estados declarativos |
 | Socrata como fuente unica | Datos oficiales sin backend propio |
 | Fallback estatico de estaciones | La UI sigue operativa si falla la metadata remota |
-| `fetchJson()` comun para red | Timeout de 10s, retries y `ProviderError` tipado |
+| `fetchJson()` comun para red | Timeout de 10s, cancelacion cooperativa y `ProviderError` tipado |
 | `VITE_DEBUG_XEMA` y `VITE_DEBUG_DATA` separados | Se distingue el diagnostico del provider de la auditoria del dataset final |
 
 ## Verificacion

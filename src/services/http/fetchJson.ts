@@ -1,5 +1,5 @@
 /**
- * HTTP client with timeout, retries, and typed errors
+ * HTTP client with timeout and typed errors.
  */
 
 import { ProviderError, type ApiErrorCode, type DataSource } from '@/types/weather';
@@ -7,10 +7,6 @@ import { ProviderError, type ApiErrorCode, type DataSource } from '@/types/weath
 interface FetchOptions extends RequestInit {
   /** Timeout in milliseconds (default: 10000) */
   timeout?: number;
-  /** Number of retries on failure (default: 2) */
-  retries?: number;
-  /** Base delay for exponential backoff in ms (default: 1000) */
-  retryDelay?: number;
   /** Provider for error context */
   provider?: DataSource;
 }
@@ -21,7 +17,7 @@ interface FetchResult<T> {
 }
 
 /**
- * Fetch JSON with timeout, retries, and error handling
+ * Fetch JSON with timeout and typed error handling.
  */
 export async function fetchJson<T>(
   url: string,
@@ -29,45 +25,11 @@ export async function fetchJson<T>(
 ): Promise<FetchResult<T>> {
   const {
     timeout = 10000,
-    retries = 2,
-    retryDelay = 1000,
     provider,
     ...fetchOptions
   } = options;
 
-  let lastError: Error | null = null;
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const result = await fetchWithTimeout<T>(url, { ...fetchOptions, timeout }, provider);
-      return result;
-    } catch (error) {
-      lastError = error as Error;
-      
-      // Don't retry on certain errors
-      if (error instanceof ProviderError) {
-        const nonRetryableCodes: ApiErrorCode[] = [
-          'MISSING_API_KEY',
-          'INVALID_API_KEY',
-          'INVALID_PARAMS',
-          'NOT_FOUND',
-        ];
-        if (nonRetryableCodes.includes(error.code)) {
-          throw error;
-        }
-      }
-
-      // Wait before retrying (exponential backoff)
-      if (attempt < retries) {
-        const delay = retryDelay * Math.pow(2, attempt);
-        console.warn(`Retry ${attempt + 1}/${retries} for ${url} in ${delay}ms`);
-        await sleep(delay);
-      }
-    }
-  }
-
-  // All retries exhausted
-  throw lastError;
+  return fetchWithTimeout<T>(url, { ...fetchOptions, timeout }, provider);
 }
 
 async function fetchWithTimeout<T>(
@@ -75,10 +37,23 @@ async function fetchWithTimeout<T>(
   options: FetchOptions & { timeout: number },
   provider?: DataSource
 ): Promise<FetchResult<T>> {
-  const { timeout, ...fetchOptions } = options;
-  
+  const { timeout, signal: externalSignal, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  let didTimeout = false;
+  const forwardAbort = () => controller.abort();
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener('abort', forwardAbort, { once: true });
+    }
+  }
+
+  const timeoutId = setTimeout(() => {
+    didTimeout = true;
+    controller.abort();
+  }, timeout);
 
   try {
     const response = await fetch(url, {
@@ -100,21 +75,23 @@ async function fetchWithTimeout<T>(
 
     return { data, cached };
   } catch (error) {
-    clearTimeout(timeoutId);
-
     if (error instanceof ProviderError) {
       throw error;
     }
 
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new ProviderError({
-          code: 'TIMEOUT',
-          message: `La petición ha excedido el tiempo límite (${timeout}ms)`,
-          provider,
-        });
+    if (isAbortError(error)) {
+      if (externalSignal?.aborted && !didTimeout) {
+        throw error;
       }
 
+      throw new ProviderError({
+        code: 'TIMEOUT',
+        message: `La petición ha excedido el tiempo límite (${timeout}ms)`,
+        provider,
+      });
+    }
+
+    if (error instanceof Error) {
       // Network error
       throw new ProviderError({
         code: 'NETWORK_ERROR',
@@ -129,7 +106,14 @@ async function fetchWithTimeout<T>(
       message: 'Error desconocido',
       provider,
     });
+  } finally {
+    clearTimeout(timeoutId);
+    externalSignal?.removeEventListener('abort', forwardAbort);
   }
+}
+
+function isAbortError(error: unknown): error is Error {
+  return error instanceof Error && error.name === 'AbortError';
 }
 
 function createErrorFromResponse(response: Response, provider?: DataSource): ProviderError {
@@ -173,10 +157,6 @@ function createErrorFromResponse(response: Response, provider?: DataSource): Pro
     provider,
     details: { status, statusText: response.statusText },
   });
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**

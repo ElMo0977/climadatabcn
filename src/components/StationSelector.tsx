@@ -1,4 +1,4 @@
-import { Search, MapPin, Mountain } from 'lucide-react';
+import { Search, MapPin, Mountain, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +17,7 @@ interface StationSelectorProps {
   onSelectStation: (station: Station) => void;
   isLoading: boolean;
   error: Error | null;
+  warning?: string | null;
 }
 
 export function StationSelector({
@@ -25,6 +26,7 @@ export function StationSelector({
   onSelectStation,
   isLoading,
   error,
+  warning,
 }: StationSelectorProps) {
   const [search, setSearch] = useState('');
   const canRenderMap = typeof window !== 'undefined';
@@ -66,6 +68,15 @@ export function StationSelector({
             className="pl-9"
           />
         </div>
+
+        {warning && !error && (
+          <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-700" />
+              <p className="text-xs text-amber-900">{warning}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <ScrollArea className="flex-1">

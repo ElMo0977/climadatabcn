@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Station } from '@/types/weather';
-import { fetchStationsFromSocrata, listStations } from '@/services/providers/xemaTransparencia';
+import {
+  fetchStationsFromSocrata,
+  type StationMetadataSource,
+} from '@/services/providers/xemaTransparencia';
 
 const BARCELONA_LAT = 41.3851;
 const BARCELONA_LON = 2.1734;
@@ -39,24 +42,34 @@ function mapAndSortStations(
     .sort((a, b) => a.distance - b.distance);
 }
 
-export function useStations() {
-  return useQuery({
-    queryKey: ['stations', BARCELONA_LAT, BARCELONA_LON, DEFAULT_RADIUS_KM],
-    queryFn: async (): Promise<Station[]> => {
-      // Try dynamic Socrata fetch first
-      try {
-        const socrataStations = await fetchStationsFromSocrata();
-        if (socrataStations.length > 0) {
-          return mapAndSortStations(socrataStations);
-        }
-      } catch (e) {
-        console.warn('[useStations] Socrata fetch failed:', e);
-      }
+interface StationsQueryData {
+  stations: Station[];
+  metadataSource: StationMetadataSource;
+  warning: string | null;
+}
 
-      // Fallback: lista estática XEMA
-      return mapAndSortStations(listStations());
+export function useStations() {
+  const query = useQuery<StationsQueryData, Error>({
+    queryKey: ['stations', BARCELONA_LAT, BARCELONA_LON, DEFAULT_RADIUS_KM],
+    queryFn: async (): Promise<StationsQueryData> => {
+      const result = await fetchStationsFromSocrata();
+      return {
+        stations: mapAndSortStations(result.stations),
+        metadataSource: result.metadataSource,
+        warning: result.warning,
+      };
     },
     staleTime: 24 * 60 * 60 * 1000, // 24h
-    retry: 2,
+    retry: false,
   });
+
+  return {
+    data: query.data?.stations ?? [],
+    metadataSource: query.data?.metadataSource ?? null,
+    warning: query.data?.warning ?? null,
+    isLoading: query.isLoading,
+    error: query.error,
+    refetch: query.refetch,
+    isFetching: query.isFetching,
+  };
 }

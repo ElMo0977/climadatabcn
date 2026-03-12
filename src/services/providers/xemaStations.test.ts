@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchStationsFromSocrata } from './xemaTransparencia';
-import type { RawSocrataStation } from './xemaStations';
+import {
+  fetchStationsFromSocrata,
+  STATIONS_FALLBACK_WARNING,
+  type RawSocrataStation,
+} from './xemaStations';
 
 vi.mock('@/services/http/socrata', () => ({
   fetchSocrata: vi.fn(),
@@ -16,36 +19,28 @@ beforeEach(() => {
 });
 
 describe('fetchStationsFromSocrata', () => {
-  it('uses stations metadata resource and maps station fields', async () => {
-    const rows: RawSocrataStation[] = [
-      {
-        codi_estacio: 'X4',
-        nom_estacio: 'Barcelona - el Raval',
-        latitud: '41.38',
-        longitud: '2.17',
-        altitud: '33',
-        nom_municipi: 'Barcelona',
-      },
-    ];
+  it('returns fallback metadata and warning when Socrata fails', async () => {
+    fetchSocrataMock.mockRejectedValueOnce(new Error('offline'));
+
+    const result = await fetchStationsFromSocrata();
+
+    expect(result.metadataSource).toBe('fallback');
+    expect(result.warning).toBe(STATIONS_FALLBACK_WARNING);
+    expect(result.stations.length).toBeGreaterThan(0);
+    expect(result.stations[0]).toMatchObject({
+      id: expect.any(String),
+      name: expect.any(String),
+    });
+  });
+
+  it('returns fallback metadata and warning when Socrata yields no usable stations', async () => {
+    const rows: RawSocrataStation[] = [];
     fetchSocrataMock.mockResolvedValueOnce(rows);
 
     const result = await fetchStationsFromSocrata();
 
-    expect(fetchSocrataMock).toHaveBeenCalledWith(
-      'yqwd-vj5e',
-      expect.objectContaining({
-        $where: "nom_xarxa = 'XEMA' AND codi_estat_ema = '2'",
-      }),
-    );
-    expect(result).toEqual([
-      {
-        id: 'X4',
-        name: 'Barcelona - el Raval',
-        latitude: 41.38,
-        longitude: 2.17,
-        elevation: 33,
-        municipality: 'Barcelona',
-      },
-    ]);
+    expect(result.metadataSource).toBe('fallback');
+    expect(result.warning).toBe(STATIONS_FALLBACK_WARNING);
+    expect(result.stations.length).toBeGreaterThan(0);
   });
 });

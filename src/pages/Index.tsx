@@ -29,6 +29,7 @@ const Index = () => {
 
   const { 
     data: stations = [], 
+    warning: stationsWarning,
     isLoading: stationsLoading, 
     error: stationsError,
     refetch: refetchStations,
@@ -153,6 +154,7 @@ const Index = () => {
               onSelectStation={setSelectedStation}
               isLoading={stationsLoading}
               error={stationsError}
+              warning={stationsWarning}
             />
           </aside>
 
