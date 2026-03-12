@@ -1,5 +1,5 @@
 import { endOfDay, startOfDay, subDays } from 'date-fns';
-import { toLocalDayKey } from '@/lib/dailyCoverage';
+import { toLocalDayKey } from '@/lib/dateKeys';
 import type { DateRange } from '@/types/weather';
 
 export type QuickRangeKey = '7d' | '14d' | '30d';

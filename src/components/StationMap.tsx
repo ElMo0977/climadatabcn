@@ -2,12 +2,15 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { Station } from '@/types/weather';
 import 'leaflet/dist/leaflet.css';
+import markerIconUrl from 'leaflet/dist/images/marker-icon.png';
+import markerRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 // Fix for default marker icons
 const defaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl: markerIconUrl,
+  iconRetinaUrl: markerRetinaUrl,
+  shadowUrl: markerShadowUrl,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -15,9 +18,9 @@ const defaultIcon = L.icon({
 });
 
 const selectedIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl: markerIconUrl,
+  iconRetinaUrl: markerRetinaUrl,
+  shadowUrl: markerShadowUrl,
   iconSize: [30, 49],
   iconAnchor: [15, 49],
   popupAnchor: [1, -40],
@@ -32,31 +35,38 @@ interface StationMapProps {
 
 // Barcelona center coordinates
 const BARCELONA_CENTER: L.LatLngExpression = [41.3851, 2.1734];
+const POPUP_PADDING_TOP_LEFT = L.point(12, 52);
+const POPUP_PADDING_BOTTOM_RIGHT = L.point(12, 12);
 
 export function StationMap({ stations, selectedStation, onSelectStation }: StationMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
+  const selectedStationIdRef = useRef<string | null>(null);
 
   // Initialize map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    mapRef.current = L.map(containerRef.current, {
+    const map = L.map(containerRef.current, {
       center: BARCELONA_CENTER,
       zoom: 11,
       scrollWheelZoom: false,
     });
+    mapRef.current = map;
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(mapRef.current);
+    }).addTo(map);
+
+    const markers = markersRef.current;
 
     return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
+      if (mapRef.current === map) {
+        map.remove();
         mapRef.current = null;
       }
+      markers.clear();
     };
   }, []);
 
@@ -69,44 +79,72 @@ export function StationMap({ stations, selectedStation, onSelectStation }: Stati
     markersRef.current.clear();
 
     // Add new markers
-    stations.forEach(station => {
+    stations.forEach((station) => {
       const marker = L.marker([station.latitude, station.longitude], {
-        icon: selectedStation?.id === station.id ? selectedIcon : defaultIcon,
+        icon: defaultIcon,
       })
         .addTo(mapRef.current!)
-        .bindPopup(`
-          <div style="font-size: 14px;">
-            <p style="font-weight: 600; margin: 0;">${station.name}</p>
-            <p style="color: #666; margin: 4px 0 0 0; font-size: 12px;">
-              ${station.distance} km · ${station.elevation ?? '—'} m
-            </p>
-          </div>
-        `)
+        .bindPopup(buildStationPopup(station), {
+          autoPan: true,
+          autoPanPaddingTopLeft: POPUP_PADDING_TOP_LEFT,
+          autoPanPaddingBottomRight: POPUP_PADDING_BOTTOM_RIGHT,
+          keepInView: true,
+        })
         .on('click', () => onSelectStation(station));
 
       markersRef.current.set(station.id, marker);
     });
-  }, [stations, selectedStation, onSelectStation]);
+
+    syncMarkerSelection(markersRef.current, selectedStationIdRef.current);
+  }, [stations, onSelectStation]);
 
   // Fly to selected station
   useEffect(() => {
-    if (!mapRef.current || !selectedStation) return;
+    selectedStationIdRef.current = selectedStation?.id ?? null;
+    syncMarkerSelection(markersRef.current, selectedStationIdRef.current);
+    if (!mapRef.current) return;
+    if (!selectedStation) {
+      mapRef.current.closePopup();
+      return;
+    }
 
-    mapRef.current.flyTo([selectedStation.latitude, selectedStation.longitude], 13, {
+    const map = mapRef.current;
+    const selectedMarker = markersRef.current.get(selectedStation.id);
+    const reopenPopup = () => selectedMarker?.openPopup();
+
+    selectedMarker?.openPopup();
+    map.flyTo([selectedStation.latitude, selectedStation.longitude], 13, {
       duration: 0.5,
     });
+    map.once('moveend', reopenPopup);
 
-    // Update marker icon
-    markersRef.current.forEach((marker, id) => {
-      marker.setIcon(id === selectedStation.id ? selectedIcon : defaultIcon);
-    });
+    return () => {
+      map.off('moveend', reopenPopup);
+    };
   }, [selectedStation]);
 
   return (
     <div 
       ref={containerRef} 
-      className="h-48 rounded-lg overflow-hidden border border-border"
+      className="h-56 rounded-lg overflow-hidden border border-border md:h-60"
       style={{ zIndex: 0 }}
     />
   );
+}
+
+function syncMarkerSelection(markers: Map<string, L.Marker>, selectedStationId: string | null): void {
+  markers.forEach((marker, id) => {
+    marker.setIcon(id === selectedStationId ? selectedIcon : defaultIcon);
+  });
+}
+
+function buildStationPopup(station: Station): string {
+  return `
+    <div style="font-size: 14px;">
+      <p style="font-weight: 600; margin: 0;">${station.name}</p>
+      <p style="color: #666; margin: 4px 0 0 0; font-size: 12px;">
+        ${station.distance} km · ${station.elevation ?? '—'} m
+      </p>
+    </div>
+  `;
 }

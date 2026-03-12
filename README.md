@@ -41,6 +41,7 @@ Copia `.env.example` a `.env`. La configuracion habitual del proyecto solo neces
 | Variable | Uso |
 |----------|-----|
 | `VITE_DEBUG_XEMA` | Diagnostico del provider XEMA y del fetch subdaily (`true` o `1`, solo en desarrollo) |
+| `VITE_XEMA_HTTP_TIMEOUT_MS` | Timeout de las peticiones XEMA / Socrata en ms. Valor por defecto: `40000` |
 | `VITE_DEBUG_DATA` | Auditoria del dataset final en consola (`1`) |
 
 Nota: `src/config/env.ts` tambien expone `VITE_DATA_MODE`, pero el runtime actual no cambia de provider ni de flujo en funcion de esa variable. Se considera configuracion interna y no forma parte del setup normal del proyecto.

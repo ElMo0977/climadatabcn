@@ -8,16 +8,19 @@ Este documento describe la integracion vigente entre Meteo BCN y los datasets pu
 
 | Archivo | Rol actual |
 |--------|------------|
-| `src/services/http/fetchJson.ts` | Cliente HTTP comun con timeout de 10 s, abort cooperativo y errores tipados |
-| `src/services/http/socrata.ts` | Cliente SODA (`fetchSocrata`, `fetchSocrataAll`) sobre `https://analisi.transparenciacatalunya.cat`, con propagacion de `signal` |
+| `src/services/http/fetchJson.ts` | Cliente HTTP comun con timeout configurable, abort cooperativo y errores tipados |
+| `src/services/http/socrata.ts` | Cliente SODA (`fetchSocrata`, `fetchSocrataAll`) sobre `https://analisi.transparenciacatalunya.cat`, con propagacion de `signal` y timeout leido desde entorno |
 | `src/services/providers/xemaTransparencia.ts` | Fachada fina que reexporta estaciones y observaciones |
 | `src/services/providers/xemaStations.ts` | Estaciones XEMA activas via `yqwd-vj5e`, con `metadataSource`, `warning` y fallback visible |
 | `src/services/providers/xemaObservations.ts` | Observaciones `30min` y `day`, validacion de parametros, propagacion de `signal` y mapping a `Observation[]` |
 | `src/services/providers/xemaVariableMap.ts` | Codigos de variables usados por daily y subdaily, mas helper opcional de metadata |
+| `src/hooks/useWeatherDashboard.ts` | View-model de la pagina principal que centraliza estado, cobertura, exportacion y refresh |
 | `src/hooks/useStations.ts` | Consume metadata de estaciones y expone `warning` / `metadataSource` a la UI |
 | `src/hooks/useObservations.ts` | Traduce granularidad de UI a contrato del provider, propaga `ProviderError` y ejecuta `logDataDebug()` |
+| `src/lib/dateKeys.ts` | Normalizacion y validacion de day keys compartidas |
+| `src/lib/stationGeo.ts` | Distancias y ordenacion de estaciones cercanas a Barcelona |
 | `src/lib/dataDebug.ts` | Auditoria opcional del dataset final (`VITE_DEBUG_DATA=1`) |
-| `src/config/env.ts` | Parseo de `VITE_DEBUG_XEMA` y `VITE_DATA_MODE` |
+| `src/config/env.ts` | Parseo de `VITE_DEBUG_XEMA`, `VITE_XEMA_HTTP_TIMEOUT_MS` y `VITE_DATA_MODE` |
 
 ## Contratos vigentes
 
@@ -109,13 +112,14 @@ Ademas, hace una segunda consulta a `nzvn-apee` para `VVx10` y completa `windGus
 
 ## Flujo de datos actual
 
-1. `useStations()` carga metadata de estaciones, anade `source: 'xema-transparencia'` y expone `metadataSource` / `warning`.
-2. `StationSelector` muestra el warning de modo degradado sin bloquear la seleccion de estaciones fallback.
-3. `useObservations()` construye la query key, valida que la fuente seleccionada sea XEMA y usa la `signal` de React Query.
-4. `getObservations()` devuelve `Observation[]`.
-5. `useObservations()` anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
-6. `Index.tsx` usa ese array para KPIs, graficas, tabla, coverage y exportacion.
-7. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`.
+1. `useWeatherDashboard()` centraliza estado de seleccion, rango, granularidad, cobertura y exportacion.
+2. `useStations()` carga metadata de estaciones, anade `source: 'xema-transparencia'` y expone `metadataSource` / `warning`.
+3. `StationSelector` muestra el warning de modo degradado sin bloquear la seleccion de estaciones fallback.
+4. `useObservations()` construye la query key, valida que la fuente seleccionada sea XEMA y usa la `signal` de React Query.
+5. `getObservations()` devuelve `Observation[]`.
+6. `useObservations()` anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
+7. `Index.tsx` compone el dashboard y carga `WeatherCharts` en diferido.
+8. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`.
 
 ## Reintentos y cancelacion
 
@@ -132,11 +136,13 @@ Los dos flags actuales tienen responsabilidades distintas y pueden activarse por
 | Variable | Que activa | Donde se usa |
 |----------|------------|--------------|
 | `VITE_DEBUG_XEMA` | Logs del provider XEMA y resumen de fetch subdaily | `src/config/env.ts`, `src/services/providers/xemaObservations.ts`, `Index.tsx` |
+| `VITE_XEMA_HTTP_TIMEOUT_MS` | Timeout de peticiones XEMA / Socrata. Default runtime: `40000` ms | `src/config/env.ts`, `src/services/http/socrata.ts`, `src/services/http/fetchJson.ts` |
 | `VITE_DEBUG_DATA` | Auditoria del dataset final (`stats`, timestamps, snapshot en `window.__DATA_DEBUG_SNAPSHOT`) | `src/lib/dataDebug.ts`, `src/hooks/useObservations.ts` |
 
 Notas:
 
 - `VITE_DEBUG_XEMA` solo se considera en desarrollo mediante `isXemaDebugEnabled()`.
+- `VITE_XEMA_HTTP_TIMEOUT_MS` permite dar mas margen cuando Socrata responde con latencia alta o muy variable.
 - `VITE_DEBUG_DATA` se activa unicamente con el valor literal `1`.
 - `VITE_DATA_MODE` existe en `env.ts`, pero el runtime actual no cambia de comportamiento por esa variable.
 

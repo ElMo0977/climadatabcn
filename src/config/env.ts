@@ -6,6 +6,7 @@
 interface EnvConfig {
   dataMode: 'live' | 'mock';
   xemaDebug: boolean;
+  xemaHttpTimeoutMs: number;
 }
 
 function getEnvVar(key: string): string | null {
@@ -22,6 +23,18 @@ export function parseBooleanEnv(value?: string): boolean {
   return ['1', 'true', 'yes', 'on'].includes(normalized);
 }
 
+export function parseIntegerEnv(
+  value: string | null,
+  fallback: number,
+  options: { min?: number } = {},
+): number {
+  if (!value) return fallback;
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (options.min != null && parsed < options.min) return fallback;
+  return parsed;
+}
+
 function parseDataModeEnv(value: string | null): EnvConfig['dataMode'] {
   return value === 'mock' ? 'mock' : 'live';
 }
@@ -29,6 +42,9 @@ function parseDataModeEnv(value: string | null): EnvConfig['dataMode'] {
 export const env: EnvConfig = {
   dataMode: parseDataModeEnv(getEnvVar('VITE_DATA_MODE')),
   xemaDebug: parseBooleanEnv(getEnvVar('VITE_DEBUG_XEMA') ?? undefined),
+  xemaHttpTimeoutMs: parseIntegerEnv(getEnvVar('VITE_XEMA_HTTP_TIMEOUT_MS'), 40000, {
+    min: 1000,
+  }),
 };
 
 /**

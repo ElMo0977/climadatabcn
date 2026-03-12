@@ -4,6 +4,7 @@
  */
 
 import { fetchJson } from '@/services/http/fetchJson';
+import { env } from '@/config/env';
 
 const BASE_URL = 'https://analisi.transparenciacatalunya.cat';
 
@@ -44,6 +45,7 @@ export async function fetchSocrata<T = unknown[]>(
   const { data } = await fetchJson<T>(url, {
     provider: 'xema-transparencia',
     signal: options.signal,
+    timeout: env.xemaHttpTimeoutMs,
   });
   return data;
 }

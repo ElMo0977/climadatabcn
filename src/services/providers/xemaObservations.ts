@@ -1,11 +1,10 @@
 import { ProviderError, type Observation } from '@/types/weather';
-import { toLocalDayKey } from '@/lib/dailyCoverage';
+import { DAY_KEY_RE, toLocalDayKey } from '@/lib/dateKeys';
 import { DAILY_CODES, SUBDAILY_CODES } from './xemaVariableMap';
 import { fetchSocrataAll } from '@/services/http/socrata';
 import { parseBooleanEnv } from '@/config/env';
 
 const STATION_ID_RE = /^[A-Za-z0-9]{1,10}$/;
-const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function assertValidStationId(id: string): void {
   if (!STATION_ID_RE.test(id)) {

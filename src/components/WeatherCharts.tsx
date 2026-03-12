@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Brush, BarChart, Bar, Legend, ReferenceLine, Label,
@@ -12,29 +13,49 @@ interface WeatherChartsProps {
   granularity: Granularity;
   isLoading: boolean;
   dataSourceLabel?: string;
-  stationName?: string;
 }
 
+const LINE_CHARTS = [
+  {
+    title: 'Temperatura',
+    icon: Thermometer,
+    dataKey: 'temperature',
+    color: 'hsl(var(--chart-temp))',
+    unit: '°C',
+    colorClass: 'text-temperature',
+  },
+  {
+    title: 'Humedad',
+    icon: Droplets,
+    dataKey: 'humidity',
+    color: 'hsl(var(--chart-humidity))',
+    unit: '%',
+    colorClass: 'text-humidity',
+  },
+] as const;
+
 export function WeatherCharts({ observations, granularity, isLoading, dataSourceLabel }: WeatherChartsProps) {
-  const chartData = observations.map(obs => ({
-    ...obs,
-    label: granularity === 'daily'
-      ? formatDayKey(obs.timestamp)
-      : formatShortDate(obs.timestamp),
-  }));
+  const formatObservationLabel = granularity === 'daily' ? formatDayKey : formatShortDate;
 
-  const windBucketFn = granularity === 'daily'
-    ? (obs: Observation) => formatDayKey(obs.timestamp)
-    : (obs: Observation) => formatShortDate(obs.timestamp);
-  const windChartData = aggregateWindByBucket(observations, windBucketFn).map(bucket => ({
-    ...bucket,
-    label: bucket.time,
-  }));
+  const chartData = useMemo(
+    () =>
+      observations.map((observation) => ({
+        ...observation,
+        label: formatObservationLabel(observation.timestamp),
+      })),
+    [formatObservationLabel, observations],
+  );
 
-  const lineCharts = [
-    { title: 'Temperatura', icon: Thermometer, dataKey: 'temperature', color: 'hsl(var(--chart-temp))', unit: '°C', colorClass: 'text-temperature' },
-    { title: 'Humedad', icon: Droplets, dataKey: 'humidity', color: 'hsl(var(--chart-humidity))', unit: '%', colorClass: 'text-humidity' },
-  ];
+  const windChartData = useMemo(
+    () =>
+      aggregateWindByBucket(observations, (observation) => formatObservationLabel(observation.timestamp)).map(
+        (bucket) => ({
+          ...bucket,
+          label: bucket.time,
+        }),
+      ),
+    [formatObservationLabel, observations],
+  );
 
   if (isLoading) {
     return (
@@ -61,7 +82,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
     <div className="space-y-4">
       {dataSourceLabel && <p className="text-xs text-muted-foreground">{dataSourceLabel}</p>}
 
-      {lineCharts.map((chart, index) => (
+      {LINE_CHARTS.map((chart, index) => (
         <div key={chart.dataKey} className="chart-container animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
           <div className="flex items-center gap-2 mb-4">
             <chart.icon className={`h-5 w-5 ${chart.colorClass}`} />
@@ -85,7 +106,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
       ))}
 
       {/* Wind Chart */}
-      <div className="chart-container animate-slide-up" style={{ animationDelay: `${lineCharts.length * 100}ms` }}>
+      <div className="chart-container animate-slide-up" style={{ animationDelay: `${LINE_CHARTS.length * 100}ms` }}>
         <div className="flex items-center gap-2 mb-4">
           <Wind className="h-5 w-5 text-wind" />
           <h4 className="font-display font-semibold text-sm">Velocidad del viento</h4>
@@ -116,7 +137,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
       </div>
 
       {/* Precipitation */}
-      <div className="chart-container animate-slide-up" style={{ animationDelay: `${(lineCharts.length + 1) * 100}ms` }}>
+      <div className="chart-container animate-slide-up" style={{ animationDelay: `${(LINE_CHARTS.length + 1) * 100}ms` }}>
         <div className="flex items-center gap-2 mb-4">
           <CloudRain className="h-5 w-5 text-primary" />
           <h4 className="font-display font-semibold text-sm">Precipitación</h4>

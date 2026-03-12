@@ -41,6 +41,7 @@ describe('socrata client', () => {
     expect(options).toEqual({
       provider: 'xema-transparencia',
       signal: controller.signal,
+      timeout: 40000,
     });
   });
 

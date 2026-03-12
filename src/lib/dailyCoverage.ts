@@ -1,5 +1,6 @@
 import { addDays, startOfDay } from 'date-fns';
 import type { DateRange, Observation } from '@/types/weather';
+import { isDayKey, toLocalDayKey } from '@/lib/dateKeys';
 
 export interface DailyCoverage {
   expectedDays: string[];
@@ -8,13 +9,6 @@ export interface DailyCoverage {
   expectedCount: number;
   availableCount: number;
   missingCount: number;
-}
-
-export function toLocalDayKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
 }
 
 export function buildExpectedDayKeys(range: DateRange): string[] {
@@ -33,7 +27,7 @@ export function buildExpectedDayKeys(range: DateRange): string[] {
 
 export function getObservedDayKeys(observations: Observation[]): string[] {
   return Array.from(
-    new Set(observations.map((o) => o.timestamp.slice(0, 10)).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))),
+    new Set(observations.map((o) => o.timestamp.slice(0, 10)).filter(isDayKey)),
   ).sort();
 }
 

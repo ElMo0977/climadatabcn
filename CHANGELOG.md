@@ -15,11 +15,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 - `fetchJson()` deja de hacer retries internos; la politica de reintentos queda bajo control de React Query.
 - `useObservations()` propaga `ProviderError`, acepta cancelacion via `signal` y limita los retries a errores transitorios.
 - `fetchSocrata()` / `fetchSocrataAll()` y `xemaObservations.ts` propagan la cancelacion hasta `fetch()`.
+- `Index.tsx` se aligera delegando estado y datos derivados a `useWeatherDashboard.ts`.
+- La normalizacion de day keys se mueve a `src/lib/dateKeys.ts` y la politica de distancia/radio de estaciones a `src/lib/stationGeo.ts`.
+- `WeatherCharts` pasa a cargarse en diferido desde la ruta principal.
+- `StationMap` deja de depender de iconos remotos y evita reconstruir marcadores al cambiar solo la seleccion.
+- `vite.config.ts` baja `chunkSizeWarningLimit` para volver a alertar sobre crecimiento del bundle.
 
 ### Added
 
 - Nueva cobertura para `env.ts`, `fetchJson.ts`, `socrata.ts`, `useStations()`, `useObservations()` y `useExcelExport()`.
 - Validaciones adicionales del flujo de exportacion Excel y del warning visible de estaciones en modo degradado.
+- Test directo de la politica geografica de estaciones extraida a `src/lib/stationGeo.ts`.
+
+### Fixed
+
+- Ajustado el contrato tipado de `src/lib/stationGeo.ts` al shape real consumido por `useStations()` y saneado el cleanup de `StationMap` para cerrar la fase 2 sin avisos de build/lint.
+- `StationMap` vuelve a mantener visible la informacion de la estacion seleccionada reabriendo la popup tras el `flyTo`, con autopan y mas altura util para el mapa.
+
+### Changed
+
+- El cliente Socrata pasa a usar `VITE_XEMA_HTTP_TIMEOUT_MS` con un default de `40000` ms para tolerar mejor la latencia variable de la fuente.
 
 ## 2026-03-12 — Reorganizacion documental
 

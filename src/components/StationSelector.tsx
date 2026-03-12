@@ -45,7 +45,7 @@ export function StationSelector({
           <div className="mb-3">
             <Suspense
               fallback={
-                <div className="h-48 rounded-lg overflow-hidden border border-border">
+                <div className="h-56 rounded-lg overflow-hidden border border-border md:h-60">
                   <Skeleton className="h-full w-full" />
                 </div>
               }
