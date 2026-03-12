@@ -1,54 +1,39 @@
 # Roadmap
 
-Mejoras identificadas en el code review de marzo 2026, ordenadas por prioridad.
-
----
+Trabajo pendiente del proyecto, ordenado por prioridad.
 
 ## Prioridad alta
 
-### ~~Sanitizar queries Socrata~~ ✔ Completado (2026-03-04)
+### Aclarar el futuro de `VITE_DATA_MODE`
 
-Resuelto: se añadieron validaciones con regex para `stationId` (`/^[A-Za-z0-9]{1,10}$/`) y day keys (`/^\d{4}-\d{2}-\d{2}$/`) en `getObservations()` antes de interpolar en queries `$where`.
+`src/config/env.ts` sigue exponiendo `VITE_DATA_MODE`, pero el runtime actual no cambia de flujo ni de provider segun esa variable.
 
-### ~~Habilitar TypeScript strict~~ ✔ Completado (2026-03-04)
+Criterio de cierre: eliminarla del codigo si ya no aporta valor, o documentar e implementar un uso real y verificable.
 
-Resuelto: se activo `strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true` y `noFallthroughCasesInSwitch: true` en `tsconfig.app.json`. Se corrigieron 9 errores en 5 archivos (imports sin usar, parametros sin tipo, variables sin usar).
+### Rehabilitar `@typescript-eslint/no-unused-vars`
 
----
+La regla esta desactivada en `eslint.config.js`, lo que permite que se acumulen imports y parametros muertos.
+
+Criterio de cierre: volver a activarla con una limpieza previa del codigo que hoy depende de esa tolerancia.
 
 ## Prioridad media
 
-### ~~Timeout y reintentos en el cliente Socrata~~ ✔ Completado (2026-03-04)
+### Renombrar `.github/workflows/deply.yml` a `deploy.yml`
 
-Resuelto: `socrata.ts` ahora usa `fetchJson()` en lugar de `fetch()` directo, ganando timeout (10s), reintentos (2) con backoff exponencial, y errores tipados con `ProviderError`.
+El workflow funciona, pero el nombre actual contiene un typo que dificulta navegacion y mantenimiento.
 
-### ~~Eliminar duplicacion en useStations~~ ✔ Completado (2026-03-04)
+Criterio de cierre: renombrar el archivo sin cambiar el comportamiento del pipeline.
 
-Resuelto: se extrajo la funcion helper `mapAndSortStations()` en `useStations.ts`, eliminando la duplicacion del bloque `.map().filter().sort()` entre el path de Socrata y el fallback estatico.
+### Decidir el destino del directorio `supabase/`
 
----
+El changelog documenta la eliminacion de la integracion legacy, pero el directorio `supabase/` sigue presente en el repo.
+
+Criterio de cierre: eliminarlo si ya no se usa o documentar por que debe conservarse.
 
 ## Prioridad baja
 
-### ~~Limpiar componentes UI sin usar~~ ✔ Completado (2026-03-04)
+### Consolidar `downloadFile` y `downloadFileBuffer`
 
-Resuelto: eliminados 36 componentes shadcn/ui sin usar de `src/components/ui/`. El CSS del bundle se redujo de 65 KB a 33 KB (-49%).
+`src/lib/weatherUtils.ts` mantiene dos utilidades de descarga muy parecidas.
 
-### ~~Unificar manejo de errores~~ ✔ Completado (2026-03-04)
-
-Resuelto: `socrata.ts` migrado a `fetchJson()` (usa `ProviderError`). Validaciones en `xemaObservations.ts` ahora lanzan `ProviderError` con code `INVALID_PARAMS`. Narrowing seguro de errores en `useObservations.ts`.
-
-### ~~Refactorizar Index.tsx~~ ✔ Completado (2026-03-04)
-
-Resuelto: logica de exportacion Excel extraida a hook `useExcelExport.ts`. Alertas de cobertura extraidas a componente `CoverageAlerts.tsx`. `Index.tsx` reducido de 338 a ~230 lineas.
-
----
-
-## Housekeeping
-
-| Tarea | Detalle |
-|-------|---------|
-| Corregir typo en CI | `.github/workflows/deply.yml` deberia ser `deploy.yml` |
-| Eliminar directorio `supabase/` | Contiene funciones legacy que ya no se usan |
-| Habilitar `no-unused-vars` en ESLint | La regla esta deshabilitada en `eslint.config.js`, lo que permite acumular imports muertos |
-| Unificar `downloadFile` / `downloadFileBuffer` | `weatherUtils.ts` tiene dos funciones casi identicas que podrian ser una sola |
+Criterio de cierre: evaluar si pueden unificarse sin complicar la exportacion de Excel ni el resto de helpers.

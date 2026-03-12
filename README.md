@@ -1,76 +1,69 @@
 # Meteo BCN
 
-Aplicación web para consultar y exportar datos meteorológicos históricos de Barcelona y su área metropolitana.
+Aplicacion web para consultar y exportar datos meteorologicos historicos de Barcelona y su area metropolitana.
 
-Consume datos abiertos de la red XEMA del Servei Meteorologic de Catalunya a través de la API SODA de Socrata (Transparencia Catalunya).
+Consume datos abiertos de la red XEMA del Servei Meteorologic de Catalunya a traves de la API SODA de Socrata y se despliega como sitio estatico en GitHub Pages.
 
 ## Funcionalidades
 
-- Selección de estaciones meteorológicas cercanas a Barcelona (mapa interactivo + lista).
-- Selección de rango de fechas con presets rápidos (7, 14, 30 días).
-- Dos modos de visualización: datos cada 30 minutos y resumen diario.
-- KPIs: temperatura media, humedad media, viento medio/máximo, precipitación total.
-- Gráficas de series temporales (temperatura, humedad, viento, precipitación).
-- Tabla paginada con resaltado de viento fuerte (>5 m/s).
-- Exportación a Excel con dos hojas (detalle 30min y resumen diario).
-- Alertas cuando faltan datos en el rango seleccionado.
+- Seleccion de estaciones meteorologicas cercanas a Barcelona con mapa interactivo y lista.
+- Seleccion de rango de fechas con presets rapidos de 7, 14 y 30 dias.
+- Dos vistas temporales: detalle cada 30 minutos y resumen diario.
+- KPIs de temperatura, humedad, viento y precipitacion.
+- Graficas de series temporales y tabla paginada de observaciones.
+- Exportacion a Excel con dos hojas: `30min` y `Diario`.
+- Alertas de cobertura cuando faltan datos en el rango seleccionado.
 
-## Quick start
+## Inicio rapido
 
 ```bash
 npm install
 npm run dev
 ```
 
-La app abre en el puerto configurado en `vite.config.ts`.
+La app de desarrollo arranca en `http://localhost:8080`.
 
-### Comandos principales
+## Comandos principales
 
-| Comando | Descripción |
-|---------|-------------|
-| `npm run dev` | Servidor de desarrollo |
-| `npm test` | Ejecutar tests (single run) |
+| Comando | Uso |
+|---------|-----|
+| `npm run dev` | Servidor de desarrollo con Vite |
+| `npm test` | Suite de tests con Vitest |
 | `npm run test:watch` | Tests en modo watch |
-| `npm run lint` | Verificar reglas ESLint |
-| `npm run build` | Build de producción (type-check + Vite) |
+| `npm run lint` | Verificacion de ESLint |
+| `npm run build` | Type-check y build de produccion |
+| `npm run preview` | Servir localmente el build generado |
 
-## Variables de entorno
+## Variables de entorno soportadas
 
-Copiar `.env.example` a `.env`. Todas son opcionales:
+Copia `.env.example` a `.env`. La configuracion habitual del proyecto solo necesita estas variables opcionales:
 
-| Variable | Descripción |
-|----------|-------------|
-| `VITE_DEBUG_XEMA` | `true` para activar logs de depuración del proveedor XEMA (solo en desarrollo) |
-| `VITE_DEBUG_DATA` | `1` para ver diagnostico de datos en consola |
-| `VITE_API_PROXY_URL` | URL base de proxy para las peticiones a Socrata (opcional) |
+| Variable | Uso |
+|----------|-----|
+| `VITE_API_PROXY_URL` | Base opcional para enrutar peticiones a Socrata a traves de un proxy |
+| `VITE_DEBUG_XEMA` | Diagnostico del provider XEMA y del fetch subdaily (`true` o `1`, solo en desarrollo) |
+| `VITE_DEBUG_DATA` | Auditoria del dataset final en consola (`1`) |
 
-## Tecnologías
+Nota: `src/config/env.ts` tambien expone `VITE_DATA_MODE`, pero el runtime actual no cambia de provider ni de flujo en funcion de esa variable. Se considera configuracion interna y no forma parte del setup normal del proyecto.
 
-| Tecnología | Uso |
-|------------|-----|
-| React 18 + TypeScript | Framework UI y tipado |
-| Vite | Bundler y servidor de desarrollo |
-| Tailwind CSS | Estilos utilitarios |
-| React Query (TanStack) | Cache y gestión de estado de servidor |
-| Recharts | Graficas de series temporales |
-| Leaflet | Mapa interactivo de estaciones |
-| ExcelJS | Generación de archivos Excel (lazy-loaded) |
-| Vitest + Testing Library | Tests unitarios y de componentes |
+## Documentacion
 
-## Documentación
+El mapa documental completo vive en [docs/README.md](docs/README.md).
 
-| Documento | Contenido |
-|-----------|-----------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura técnica, diagrama de capas, estructura de directorios, flujo de datos |
-| [CHANGELOG.md](CHANGELOG.md) | Histórico de cambios del proyecto |
-| [ROADMAP.md](ROADMAP.md) | Mejoras futuras planificadas |
-| [docs/xema-transparencia-implementation.md](docs/xema-transparencia-implementation.md) | Detalles de la integración con XEMA/Socrata |
+| Documento | Para que sirve |
+|-----------|----------------|
+| [docs/README.md](docs/README.md) | Indice canonico y ownership de la documentacion |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Arquitectura por capas, flujo de datos y decisiones tecnicas |
+| [docs/xema-transparencia-implementation.md](docs/xema-transparencia-implementation.md) | Integracion actual con XEMA / Socrata, contratos y flags de debug |
+| [ROADMAP.md](ROADMAP.md) | Trabajo pendiente |
+| [CHANGELOG.md](CHANGELOG.md) | Historial de cambios relevantes |
+| [AGENTS.md](AGENTS.md) | Flujo de trabajo y referencias para agentes |
 
 ## Fuente de datos
 
-Los datos meteorológicos provienen de la **red XEMA** (Xarxa d'Estacions Meteorologiques Automatiques) del **Servei Meteorologic de Catalunya**, publicados como datos abiertos en el portal de **Transparencia Catalunya** a traves de la API SODA de Socrata.
+Los datos meteorologicos provienen de la red XEMA del Servei Meteorologic de Catalunya, publicados como datos abiertos en Transparencia Catalunya a traves de la API SODA de Socrata.
 
 - Portal: [analisi.transparenciacatalunya.cat](https://analisi.transparenciacatalunya.cat)
-- Dataset diario: `7bvh-jvq2`
-- Dataset 30min: `nzvn-apee`
 - Estaciones: `yqwd-vj5e`
+- Dataset diario: `7bvh-jvq2`
+- Dataset 30 min: `nzvn-apee`

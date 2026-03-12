@@ -1,66 +1,152 @@
-# XEMA (Transparència Catalunya) – Implementación
+# XEMA / Transparencia Catalunya - Integracion actual
 
-## Archivos creados
+## Objetivo
 
-| Archivo | Descripción |
-|--------|-------------|
-| `src/services/http/socrata.ts` | Cliente SODA: `fetchSocrata(resourceId, params)` con `$select`, `$where`, `$order`, `$limit`, `$offset`. `fetchSocrataAll` para paginación. |
-| `src/services/providers/xemaVariableMap.ts` | Códigos de variables desde metadatos 4fb2-n3yi (cache en memoria). Exporta `SUBDAILY_CODES` (T, HR, PPT, VV10, DV10, VVx10, DVVx10) y `DAILY_CODES` (TM, HRM, PPT, VVM10vec, VVX10). |
-| `src/services/providers/xemaTransparencia.ts` | Provider XEMA: `listStations()` (estaciones Barcelona), `getObservations({ stationId, from, to, granularity })` → `Observation[]`. Hourly vía nzvn-apee (agregación a hora Europe/Madrid, viento vectorial, racha max). Daily vía 7bvh-jvq2. Debug con `VITE_DEBUG_DATA=1`. |
-| `src/lib/windVector.ts` | Media vectorial: `speedDirToUV`, `uvToSpeedDir`, `vectorialMeanWind(pairs)`. Convención meteorológica (dirección = de dónde sopla). |
-| `src/lib/exceedance.ts` | `exceedanceIntervals(observations, threshold, valueKey)` → intervalos `[start, end]` donde gust > umbral (horas contiguas consolidadas). |
-| `src/lib/windVector.test.ts` | Tests: speed/dir ↔ u/v, media vectorial (opuestos → baja velocidad, misma dirección → media). |
-| `src/lib/exceedance.test.ts` | Tests: sin superación, una hora, horas contiguas consolidadas, ordenación por timestamp. |
+Este documento describe la integracion vigente entre Meteo BCN y los datasets publicos de XEMA publicados en Socrata. Su foco es el estado real del codigo actual: modulos activos, contratos, datasets, flags de debug y puntos de verificacion.
 
-## Archivos modificados
+## Modulos principales
 
-| Archivo | Cambio |
-|--------|--------|
-| `src/types/weather.ts` | `DataSource` = `'xema-transparencia'`. |
-| `src/domain/types.ts` | `DataProvider` = `'xema-transparencia'`. |
-| `src/config/sources.ts` | `SOURCE_LABELS['xema-transparencia'] = 'XEMA (Transparència Catalunya)'`. |
-| `src/services/dataService.ts` | `getStations()` usa solo XEMA (`listStationsXema()`). |
-| `src/hooks/useStations.ts` | Devuelve estaciones con `source: 'xema-transparencia'`. |
-| `src/hooks/useObservations.ts` | Si `source === 'xema-transparencia'` llama `getObservationsXema({ stationId, from, to, granularity: 'hour' \| 'day' })`, asigna `dataSourceLabel` y `logDataDebug`. |
-| (ninguno en env) | XEMA no requiere API key; no cambios en `env.ts`. |
+| Archivo | Rol actual |
+|--------|------------|
+| `src/services/http/fetchJson.ts` | Cliente HTTP comun con timeout de 10 s, `retries = 2`, backoff exponencial y errores tipados |
+| `src/services/http/socrata.ts` | Cliente SODA (`fetchSocrata`, `fetchSocrataAll`) sobre `https://analisi.transparenciacatalunya.cat` |
+| `src/services/providers/xemaTransparencia.ts` | Fachada fina que reexporta estaciones y observaciones |
+| `src/services/providers/xemaStations.ts` | Estaciones XEMA activas via `yqwd-vj5e` con fallback estatico |
+| `src/services/providers/xemaObservations.ts` | Observaciones `30min` y `day`, validacion de parametros y mapping a `Observation[]` |
+| `src/services/providers/xemaVariableMap.ts` | Codigos de variables usados por daily y subdaily, mas helper opcional de metadata |
+| `src/hooks/useObservations.ts` | Traduce granularidad de UI a contrato del provider y ejecuta `logDataDebug()` |
+| `src/lib/dataDebug.ts` | Auditoria opcional del dataset final (`VITE_DEBUG_DATA=1`) |
+| `src/config/env.ts` | Parseo de `VITE_API_PROXY_URL`, `VITE_DEBUG_XEMA` y `VITE_DATA_MODE` |
 
-## Recursos SODA
+## Contratos vigentes
 
-- **Subdiario (por hora):** `nzvn-apee`. Filtro: `codi_estacio`, `data_lectura` en rango, `codi_variable in (32,33,35,30,31,50,51)`, `codi_estat = 'V'`. Agregación: bucket por hora en Europe/Madrid; T/HR media, PPT suma, viento media vectorial (VV10+DV10), máximo racha (VVx10).
-- **Diario:** `7bvh-jvq2`. Filtro: `codi_estacio`, `data_lectura` en rango, `codi_variable in (1000,1100,1300,1500,1512)`. Una fila por día con TM, HRM, PPT, VVM10vec, VVX10.
-
-## Validación manual (ejemplos de timestamps)
-
-Con **VITE_DEBUG_DATA=1** y una estación XEMA (ej. D5 o X2), rango 7 días:
-
-1. **Granularidad Hora:** en consola `[ClimaDataBCN data debug]` debe mostrar ~168 puntos, `stepDetectedHours` ≈ 1. Ejemplos de timestamps: primer punto `YYYY-MM-DDTHH:00:00`, medio `YYYY-MM-DDTHH:00:00`, último similar (horas en Europe/Madrid).
-2. **Granularidad Día:** ~7 puntos, `stepDetectedHours` ≈ 24. Ejemplos: `YYYY-MM-DD`, `YYYY-MM-DD`, `YYYY-MM-DD`.
-
-Para obtener **3 timestamps y valores reales** (hour y day):
-
-1. `npm run dev`, `.env` con `VITE_DEBUG_DATA=1`.
-2. Seleccionar estación XEMA (ej. "Barcelona - el Raval" o "Observatori Fabra"), rango 7 días, **Hora**. En consola copiar del snapshot `firstTimestamp`, `midTimestamp`, `lastTimestamp` y los min/max de temperature, humidity, windSpeed, precipitation.
-3. Cambiar a **Día**, repetir y copiar los mismos campos.
-
-La UI debe mostrar **"Fuente: XEMA (Transparència Catalunya) - Estación: [nombre]"**. El Excel exporta la misma serie que el gráfico (mismo `observations` en memoria).
-
-## Uso de exceedance
-
-Para futura pantalla "Informe" (ventanas donde viento > umbral):
+### Fuente de datos
 
 ```ts
-import { exceedanceIntervals } from '@/lib/exceedance';
-
-const intervals = exceedanceIntervals(observations, 5, 'windSpeedMax');
-// intervals = [{ start: '2024-01-15T11:00:00', end: '2024-01-15T13:00:00' }, ...]
+export type DataSource = 'xema-transparencia';
 ```
 
-## Criterios de aceptación
+La etiqueta visible para UI y exportacion se construye desde `src/config/sources.ts`.
 
-- [x] granularity=hour → ~168 puntos (7 días), step ≈ 1h.
-- [x] granularity=day → ~7 puntos, step ≈ 24h.
-- [x] Viento: media horaria/diaria vectorial (VV10+DV10), máximo racha (VVx10 / VVX10).
-- [x] UI: "Fuente: XEMA (Transparència Catalunya)".
-- [x] Export Excel: mismos datos que el gráfico.
-- [x] Debug con VITE_DEBUG_DATA=1 (params, stats, muestras por bucket en hourly).
-- [x] Tests: windVector (vectorial), exceedance (intervalos contiguos).
+### Granularidad
+
+- La UI trabaja con `Granularity = '30min' | 'daily'`.
+- `useObservations()` traduce esa granularidad al contrato del provider:
+  - `30min -> '30min'`
+  - `daily -> 'day'`
+
+Contrato del provider:
+
+```ts
+getObservations({
+  stationId: string,
+  from: Date,
+  to: Date,
+  granularity: '30min' | 'day',
+}): Promise<Observation[]>
+```
+
+### Validacion de parametros
+
+`xemaObservations.ts` valida:
+
+- `stationId` con `/^[A-Za-z0-9]{1,10}$/`
+- day keys con `/^\\d{4}-\\d{2}-\\d{2}$/`
+
+Los errores invalidos se lanzan como `ProviderError` con `code: 'INVALID_PARAMS'`.
+
+## Datasets y estrategia de consulta
+
+### Estaciones: `yqwd-vj5e`
+
+`fetchStationsFromSocrata()` consulta estaciones activas de la red XEMA con:
+
+- `nom_xarxa = 'XEMA'`
+- `codi_estat_ema = '2'`
+
+Si la consulta falla o no devuelve resultados, el hook cae al fallback estatico de `listStations()`.
+
+### Observaciones 30 min: `nzvn-apee`
+
+`getObservations({ granularity: '30min' })` consulta `nzvn-apee` con estas variables:
+
+- `T` (`32`)
+- `HR` (`33`)
+- `PPT` (`35`)
+- `VV10` (`30`)
+- `DV10` (`31`)
+- `VVx10` (`50`)
+
+Comportamiento actual:
+
+- Se consulta `data_lectura` en el rango completo `fromDay 00:00:00 -> toDay 23:59:59`.
+- El mapping agrupa por timestamp exacto devuelto por Socrata.
+- La salida conserva detalle cada 30 minutos; no hay agregacion horaria intermedia en el codigo actual.
+
+### Observaciones diarias: `7bvh-jvq2`
+
+`getObservations({ granularity: 'day' })` consulta `7bvh-jvq2` con:
+
+- `TM` (`1000`)
+- `HRM` (`1100`)
+- `PPT` (`1300`)
+- `VVM10` (`1503`)
+- `VVX10` (`1512`)
+
+Ademas, hace una segunda consulta a `nzvn-apee` para `VVx10` y completa `windGustTime` en cada observacion diaria.
+
+## Flujo de datos actual
+
+1. `useStations()` carga metadata de estaciones y anade `source: 'xema-transparencia'`.
+2. `useObservations()` construye la query key y valida que la fuente seleccionada sea XEMA.
+3. `getObservations()` devuelve `Observation[]`.
+4. `useObservations()` anade `dataSourceLabel` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
+5. `Index.tsx` usa ese array para KPIs, graficas, tabla, coverage y exportacion.
+6. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`.
+
+## Debug y diagnostico
+
+Los dos flags actuales tienen responsabilidades distintas y pueden activarse por separado:
+
+| Variable | Que activa | Donde se usa |
+|----------|------------|--------------|
+| `VITE_DEBUG_XEMA` | Logs del provider XEMA y resumen de fetch subdaily | `src/config/env.ts`, `src/services/providers/xemaObservations.ts`, `Index.tsx` |
+| `VITE_DEBUG_DATA` | Auditoria del dataset final (`stats`, timestamps, snapshot en `window.__DATA_DEBUG_SNAPSHOT`) | `src/lib/dataDebug.ts`, `src/hooks/useObservations.ts` |
+
+Notas:
+
+- `VITE_DEBUG_XEMA` solo se considera en desarrollo mediante `isXemaDebugEnabled()`.
+- `VITE_DEBUG_DATA` se activa unicamente con el valor literal `1`.
+- `VITE_DATA_MODE` existe en `env.ts`, pero el runtime actual no cambia de comportamiento por esa variable.
+
+## Verificacion manual
+
+1. Copia `.env.example` a `.env`.
+2. Activa uno o ambos flags segun lo que quieras inspeccionar:
+   - `VITE_DEBUG_XEMA=true`
+   - `VITE_DEBUG_DATA=1`
+3. Ejecuta `npm run dev`.
+4. Selecciona una estacion XEMA y prueba ambas vistas:
+   - `Datos 30 min`
+   - `Diario`
+5. Comprueba:
+   - la etiqueta de fuente y estacion en la UI
+   - la carga de graficas y tabla
+   - los logs de debug esperados en consola
+   - la exportacion Excel con las hojas `30min` y `Diario`
+
+## Tests relacionados
+
+| Archivo | Cobertura |
+|--------|-----------|
+| `src/services/providers/xemaStations.test.ts` | Estaciones y fallback |
+| `src/services/providers/xemaTransparencia.test.ts` | Fachada y mapping principal |
+| `src/hooks/useObservations.test.ts` | Coordinacion del hook y contrato de consulta |
+| `src/lib/windVector.test.ts` | Utilidades de viento |
+| `src/lib/exceedance.test.ts` | Intervalos de exceedance |
+
+## Documentos relacionados
+
+- [README.md](../README.md) para arranque y variables soportadas.
+- [ARCHITECTURE.md](../ARCHITECTURE.md) para arquitectura general.
+- [docs/README.md](README.md) para el mapa documental.

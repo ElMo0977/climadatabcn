@@ -2,142 +2,90 @@
 
 ## Vision general
 
-Meteo BCN es una SPA (Single Page Application) construida con React + TypeScript y empaquetada con Vite. Consume datos meteorologicos de la API SODA de Socrata (Transparencia Catalunya / XEMA) y se despliega como sitio estatico en GitHub Pages.
+Meteo BCN es una SPA construida con React, TypeScript y Vite. El frontend consulta datos meteorologicos de la red XEMA mediante Socrata, procesa observaciones en cliente y se despliega como sitio estatico en GitHub Pages.
 
-La aplicacion sigue una arquitectura por capas: las paginas orquestan componentes, que consumen hooks de datos, que a su vez delegan en servicios HTTP. La logica de calculo y exportacion vive en una capa de utilidades independiente.
+La arquitectura sigue una separacion por capas: las paginas orquestan componentes, los componentes consumen hooks, los hooks coordinan acceso a datos y la logica del dominio vive en servicios y utilidades puras.
 
----
+## Principios de diseno
+
+- Una sola fuente de datos en runtime: `xema-transparencia`.
+- UI sin `fetch` directo: el acceso remoto pasa por `src/services/`.
+- Logica de negocio y transformaciones fuera de la capa visual.
+- Exportacion pesada diferida: ExcelJS se carga solo al exportar.
+- Despliegue estatico: el build de produccion usa `base: "/climadatabcn/"`.
 
 ## Diagrama de capas
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    Pages (Index.tsx)                 │
-├─────────────────────────────────────────────────────┤
-│   Components                                        │
-│   StationSelector · WeatherCharts · DataTable       │
-│   WeatherKPIs · DateRangePicker · DownloadButtons   │
-├─────────────────────────────────────────────────────┤
-│   Hooks                          Lib / Utils        │
-│   useStations ──────┐           weatherUtils        │
-│   useObservations ──┤           exportExcel         │
-│                     │           dailyCoverage       │
-│                     ▼           subdailyCoverage    │
-│              Services            exceedance         │
-│   xemaTransparencia (facade)     windVector         │
-│   xemaStations · xemaObservations                   │
-│   socrata (HTTP) · fetchJson                        │
-├─────────────────────────────────────────────────────┤
-│        API Socrata (analisi.transparenciacatalunya) │
-└─────────────────────────────────────────────────────┘
+```text
+Pages (Index.tsx)
+  ->
+Components (StationSelector, DateRangePicker, WeatherKPIs, WeatherCharts, DataTable, DownloadButtons)
+  ->
+Hooks (useStations, useObservations, useExcelExport)
+  ->
+Services (xemaTransparencia, xemaStations, xemaObservations, socrata, fetchJson)
+  ->
+Lib / Config / Types (coverage, stats, export, labels, env, weather types)
+  ->
+API Socrata (Transparencia Catalunya / XEMA)
 ```
 
----
+## Estructura del codigo
 
-## Estructura de directorios
-
-```
+```text
 src/
-├── pages/               Pantallas de la app
-│   ├── Index.tsx         Pagina principal (flujo completo)
-│   └── NotFound.tsx      Pagina 404
-│
-├── components/          Componentes del flujo principal
-│   ├── Header.tsx        Cabecera con branding y boton de recarga
-│   ├── StationSelector.tsx  Panel lateral: mapa + lista de estaciones
-│   ├── StationMap.tsx    Mapa interactivo Leaflet con marcadores
-│   ├── DateRangePicker.tsx  Selector de fechas + presets + granularidad
-│   ├── WeatherKPIs.tsx   5 tarjetas con indicadores clave
-│   ├── WeatherCharts.tsx Graficas Recharts (temp, humedad, viento, lluvia)
-│   ├── DataTable.tsx     Tabla paginada de observaciones
-│   ├── DownloadButtons.tsx  Boton de exportacion Excel
-│   └── ui/              Componentes genericos shadcn/ui
-│
-├── hooks/               Logica de carga de datos
-│   ├── useStations.ts    Estaciones cercanas (React Query + fallback estatico)
-│   └── useObservations.ts  Observaciones por rango y granularidad
-│
-├── services/            Capa de acceso a datos
-│   ├── http/
-│   │   ├── socrata.ts     Cliente SODA: fetchSocrata + fetchSocrataAll (paginacion)
-│   │   └── fetchJson.ts   Cliente HTTP generico: timeout, reintentos, backoff
-│   └── providers/
-│       ├── xemaTransparencia.ts  Facade: exporta listStations + fetchObservations
-│       ├── xemaStations.ts       Consulta estaciones activas de la red XEMA
-│       ├── xemaObservations.ts   Observaciones daily (7bvh-jvq2) y 30min (nzvn-apee)
-│       └── xemaVariableMap.ts    Mapeo de codigos XEMA a campos internos
-│
-├── lib/                 Utilidades y logica de negocio
-│   ├── weatherUtils.ts    Agregacion, estadisticas, formateo, CSV, download
-│   ├── exportExcel.ts     Generacion Excel con ExcelJS (2 hojas, lazy-loaded)
-│   ├── dailyCoverage.ts   Deteccion de gaps en datos diarios
-│   ├── subdailyCoverage.ts  Deteccion de gaps en datos 30min
-│   ├── exceedance.ts      Calculo de exceedance (distribucion sobre umbral)
-│   ├── windVector.ts      Matematica de vectores de viento
-│   ├── windKpi.ts         Logica de visualizacion de KPI de viento
-│   ├── quickDateRanges.ts Presets de rango rapido (7d, 14d, 30d)
-│   ├── dataDebug.ts       Diagnostico de datos (solo en desarrollo)
-│   └── utils.ts           Utilidades genericas (className merge)
-│
-├── config/              Configuracion
-│   ├── env.ts             Variables de entorno Vite
-│   └── sources.ts         Etiquetas de fuente de datos
-│
-├── types/               Tipos TypeScript
-│   └── weather.ts         Station, Observation, DateRange, WeatherStats,
-│                          Granularity, DataSource, ProviderError, ApiError
-│
-└── test/                Setup de tests (Vitest)
+├── pages/                Pantallas y composicion principal
+├── components/           UI de dominio y componentes reutilizables
+│   └── ui/               Componentes base de shadcn/ui
+├── hooks/                React Query, coordinacion de carga y exportacion
+├── services/
+│   ├── http/             Cliente HTTP y cliente Socrata
+│   └── providers/        Fachada XEMA, estaciones, observaciones y codigos
+├── lib/                  Calculo, coverage, exportacion y utilidades
+├── config/               Entorno y etiquetas de fuentes
+├── types/                Tipos del dominio meteorologico y errores
+└── test/                 Setup de Vitest
 ```
-
----
 
 ## Flujo de datos
 
-1. **Inicio**: `Index.tsx` monta los componentes principales. `useStations` consulta estaciones XEMA cercanas a Barcelona via Socrata. Si falla, usa una lista estatica de 8 estaciones de respaldo.
+1. `Index.tsx` coordina estacion seleccionada, rango y granularidad (`30min` o `daily`).
+2. `useStations()` intenta leer estaciones activas desde `yqwd-vj5e` y, si falla, cae al fallback estatico definido en `xemaStations.ts`.
+3. `useObservations()` traduce la granularidad de UI a contrato de provider (`daily -> day`, `30min -> 30min`) y llama a `getObservations()` desde `xemaTransparencia.ts`.
+4. `xemaObservations.ts` consulta Socrata:
+   - `7bvh-jvq2` para el agregado diario
+   - `nzvn-apee` para detalle 30 min y para completar `windGustTime` diario
+5. `src/lib/` calcula estadisticas (`weatherUtils.ts`), cobertura (`dailyCoverage.ts`, `subdailyCoverage.ts`) y exportacion (`exportExcel.ts`).
+6. `useExcelExport()` recupera ambas granularidades bajo demanda y genera el `.xlsx`.
 
-2. **Seleccion**: El usuario elige estacion (mapa o lista), rango de fechas y granularidad (30min o diario) mediante `StationSelector` y `DateRangePicker`.
+## Modulos clave
 
-3. **Consulta**: `useObservations` (React Query) llama a `fetchObservations` del facade `xemaTransparencia.ts`:
-   - **Diario**: consulta el dataset `7bvh-jvq2` (agregados diarios) y complementa con hora de racha maxima desde `nzvn-apee`.
-   - **30min**: consulta `nzvn-apee` (observaciones cada 30 minutos) con todas las variables.
-   - `socrata.ts` maneja la paginacion automatica (chunks de 10.000 filas).
+| Modulo | Responsabilidad |
+|--------|-----------------|
+| `src/services/providers/xemaTransparencia.ts` | Fachada del dominio XEMA y punto de entrada para estaciones y observaciones |
+| `src/services/providers/xemaStations.ts` | Estaciones activas via Socrata y fallback estatico |
+| `src/services/providers/xemaObservations.ts` | Queries daily y 30 min, validacion de parametros y mapping a `Observation[]` |
+| `src/services/http/socrata.ts` | Cliente SODA con paginacion por offset |
+| `src/services/http/fetchJson.ts` | Fetch con timeout, retries y errores tipados |
+| `src/lib/dataDebug.ts` | Auditoria opcional del dataset final en consola |
+| `src/config/env.ts` | Parseo de flags de entorno y helper `isXemaDebugEnabled()` |
 
-4. **Procesamiento**: Las observaciones pasan por `weatherUtils.ts` para calcular estadisticas, y por `dailyCoverage.ts` / `subdailyCoverage.ts` para detectar huecos.
-
-5. **Renderizado**: Los componentes reciben los datos procesados:
-   - `WeatherKPIs` muestra indicadores agregados.
-   - `WeatherCharts` grafica series temporales con Recharts.
-   - `DataTable` muestra la tabla paginada.
-   - Alertas de cobertura informan de datos faltantes.
-
-6. **Exportacion**: `DownloadButtons` dispara `buildAndDownloadExcel` que carga ExcelJS de forma lazy y genera un `.xlsx` con dos hojas (30min y diario).
-
----
-
-## Decisiones tecnicas clave
+## Decisiones tecnicas
 
 | Decision | Razon |
 |----------|-------|
-| **React Query** para datos | Cache automatica, refetch condicional, estados de carga/error declarativos |
-| **Socrata como fuente unica** | API publica, sin necesidad de backend propio, datos oficiales XEMA |
-| **ExcelJS lazy-loaded** | El paquete es grande (~200KB); se carga solo cuando el usuario exporta |
-| **Paginacion automatica** | `fetchSocrataAll` itera hasta agotar resultados, transparente para el consumidor |
-| **Fallback de estaciones** | Lista estatica de 8 estaciones si la consulta a Socrata falla |
-| **Debug opt-in** | `VITE_DEBUG_XEMA` activa logs solo en desarrollo, sin impacto en produccion |
-| **Granularidad como concepto central** | `30min` vs `daily` afecta queries, datasets consultados, agregacion y UI |
+| TanStack React Query para carga | Cache, retry y estados declarativos |
+| Socrata como fuente unica | Datos oficiales sin backend propio |
+| Fallback estatico de estaciones | La UI sigue operativa si falla la metadata remota |
+| `fetchJson()` comun para red | Timeout de 10s, retries y `ProviderError` tipado |
+| `VITE_DEBUG_XEMA` y `VITE_DEBUG_DATA` separados | Se distingue el diagnostico del provider de la auditoria del dataset final |
 
----
+## Verificacion
 
-## Tests
+- Tests: Vitest + Testing Library, colocados junto a los modulos cuando aplica.
+- Comandos operativos: `npm test`, `npm run lint`, `npm run build`.
 
-- Framework: **Vitest** + **Testing Library**
-- ~55 tests cubriendo utilidades, hooks y logica de servicios
-- Los archivos de test se ubican junto a su modulo (ej: `useObservations.test.ts`)
-- Ejecucion: `npm test` (single run) o `npm run test:watch`
+## Documentos relacionados
 
----
-
-## Documentacion tecnica adicional
-
-- [Implementacion XEMA / Transparencia](docs/xema-transparencia-implementation.md): detalles de los datasets Socrata, mapeo de variables y estrategia de consulta.
+- [docs/README.md](docs/README.md) para el mapa documental.
+- [docs/xema-transparencia-implementation.md](docs/xema-transparencia-implementation.md) para contratos y detalle de la integracion con XEMA / Socrata.

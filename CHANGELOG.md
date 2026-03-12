@@ -6,6 +6,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-12 — Reorganizacion documental
+
+### Added
+
+- Nuevo indice canonico en `docs/README.md` con mapa de documentacion, ownership y clasificacion de artefactos historicos.
+
+### Changed
+
+- `README.md` simplificado como punto de entrada operativo del proyecto.
+- `ARCHITECTURE.md` ajustado para reflejar los modulos y contratos actuales sin contar detalles fragiles.
+- `docs/xema-transparencia-implementation.md` reescrito contra la integracion XEMA / Socrata vigente.
+- `AGENTS.md` reducido a flujo de trabajo para agentes y referencias a fuentes canonicas.
+- `ROADMAP.md` saneado para dejar solo trabajo pendiente.
+- `.env.example` alineado con el flujo actual de proxy y flags de debug.
+
 ## 2026-03-04 — Seguridad y strict mode
 
 ### Security

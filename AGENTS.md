@@ -1,73 +1,36 @@
 # AGENTS.md
 
-## Proyecto
+## Proposito
 
-Meteo BCN es una SPA estatica construida con React 18, TypeScript y Vite. Consulta datos meteorologicos historicos de la red XEMA a traves de la API SODA de Socrata y se despliega en GitHub Pages.
+Este archivo orienta a agentes y automatizaciones dentro del repositorio. No es la fuente canonica de setup ni de arquitectura: su trabajo es apuntar a los documentos correctos y recordar las reglas operativas del proyecto.
 
-## Stack y herramientas
+## Fuentes canonicas
 
-- UI: React, TypeScript, Tailwind CSS, shadcn/ui, Radix UI, Recharts, Leaflet.
-- Datos: TanStack React Query y servicios HTTP propios sobre Socrata.
-- Tests: Vitest + Testing Library en entorno `jsdom`.
-- Lint: ESLint 9 con `typescript-eslint`, `react-hooks` y `react-refresh`.
-- Build: `npm run build` ejecuta type-check y build de Vite.
-- Convencion de paquetes: usa `npm` como flujo principal aunque exista `bun.lockb`.
+- `README.md` — arranque del proyecto, comandos y variables de entorno soportadas.
+- `docs/README.md` — indice documental y ownership de cada documento.
+- `ARCHITECTURE.md` — arquitectura por capas y flujo de datos.
+- `docs/xema-transparencia-implementation.md` — integracion actual con XEMA / Socrata.
+- `ROADMAP.md` — trabajo pendiente.
+- `CHANGELOG.md` — historial de cambios.
 
-## Arquitectura que se debe respetar
+## Convenciones del repo
 
-La app sigue una arquitectura por capas:
-
-1. `src/pages/`: composicion de pantallas y flujo principal.
-2. `src/components/`: UI del dominio y componentes de interaccion.
-3. `src/hooks/`: carga de datos, coordinacion con React Query y estado derivado de consultas.
-4. `src/services/`: acceso a APIs externas y adaptacion de datos remotos.
-5. `src/lib/`: logica de negocio y utilidades puras reutilizables.
-6. `src/config/` y `src/types/`: configuracion compartida y tipos del dominio.
-
-Reglas importantes:
-
-- No hagas `fetch` directo desde componentes o paginas; usa `src/services/` y expon el consumo via hooks.
-- Conserva `src/services/providers/xemaTransparencia.ts` como fachada principal del dominio meteorologico.
-- Manten la logica de calculo, agregacion, cobertura y exportacion fuera de la UI, preferiblemente en `src/lib/`.
-- Si anades UI reutilizable, prioriza `src/components/ui/` y los patrones existentes de shadcn/ui.
+- Respeta la arquitectura por capas: `pages -> components -> hooks -> services -> lib/config/types`.
+- No hagas `fetch` directo desde la UI. El acceso a datos pasa por `src/services/` y se expone mediante hooks.
+- Mantén `src/services/providers/xemaTransparencia.ts` como fachada del dominio meteorologico.
 - Usa el alias `@` para imports desde `src`.
+- El flujo principal de trabajo usa `npm`, aunque exista `bun.lockb`.
+- Conserva la compatibilidad con GitHub Pages y el `base: "/climadatabcn/"` de produccion.
 
-## Convenciones del dominio
+## Mantenimiento documental
 
-- La granularidad (`30min` frente a `daily`) es un concepto central y debe reflejarse explicitamente en queries, transformacion de datos y UI.
-- El flujo actual distingue tres datasets de Socrata:
-  - Estaciones: `yqwd-vj5e`
-  - Diario: `7bvh-jvq2`
-  - Subdiario 30 min: `nzvn-apee`
-- Manten la estrategia existente de paginacion automatica en Socrata.
-- No rompas el fallback de estaciones cuando falle la consulta remota.
-- Si incorporas dependencias pesadas del lado cliente, sigue el patron de carga diferida usado con ExcelJS.
+- Si cambian arranque, comandos o variables de entorno, actualiza `README.md` y `.env.example`.
+- Si cambian estructura, flujo de datos o contratos tecnicos, actualiza `ARCHITECTURE.md` o `docs/xema-transparencia-implementation.md`.
+- Si cambia el trabajo pendiente, actualiza `ROADMAP.md`.
+- Si un cambio ya se completo, registralo en `CHANGELOG.md`.
+- Si este archivo empieza a referenciar nuevas fuentes canonicas, refresca tambien `.atl/skill-registry.md`.
 
-## Convenciones de cambios
+## Verificacion recomendada
 
-- Antes de tocar varias capas, lee `ARCHITECTURE.md` y la documentacion del area afectada.
-- Intenta mantener los cambios encapsulados por capa; evita mezclar UI, acceso a datos y calculos en el mismo archivo.
-- Si cambias contratos de datos o comportamiento del dominio, actualiza la documentacion relevante en `README.md`, `ARCHITECTURE.md` o `docs/xema-transparencia-implementation.md`.
-- Si anades una nueva convencion raiz para agentes o skills, actualiza tambien `.atl/skill-registry.md`.
-
-## Testing
-
-- Coloca los tests junto al modulo afectado con sufijos `*.test.ts` o `*.test.tsx`.
-- Cuando cambies `src/lib/`, `src/hooks/` o `src/services/`, anade o ajusta tests.
-- Para cambios de UI con logica relevante, cubre comportamiento con Testing Library cuando tenga sentido.
-- Ejecuta como minimo las comprobaciones relacionadas con tu cambio:
-  - `npm run lint`
-  - `npm test`
-  - `npm run build`
-
-## Despliegue y entorno
-
-- Produccion se publica en GitHub Pages.
-- Respeta `base: "/climadatabcn/"` en produccion.
-- El workflow `.github/workflows/deply.yml` usa Node 20 y despliega el contenido de `dist`.
-
-## Contexto persistido
-
-- El contexto SDD del proyecto vive en Engram bajo `sdd-init/climadatabcn`.
-- El registro local de skills y convenciones esta en `.atl/skill-registry.md`.
-- Si se trabaja con SDD y no se pide otro modo explicitamente, la persistencia por defecto es Engram.
+- Cambios runtime: `npm run lint`, `npm test`, `npm run build`.
+- Cambios solo documentales: validar enlaces y referencias, y volver a correr los comandos documentados si el cambio afecta la guia operativa.
