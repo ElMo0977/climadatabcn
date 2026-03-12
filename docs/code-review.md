@@ -181,3 +181,4 @@ Nota: el mapa ya esta diferido via `lazy()` en `src/components/StationSelector.t
 - Referencias: `src/components/StationMap.tsx:7`, `src/components/StationMap.tsx:8`, `src/components/StationMap.tsx:9`, `src/components/StationMap.tsx:10`, `src/components/StationMap.tsx:18`, `src/components/StationMap.tsx:19`, `src/components/StationMap.tsx:20`
 - Hallazgo: los iconos por defecto de Leaflet se cargan desde `unpkg.com` en runtime. Eso anade dependencia externa adicional, puede penalizar el primer render del mapa y deja el componente expuesto a bloqueos de red o CSP.
 - Recomendacion: empaquetar los assets del mapa dentro del proyecto o servirlos desde el mismo origen de la app.
+
