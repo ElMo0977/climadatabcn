@@ -34,3 +34,8 @@ Este archivo orienta a agentes y automatizaciones dentro del repositorio. No es 
 
 - Cambios runtime: `npm run lint`, `npm test`, `npm run build`.
 - Cambios solo documentales: validar enlaces y referencias, y volver a correr los comandos documentados si el cambio afecta la guia operativa.
+
+## Revisión de código
+Para revisiones completas, usar siempre agent-teams-lite con agentes
+especializados por capa. Guardar hallazgos en docs/code-review.md.
+Nunca aplicar correcciones sin aprobación explícita del usuario.
