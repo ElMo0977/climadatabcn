@@ -1,4 +1,6 @@
 import { lazy, Suspense } from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Header } from '@/components/Header';
 import { StationSelector } from '@/components/StationSelector';
 import { DateRangePicker } from '@/components/DateRangePicker';
@@ -23,11 +25,13 @@ const Index = () => {
     granularity,
     setGranularity,
     stations,
+    metadataSource,
     stationsWarning,
     stationsLoading,
     stationsError,
     observations,
     dataSourceLabel,
+    lastUpdatedAt,
     observationsLoading,
     observationsError,
     observationsFetching,
@@ -97,6 +101,14 @@ const Index = () => {
                     </p>
                     {dataSourceLabel && (
                       <p className="text-xs text-muted-foreground mt-1">{dataSourceLabel}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Metadata estaciones: {metadataSource ?? '—'} · Hora local de Barcelona (Europe/Madrid)
+                    </p>
+                    {lastUpdatedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Última actualización: {format(lastUpdatedAt, 'd MMM yyyy HH:mm', { locale: es })}
+                      </p>
                     )}
                   </div>
                   {(observationsLoading || observationsFetching) && (

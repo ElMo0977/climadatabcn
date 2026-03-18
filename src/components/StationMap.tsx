@@ -74,16 +74,28 @@ export function StationMap({ stations, selectedStation, onSelectStation }: Stati
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current.clear();
+    const map = mapRef.current;
+    const nextStationIds = new Set(stations.map((station) => station.id));
 
-    // Add new markers
+    markersRef.current.forEach((marker, stationId) => {
+      if (!nextStationIds.has(stationId)) {
+        marker.remove();
+        markersRef.current.delete(stationId);
+      }
+    });
+
     stations.forEach((station) => {
+      const existingMarker = markersRef.current.get(station.id);
+      if (existingMarker) {
+        existingMarker.setLatLng([station.latitude, station.longitude]);
+        existingMarker.getPopup()?.setContent(buildStationPopup(station));
+        return;
+      }
+
       const marker = L.marker([station.latitude, station.longitude], {
         icon: defaultIcon,
       })
-        .addTo(mapRef.current!)
+        .addTo(map)
         .bindPopup(buildStationPopup(station), {
           autoPan: true,
           autoPanPaddingTopLeft: POPUP_PADDING_TOP_LEFT,

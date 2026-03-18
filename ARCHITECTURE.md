@@ -50,15 +50,16 @@ src/
 ## Flujo de datos
 
 1. `Index.tsx` se mantiene como capa de composicion y delega estado de pantalla y datos derivados en `useWeatherDashboard()`.
-2. `useStations()` intenta leer estaciones activas desde `yqwd-vj5e` y, si falla o no hay metadata util, cae al fallback estatico definido en `xemaStations.ts`, marcando modo degradado visible.
-3. `useObservations()` traduce la granularidad de UI a contrato de provider (`daily -> day`, `30min -> 30min`), usa la cancelacion de React Query y llama a `getObservations()` desde `xemaTransparencia.ts`.
-4. `src/lib/dateKeys.ts` y `src/lib/stationGeo.ts` concentran reglas puras de day keys y proximidad de estaciones para no mezclarlas en hooks o providers.
-5. `xemaObservations.ts` consulta Socrata:
+2. `useWeatherDashboard()` usa los search params (`station`, `from`, `to`, `granularity`) como estado navegable del dashboard y expone setters compatibles con la UI.
+3. `useStations()` intenta leer estaciones activas desde `yqwd-vj5e` y, si falla o no hay metadata util, cae al fallback estatico definido en `xemaStations.ts`, marcando modo degradado visible.
+4. `useObservations()` traduce la granularidad de UI a contrato de provider (`daily -> day`, `30min -> 30min`), usa la cancelacion de React Query y llama a `getObservations()` desde `xemaTransparencia.ts`.
+5. `src/lib/dateKeys.ts` y `src/lib/stationGeo.ts` concentran reglas puras de day keys y proximidad de estaciones para no mezclarlas en hooks o providers.
+6. `xemaObservations.ts` consulta Socrata:
    - `7bvh-jvq2` para el agregado diario
    - `nzvn-apee` para detalle 30 min y para completar `windGustTime` diario
-6. `src/lib/` calcula estadisticas (`weatherUtils.ts`), cobertura (`dailyCoverage.ts`, `subdailyCoverage.ts`) y exportacion (`exportExcel.ts`).
-7. `WeatherCharts` se carga en diferido desde la ruta principal y `StationMap` usa assets locales de Leaflet sin depender de iconos remotos.
-8. `useExcelExport()` recupera ambas granularidades bajo demanda y genera el `.xlsx`.
+7. `src/lib/` calcula estadisticas (`weatherUtils.ts`), cobertura (`dailyCoverage.ts`, `subdailyCoverage.ts`) y exportacion (`exportExcel.ts`).
+8. `WeatherCharts` se carga en diferido desde la ruta principal y `StationMap` actualiza marcadores sin reconstruirlos completos al cambiar la seleccion.
+9. `useExcelExport()` recupera ambas granularidades bajo demanda y genera un `.xlsx` con hoja `Contexto` y detalle `30min` / `Diario`.
 
 ## Modulos clave
 
@@ -86,11 +87,12 @@ src/
 | `VITE_DEBUG_XEMA` y `VITE_DEBUG_DATA` separados | Se distingue el diagnostico del provider de la auditoria del dataset final |
 | `useWeatherDashboard()` como view-model | `Index.tsx` se mantiene fino y la logica derivada queda en la capa de hooks |
 | `WeatherCharts` en lazy load | Reduce coste inicial de la ruta principal aunque el chunk de Recharts siga existiendo |
+| Search params como estado de dashboard | Permiten compartir selecciones y reconstruir la vista sin estado local duplicado |
 
 ## Verificacion
 
 - Tests: Vitest + Testing Library, colocados junto a los modulos cuando aplica.
-- Comandos operativos: `npm test`, `npm run lint`, `npm run build`.
+- Comandos operativos: `npm test`, `npm run lint`, `npm run build`, `npm run check:bundle`.
 
 ## Documentos relacionados
 

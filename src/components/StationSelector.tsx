@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Station } from '@/types/weather';
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 const LazyStationMap = lazy(async () => {
@@ -31,9 +31,23 @@ export function StationSelector({
   const [search, setSearch] = useState('');
   const canRenderMap = typeof window !== 'undefined';
 
-  const filteredStations = stations.filter(station =>
-    station.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const normalizedSearch = search.trim().toLowerCase();
+
+  const filteredStations = useMemo(() => {
+    if (!normalizedSearch) return stations;
+
+    return stations.filter((station) => {
+      const haystack = [
+        station.name,
+        station.municipality ?? '',
+        station.id,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [normalizedSearch, stations]);
 
   return (
     <div className="flex flex-col h-full">
@@ -63,6 +77,7 @@ export function StationSelector({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar estación..."
+            aria-label="Buscar estación"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"

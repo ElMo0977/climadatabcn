@@ -20,6 +20,7 @@ beforeEach(() => {
 
 describe('fetchStationsFromSocrata', () => {
   it('returns fallback metadata and warning when Socrata fails', async () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     fetchSocrataMock.mockRejectedValueOnce(new Error('offline'));
 
     const result = await fetchStationsFromSocrata();
@@ -31,6 +32,7 @@ describe('fetchStationsFromSocrata', () => {
       id: expect.any(String),
       name: expect.any(String),
     });
+    consoleWarnSpy.mockRestore();
   });
 
   it('returns fallback metadata and warning when Socrata yields no usable stations', async () => {

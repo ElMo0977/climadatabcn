@@ -1,5 +1,5 @@
 import type { Cell, Fill } from 'exceljs';
-import type { Observation } from '@/types/weather';
+import type { Observation, DateRange, Granularity } from '@/types/weather';
 import { downloadFileBuffer } from '@/lib/weatherUtils';
 
 const WIND_LIMIT_ACOUSTIC = 5;
@@ -68,19 +68,80 @@ function formatLocalDate(ts: string): string | null {
   return `${d}/${m}/${y}`;
 }
 
+function formatDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatLocalGeneratedAt(date: Date): string {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+function slugifyFilenamePart(value: string): string {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-');
+
+  return normalized || 'estacion';
+}
+
+export interface ExcelExportOptions {
+  obs30min: Observation[];
+  obsDaily: Observation[];
+  stationName: string;
+  dataSourceLabel?: string;
+  sourceDisplayName?: string;
+  dateRange: DateRange;
+  activeGranularity: Granularity;
+  timezoneLabel?: string;
+}
+
 /**
  * Build and download Excel with two sheets:
+ * - "Contexto": export metadata
  * - "30min": raw 30-min observations
  * - "Diario": daily observations
  */
-export async function buildAndDownloadExcel(
-  obs30min: Observation[],
-  obsDaily: Observation[],
-  stationName: string,
-  dataSourceLabel?: string,
-): Promise<void> {
+export async function buildAndDownloadExcel({
+  obs30min,
+  obsDaily,
+  stationName,
+  dataSourceLabel,
+  sourceDisplayName,
+  dateRange,
+  activeGranularity,
+  timezoneLabel = 'Europe/Madrid',
+}: ExcelExportOptions): Promise<void> {
   const { Workbook } = await import('exceljs');
   const workbook = new Workbook();
+  const generatedAt = new Date();
+
+  const contextSheet = workbook.addWorksheet('Contexto', { pageSetup: { fitToPage: true } });
+  contextSheet.columns = [
+    { header: 'Campo', key: 'field', width: 22 },
+    { header: 'Valor', key: 'value', width: 42 },
+  ];
+  contextSheet.getRow(1).eachCell(styleHeaderCell);
+  [
+    { field: 'Estación', value: stationName },
+    { field: 'Fuente', value: sourceDisplayName ?? dataSourceLabel ?? '' },
+    { field: 'Rango desde', value: formatDateKey(dateRange.from) },
+    { field: 'Rango hasta', value: formatDateKey(dateRange.to) },
+    { field: 'Vista activa', value: activeGranularity === 'daily' ? 'Diario' : 'Datos 30 min' },
+    { field: 'Generado', value: formatLocalGeneratedAt(generatedAt) },
+    { field: 'Zona horaria', value: timezoneLabel },
+  ].forEach((row) => contextSheet.addRow(row));
 
   // ── Sheet 1: 30min ──
   const sheet30 = workbook.addWorksheet('30min', { pageSetup: { fitToPage: true } });
@@ -158,7 +219,7 @@ export async function buildAndDownloadExcel(
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const filename = `informe-meteo-${stationName.replace(/\s+/g, '-').toLowerCase()}.xlsx`;
+  const filename = `meteo-${slugifyFilenamePart(stationName)}-${formatDateKey(dateRange.from)}_${formatDateKey(dateRange.to)}.xlsx`;
   downloadFileBuffer(
     buffer as ArrayBuffer,
     filename,

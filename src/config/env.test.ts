@@ -6,25 +6,13 @@ afterEach(() => {
 });
 
 describe('env', () => {
-  it('defaults to live mode and xemaDebug false without proxy support', async () => {
+  it('defaults to xemaDebug false and timeout 40000', async () => {
     const mod = await import('./env');
 
     expect(mod.env).toEqual({
-      dataMode: 'live',
       xemaDebug: false,
       xemaHttpTimeoutMs: 40000,
     });
-  });
-
-  it('only accepts mock as an explicit data mode override', async () => {
-    vi.stubEnv('VITE_DATA_MODE', 'mock');
-    let mod = await import('./env');
-    expect(mod.env.dataMode).toBe('mock');
-
-    vi.resetModules();
-    vi.stubEnv('VITE_DATA_MODE', 'unexpected');
-    mod = await import('./env');
-    expect(mod.env.dataMode).toBe('live');
   });
 
   it('parses xema debug flag from supported truthy values', async () => {

@@ -4,12 +4,6 @@ Trabajo pendiente del proyecto, ordenado por prioridad.
 
 ## Prioridad alta
 
-### Aclarar el futuro de `VITE_DATA_MODE`
-
-`src/config/env.ts` sigue exponiendo `VITE_DATA_MODE`, pero el runtime actual no cambia de flujo ni de provider segun esa variable.
-
-Criterio de cierre: eliminarla del codigo si ya no aporta valor, o documentar e implementar un uso real y verificable.
-
 ### Rehabilitar `@typescript-eslint/no-unused-vars`
 
 La regla esta desactivada en `eslint.config.js`, lo que permite que se acumulen imports y parametros muertos.

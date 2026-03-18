@@ -59,6 +59,10 @@ describe('useExcelExport', () => {
     const { result } = renderHook(() =>
       useExcelExport({
         station: null,
+        dateRange: {
+          from: new Date('2024-02-01T00:00:00'),
+          to: new Date('2024-02-01T23:59:59'),
+        },
         granularity: '30min',
         observations: [],
         dataSourceLabel: null,
@@ -89,6 +93,10 @@ describe('useExcelExport', () => {
     const { result } = renderHook(() =>
       useExcelExport({
         station: TEST_STATION,
+        dateRange: {
+          from: new Date('2024-02-01T00:00:00'),
+          to: new Date('2024-02-03T23:59:59'),
+        },
         granularity: '30min',
         observations: [],
         dataSourceLabel: 'Fuente: XEMA - Estación: Test',
@@ -106,10 +114,15 @@ describe('useExcelExport', () => {
     expect(refetchCurrent).toHaveBeenCalledTimes(1);
     expect(refetchOther).toHaveBeenCalledTimes(1);
     expect(mockBuildAndDownloadExcel).toHaveBeenCalledWith(
-      [TEST_30MIN],
-      [TEST_DAILY],
-      TEST_STATION.name,
-      'Fuente: XEMA - Estación: Test',
+      expect.objectContaining({
+        obs30min: [TEST_30MIN],
+        obsDaily: [TEST_DAILY],
+        stationName: TEST_STATION.name,
+        dataSourceLabel: 'Fuente: XEMA - Estación: Test',
+        sourceDisplayName: 'XEMA (Transparència Catalunya)',
+        activeGranularity: '30min',
+        timezoneLabel: 'Europe/Madrid',
+      }),
     );
   });
 });

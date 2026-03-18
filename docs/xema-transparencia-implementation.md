@@ -20,7 +20,7 @@ Este documento describe la integracion vigente entre Meteo BCN y los datasets pu
 | `src/lib/dateKeys.ts` | Normalizacion y validacion de day keys compartidas |
 | `src/lib/stationGeo.ts` | Distancias y ordenacion de estaciones cercanas a Barcelona |
 | `src/lib/dataDebug.ts` | Auditoria opcional del dataset final (`VITE_DEBUG_DATA=1`) |
-| `src/config/env.ts` | Parseo de `VITE_DEBUG_XEMA`, `VITE_XEMA_HTTP_TIMEOUT_MS` y `VITE_DATA_MODE` |
+| `src/config/env.ts` | Parseo de `VITE_DEBUG_XEMA` y `VITE_XEMA_HTTP_TIMEOUT_MS` |
 
 ## Contratos vigentes
 
@@ -113,13 +113,14 @@ Ademas, hace una segunda consulta a `nzvn-apee` para `VVx10` y completa `windGus
 ## Flujo de datos actual
 
 1. `useWeatherDashboard()` centraliza estado de seleccion, rango, granularidad, cobertura y exportacion.
+   Ese estado principal se persiste en search params (`station`, `from`, `to`, `granularity`) para permitir enlaces reproducibles.
 2. `useStations()` carga metadata de estaciones, anade `source: 'xema-transparencia'` y expone `metadataSource` / `warning`.
 3. `StationSelector` muestra el warning de modo degradado sin bloquear la seleccion de estaciones fallback.
 4. `useObservations()` construye la query key, valida que la fuente seleccionada sea XEMA y usa la `signal` de React Query.
 5. `getObservations()` devuelve `Observation[]`.
 6. `useObservations()` anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
 7. `Index.tsx` compone el dashboard y carga `WeatherCharts` en diferido.
-8. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`.
+8. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`, que genera `Contexto`, `30min` y `Diario`.
 
 ## Reintentos y cancelacion
 
@@ -144,8 +145,6 @@ Notas:
 - `VITE_DEBUG_XEMA` solo se considera en desarrollo mediante `isXemaDebugEnabled()`.
 - `VITE_XEMA_HTTP_TIMEOUT_MS` permite dar mas margen cuando Socrata responde con latencia alta o muy variable.
 - `VITE_DEBUG_DATA` se activa unicamente con el valor literal `1`.
-- `VITE_DATA_MODE` existe en `env.ts`, pero el runtime actual no cambia de comportamiento por esa variable.
-
 ## Verificacion manual
 
 1. Copia `.env.example` a `.env`.
@@ -158,9 +157,10 @@ Notas:
    - `Diario`
 5. Comprueba:
    - la etiqueta de fuente y estacion en la UI
+   - el estado visible en la URL (`station`, `from`, `to`, `granularity`)
    - la carga de graficas y tabla
    - los logs de debug esperados en consola
-   - la exportacion Excel con las hojas `30min` y `Diario`
+   - la exportacion Excel con las hojas `Contexto`, `30min` y `Diario`
 
 ## Tests relacionados
 

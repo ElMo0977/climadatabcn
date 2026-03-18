@@ -17,6 +17,7 @@ Este directorio contiene el mapa canonico de la documentacion tecnica del proyec
 
 | Archivo | Estado | Notas |
 |---------|--------|-------|
+| `docs/code-review.md` | Historico | Revision puntual del repo; algunos hallazgos ya estan resueltos y deben leerse con fecha |
 | `docs/data-audit-findings.json` | Historico | Resultado de una auditoria puntual del pipeline; no es una especificacion activa ni una fuente canonica |
 
 ## Reglas de mantenimiento

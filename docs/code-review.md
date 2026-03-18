@@ -1,5 +1,11 @@
 # Revision de codigo
 
+Actualizacion 2026-03-18:
+
+- Este documento pasa a considerarse historico. Algunos hallazgos listados abajo ya no reflejan el estado actual del repo.
+- Quedan resueltos al menos estos puntos: `T2` (`VITE_DATA_MODE`), `C4` (cobertura superficial de Excel), `P1` (`WeatherCharts` lazy), `P2` (reconstruccion completa de marcadores), `P4` (presupuesto de bundle visible) y `P5` (iconos remotos de Leaflet).
+- Usa `ARCHITECTURE.md`, `README.md`, `docs/xema-transparencia-implementation.md` y `CHANGELOG.md` como fuentes actuales antes de reutilizar hallazgos de esta revision.
+
 Revision realizada con el contexto SDD cargado desde Engram:
 
 - `sdd-init/climadatabcn` (`#15`)
@@ -181,4 +187,3 @@ Nota: el mapa ya esta diferido via `lazy()` en `src/components/StationSelector.t
 - Referencias: `src/components/StationMap.tsx:7`, `src/components/StationMap.tsx:8`, `src/components/StationMap.tsx:9`, `src/components/StationMap.tsx:10`, `src/components/StationMap.tsx:18`, `src/components/StationMap.tsx:19`, `src/components/StationMap.tsx:20`
 - Hallazgo: los iconos por defecto de Leaflet se cargan desde `unpkg.com` en runtime. Eso anade dependencia externa adicional, puede penalizar el primer render del mapa y deja el componente expuesto a bloqueos de red o CSP.
 - Recomendacion: empaquetar los assets del mapa dentro del proyecto o servirlos desde el mismo origen de la app.
-

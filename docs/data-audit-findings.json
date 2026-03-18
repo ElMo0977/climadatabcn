@@ -10,12 +10,15 @@
   },
   {
     "id": "F3",
+    "estado": "resuelto",
+    "actualizado_en": "2026-03-18",
     "severidad": "media",
     "componente": "exportExcel",
     "descripcion": "La hoja 'Detalle Horario' puede contener 1 fila por día cuando la granularidad es diaria; el nombre de la pestaña es engañoso.",
     "evidencia": "exportExcel.ts línea 79: addWorksheet('Detalle Horario', ...); el contenido es observations tal cual, que puede ser daily.",
     "archivos": ["src/lib/exportExcel.ts"],
-    "recomendacion": "Nombrar la hoja según granularidad (p. ej. 'Detalle Diario' cuando observations son 1/día) o añadir metadata que indique la granularidad."
+    "recomendacion": "Nombrar la hoja según granularidad (p. ej. 'Detalle Diario' cuando observations son 1/día) o añadir metadata que indique la granularidad.",
+    "nota_estado": "La exportacion actual usa hojas separadas `Contexto`, `30min` y `Diario`, con metadata explicita de rango, fuente, vista activa y zona horaria."
   },
   {
     "id": "F4",
@@ -28,11 +31,14 @@
   },
   {
     "id": "F5",
+    "estado": "parcial",
+    "actualizado_en": "2026-03-18",
     "severidad": "baja",
     "componente": "pipeline",
     "descripcion": "No hay validación de rangos (outliers), monotonía temporal ni step; timezone no unificado entre providers.",
     "evidencia": "useObservations solo ordena por timestamp; no hay comprobación de rangos ni timezone en UI/export.",
     "archivos": ["src/hooks/useObservations.ts", "src/lib/weatherUtils.ts", "src/lib/exportExcel.ts"],
-    "recomendacion": "Añadir validaciones opcionales (monotonía, step, rangos por variable) en modo debug; documentar timezone por provider e indicarlo en export."
+    "recomendacion": "Añadir validaciones opcionales (monotonía, step, rangos por variable) en modo debug; documentar timezone por provider e indicarlo en export.",
+    "nota_estado": "La UI y la exportacion ya muestran `Europe/Madrid`, pero siguen pendientes validaciones adicionales de outliers, step y monotonia."
   }
 ]

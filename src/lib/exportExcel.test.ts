@@ -78,13 +78,22 @@ describe('buildAndDownloadExcel', () => {
   });
 
   it('does not throw with empty datasets', async () => {
-    await expect(buildAndDownloadExcel([], [], 'Estacion Test')).resolves.toBeUndefined();
+    await expect(buildAndDownloadExcel({
+      obs30min: [],
+      obsDaily: [],
+      stationName: 'Estacion Test',
+      dateRange: {
+        from: new Date('2024-02-01T00:00:00'),
+        to: new Date('2024-02-02T23:59:59'),
+      },
+      activeGranularity: '30min',
+    })).resolves.toBeUndefined();
     expect(mockDownloadFileBuffer).toHaveBeenCalledTimes(1);
   });
 
-  it('creates both sheets, preserves source label, and formats export rows', async () => {
-    await buildAndDownloadExcel(
-      [
+  it('creates context, preserves source labels, and formats export rows', async () => {
+    await buildAndDownloadExcel({
+      obs30min: [
         {
           timestamp: '2024-02-01T10:30:00',
           temperature: 12.4,
@@ -95,7 +104,7 @@ describe('buildAndDownloadExcel', () => {
           precipitation: 0,
         },
       ],
-      [
+      obsDaily: [
         {
           timestamp: '2024-02-01',
           temperature: 13,
@@ -107,14 +116,33 @@ describe('buildAndDownloadExcel', () => {
           windGustTime: '16:00',
         },
       ],
-      'Estacion Test',
-      'Fuente: XEMA - Estación: Test',
-    );
+      stationName: 'Estacion Test',
+      dataSourceLabel: 'Fuente: XEMA - Estación: Test',
+      sourceDisplayName: 'XEMA (Transparència Catalunya)',
+      dateRange: {
+        from: new Date('2024-02-01T00:00:00'),
+        to: new Date('2024-02-03T23:59:59'),
+      },
+      activeGranularity: 'daily',
+      timezoneLabel: 'Europe/Madrid',
+    });
 
     const workbook = workbookRegistry.workbooks[0];
-    expect(workbook.sheets.map((sheet) => sheet.name)).toEqual(['30min', 'Diario']);
-    expect(workbook.sheets[0].rows[0].values).toEqual(['Fuente: XEMA - Estación: Test']);
-    expect(workbook.sheets[0].rows[2].values).toMatchObject({
+    expect(workbook.sheets.map((sheet) => sheet.name)).toEqual(['Contexto', '30min', 'Diario']);
+    expect(workbook.sheets[0].rows[0].values).toMatchObject({
+      field: 'Estación',
+      value: 'Estacion Test',
+    });
+    expect(workbook.sheets[0].rows[1].values).toMatchObject({
+      field: 'Fuente',
+      value: 'XEMA (Transparència Catalunya)',
+    });
+    expect(workbook.sheets[0].rows[4].values).toMatchObject({
+      field: 'Vista activa',
+      value: 'Diario',
+    });
+    expect(workbook.sheets[1].rows[0].values).toEqual(['Fuente: XEMA - Estación: Test']);
+    expect(workbook.sheets[1].rows[2].values).toMatchObject({
       ts: '01/02/2024 10:30',
       temp: 12.4,
       hr: 60,
@@ -123,7 +151,7 @@ describe('buildAndDownloadExcel', () => {
       dv: 180,
       vvx: 4.5,
     });
-    expect(workbook.sheets[1].rows[2].values).toMatchObject({
+    expect(workbook.sheets[2].rows[2].values).toMatchObject({
       date: '01/02/2024',
       tm: 13,
       hrm: 58,
@@ -134,7 +162,7 @@ describe('buildAndDownloadExcel', () => {
     });
     expect(mockDownloadFileBuffer).toHaveBeenCalledWith(
       expect.any(ArrayBuffer),
-      'informe-meteo-estacion-test.xlsx',
+      'meteo-estacion-test-2024-02-01_2024-02-03.xlsx',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
   });

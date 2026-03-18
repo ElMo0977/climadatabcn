@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "build:dev": "vite build --mode development",
+    "check:bundle": "node scripts/checkBundleBudget.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",

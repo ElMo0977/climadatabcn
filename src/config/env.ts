@@ -4,7 +4,6 @@
  */
 
 interface EnvConfig {
-  dataMode: 'live' | 'mock';
   xemaDebug: boolean;
   xemaHttpTimeoutMs: number;
 }
@@ -35,12 +34,7 @@ export function parseIntegerEnv(
   return parsed;
 }
 
-function parseDataModeEnv(value: string | null): EnvConfig['dataMode'] {
-  return value === 'mock' ? 'mock' : 'live';
-}
-
 export const env: EnvConfig = {
-  dataMode: parseDataModeEnv(getEnvVar('VITE_DATA_MODE')),
   xemaDebug: parseBooleanEnv(getEnvVar('VITE_DEBUG_XEMA') ?? undefined),
   xemaHttpTimeoutMs: parseIntegerEnv(getEnvVar('VITE_XEMA_HTTP_TIMEOUT_MS'), 40000, {
     min: 1000,

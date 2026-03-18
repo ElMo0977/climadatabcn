@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useSearchParams } from 'react-router-dom';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
 import { useExcelExport } from '@/hooks/useExcelExport';
@@ -12,20 +13,82 @@ import { isXemaDebugEnabled } from '@/config/env';
 import { buildQuickRangeExcludingToday } from '@/lib/quickDateRanges';
 
 const LARGE_SUBDAILY_GAP_MIN_SLOTS = 4;
+const DEFAULT_QUICK_RANGE_DAYS = 7;
+
+function parseDayParam(value: string | null, boundary: 'start' | 'end'): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+
+  const [year, month, day] = value.split('-').map((part) => Number.parseInt(part, 10));
+  const date = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  if (boundary === 'start') {
+    date.setHours(0, 0, 0, 0);
+  } else {
+    date.setHours(23, 59, 59, 999);
+  }
+
+  return date;
+}
+
+function parseGranularityParam(value: string | null): Granularity {
+  return value === 'daily' ? 'daily' : '30min';
+}
+
+function formatDayParam(date: Date): string {
+  return format(date, 'yyyy-MM-dd');
+}
+
+function readDateRangeFromParams(searchParams: URLSearchParams): DateRange | null {
+  const from = parseDayParam(searchParams.get('from'), 'start');
+  const to = parseDayParam(searchParams.get('to'), 'end');
+
+  if (!from || !to || from.getTime() > to.getTime()) {
+    return null;
+  }
+
+  return { from, to };
+}
+
+function areDateRangesEqual(a: DateRange, b: DateRange): boolean {
+  return a.from.getTime() === b.from.getTime() && a.to.getTime() === b.to.getTime();
+}
 
 export function useWeatherDashboard() {
-  const [selectedStation, setSelectedStation] = useState<Station | null>(null);
-  const [dateRange, setDateRange] = useState<DateRange>(() => buildQuickRangeExcludingToday(7));
-  const [granularity, setGranularity] = useState<Granularity>('30min');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaultDateRangeRef = useRef<DateRange>(buildQuickRangeExcludingToday(DEFAULT_QUICK_RANGE_DAYS));
+  const stationIdFromUrl = searchParams.get('station');
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
+  const lastUpdatedSignatureRef = useRef<string | null>(null);
 
   const {
     data: stations = [],
+    metadataSource,
     warning: stationsWarning,
     isLoading: stationsLoading,
     error: stationsError,
     refetch: refetchStations,
     isFetching: stationsFetching,
   } = useStations();
+
+  const dateRange = useMemo(
+    () => readDateRangeFromParams(searchParams) ?? defaultDateRangeRef.current,
+    [searchParams],
+  );
+
+  const granularity = parseGranularityParam(searchParams.get('granularity'));
+
+  const selectedStation = useMemo(
+    () => stations.find((station) => station.id === stationIdFromUrl) ?? null,
+    [stationIdFromUrl, stations],
+  );
 
   const {
     data: observations = [],
@@ -43,6 +106,17 @@ export function useWeatherDashboard() {
     granularity: otherGranularity,
     enabled: false,
   });
+
+  useEffect(() => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('from', formatDayParam(dateRange.from));
+    nextSearchParams.set('to', formatDayParam(dateRange.to));
+    nextSearchParams.set('granularity', granularity);
+
+    if (nextSearchParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextSearchParams, { replace: true });
+    }
+  }, [dateRange.from, dateRange.to, granularity, searchParams, setSearchParams]);
 
   const stats = useMemo(() => {
     if (observations.length === 0) return null;
@@ -95,6 +169,36 @@ export function useWeatherDashboard() {
     subdailyCoverage.largestGap.missingCount >= LARGE_SUBDAILY_GAP_MIN_SLOTS;
 
   useEffect(() => {
+    if (!selectedStation) {
+      lastUpdatedSignatureRef.current = null;
+      setLastUpdatedAt(null);
+      return;
+    }
+
+    if (observationsLoading || observationsFetching || observationsError) return;
+
+    const requestSignature = [
+      selectedStation.id,
+      granularity,
+      formatDayParam(dateRange.from),
+      formatDayParam(dateRange.to),
+    ].join('|');
+
+    if (lastUpdatedSignatureRef.current === requestSignature) return;
+
+    lastUpdatedSignatureRef.current = requestSignature;
+    setLastUpdatedAt(new Date());
+  }, [
+    dateRange.from,
+    dateRange.to,
+    granularity,
+    observationsError,
+    observationsFetching,
+    observationsLoading,
+    selectedStation,
+  ]);
+
+  useEffect(() => {
     if (!isXemaDebugEnabled() || granularity !== 'daily' || !selectedStation) return;
     console.debug('[Index daily] observations diagnostics', {
       granularity,
@@ -117,8 +221,52 @@ export function useWeatherDashboard() {
     }
   };
 
+  const setSelectedStation = (station: Station | null) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (station?.id) {
+      nextSearchParams.set('station', station.id);
+    } else {
+      nextSearchParams.delete('station');
+    }
+    nextSearchParams.set('from', formatDayParam(dateRange.from));
+    nextSearchParams.set('to', formatDayParam(dateRange.to));
+    nextSearchParams.set('granularity', granularity);
+    setSearchParams(nextSearchParams);
+  };
+
+  const setDateRange = (nextDateRange: DateRange) => {
+    if (areDateRangesEqual(dateRange, nextDateRange)) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('from', formatDayParam(nextDateRange.from));
+    nextSearchParams.set('to', formatDayParam(nextDateRange.to));
+    nextSearchParams.set('granularity', granularity);
+    if (selectedStation?.id) {
+      nextSearchParams.set('station', selectedStation.id);
+    } else {
+      nextSearchParams.delete('station');
+    }
+    setSearchParams(nextSearchParams);
+  };
+
+  const setGranularity = (nextGranularity: Granularity) => {
+    if (granularity === nextGranularity) return;
+
+    const nextSearchParams = new URLSearchParams(searchParams);
+    nextSearchParams.set('from', formatDayParam(dateRange.from));
+    nextSearchParams.set('to', formatDayParam(dateRange.to));
+    nextSearchParams.set('granularity', nextGranularity);
+    if (selectedStation?.id) {
+      nextSearchParams.set('station', selectedStation.id);
+    } else {
+      nextSearchParams.delete('station');
+    }
+    setSearchParams(nextSearchParams);
+  };
+
   const { handleExportExcel } = useExcelExport({
     station: selectedStation,
+    dateRange,
     granularity,
     observations,
     dataSourceLabel,
@@ -136,11 +284,13 @@ export function useWeatherDashboard() {
     granularity,
     setGranularity,
     stations,
+    metadataSource,
     stationsWarning,
     stationsLoading,
     stationsError,
     observations,
     dataSourceLabel,
+    lastUpdatedAt,
     observationsLoading,
     observationsError,
     observationsFetching,

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { Observation, Station } from '@/types/weather';
 import Index from './Index';
 import { useStations } from '@/hooks/useStations';
@@ -80,6 +81,19 @@ const mockUseObservations = vi.mocked(useObservations);
 const mockBuildAndDownloadExcel = vi.mocked(buildAndDownloadExcel);
 const mockToastError = vi.mocked(toast.error);
 
+function renderIndex() {
+  return render(
+    <MemoryRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <Index />
+    </MemoryRouter>,
+  );
+}
+
 const TEST_STATION: Station = {
   id: 'X2',
   name: 'Observatori Fabra',
@@ -133,7 +147,7 @@ describe('Index export and query behavior', () => {
       } as ReturnType<typeof useObservations>;
     });
 
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
     fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
 
@@ -153,6 +167,7 @@ describe('Index export and query behavior', () => {
   });
 
   it('shows visible error and avoids Excel generation when secondary dataset fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const refetchPrimary = vi.fn().mockResolvedValue({
       data: { data: [TEST_OBSERVATION], dataSourceLabel: 'Fuente: XEMA - Estación: Fabra' },
       error: null,
@@ -185,7 +200,7 @@ describe('Index export and query behavior', () => {
       } as ReturnType<typeof useObservations>;
     });
 
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
 
     const exportButton = screen.getByRole('button', { name: /Excel/i });
@@ -197,6 +212,8 @@ describe('Index export and query behavior', () => {
       expect(mockToastError).toHaveBeenCalledTimes(1);
       expect(mockBuildAndDownloadExcel).not.toHaveBeenCalled();
     });
+
+    consoleErrorSpy.mockRestore();
   });
 
   it('keeps KPI "Datos" aligned with chart observations length in daily view', async () => {
@@ -227,7 +244,7 @@ describe('Index export and query behavior', () => {
       } as ReturnType<typeof useObservations>;
     });
 
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
     fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
 
@@ -255,7 +272,7 @@ describe('Index export and query behavior', () => {
       } as ReturnType<typeof useObservations>;
     });
 
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
 
     await waitFor(() => {
@@ -297,7 +314,7 @@ describe('Index export and query behavior', () => {
       } as ReturnType<typeof useObservations>;
     });
 
-    render(<Index />);
+    renderIndex();
     fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
     fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
 
@@ -329,7 +346,7 @@ describe('Index export and query behavior', () => {
       isFetching: false,
     } as ReturnType<typeof useObservations>);
 
-    render(<Index />);
+    renderIndex();
 
     expect(
       screen.getByText('Lista de estaciones en modo degradado; las observaciones siguen disponibles.'),

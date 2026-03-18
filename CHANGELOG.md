@@ -6,6 +6,28 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-18 — Estado navegable, exportacion contextual y control de bundle
+
+### Added
+
+- El dashboard persiste `station`, `from`, `to` y `granularity` en la URL para poder reconstruir la vista desde search params.
+- La exportacion Excel incorpora una hoja inicial `Contexto` con estacion, fuente, rango, vista activa, fecha de generacion y zona horaria.
+- Nuevos tests para selector de estaciones, tabla, botones de descarga, alertas de cobertura y `useWeatherDashboard()` con hidratacion desde URL.
+- Nuevo comando `npm run check:bundle` y paso de CI para vigilar el tamano de `index` y `vendor-charts`.
+
+### Changed
+
+- La busqueda de estaciones ahora filtra por nombre, municipio e ID.
+- La tarjeta de estacion seleccionada muestra siempre `metadataSource`, nota fija de timezone y `lastUpdatedAt` local tras cada carga correcta.
+- La tabla reinicia la paginacion cuando cambian rango, granularidad o dataset visible.
+- `StationMap` deja de recrear todos los marcadores al cambiar solo la seleccion y actualiza iconos/popup de forma incremental.
+- La exportacion Excel pasa a nombrar los archivos como `meteo-{stationSlug}-{from}_{to}.xlsx`.
+- `index.css` elimina el `@import` remoto de Google Fonts y usa stacks locales documentados.
+
+### Removed
+
+- `VITE_DATA_MODE` deja de formar parte del contrato soportado en configuracion, tests y documentacion.
+
 ## 2026-03-18 — Ajustes del gráfico de viento
 
 ### Changed

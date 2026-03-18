@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -19,6 +19,10 @@ const WIND_LIMIT_ACOUSTIC = 5;
 
 export function DataTable({ observations, granularity, isLoading }: DataTableProps) {
   const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    setPage(0);
+  }, [granularity, observations]);
 
   const isDetail = granularity === '30min';
   const totalPages = Math.ceil(observations.length / PAGE_SIZE) || 1;
@@ -126,9 +130,11 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
           </span>
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={safePage === 0}>
+              <span className="sr-only">Página anterior</span>
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={safePage >= totalPages - 1}>
+              <span className="sr-only">Página siguiente</span>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>

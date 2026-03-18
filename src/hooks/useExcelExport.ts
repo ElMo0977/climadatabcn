@@ -1,6 +1,7 @@
-import type { Observation, Granularity, Station } from '@/types/weather';
+import type { Observation, Granularity, Station, DateRange } from '@/types/weather';
 import type { ObservationsRefetchFn } from '@/hooks/useObservations';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
+import { getSourceLabel } from '@/config/sources';
 import { toast } from 'sonner';
 
 function isChunkLoadError(error: unknown): boolean {
@@ -26,6 +27,7 @@ function isChunkLoadError(error: unknown): boolean {
 
 interface UseExcelExportParams {
   station: Station | null;
+  dateRange: DateRange;
   granularity: Granularity;
   observations: Observation[];
   dataSourceLabel: string | null;
@@ -37,6 +39,7 @@ interface UseExcelExportParams {
 
 export function useExcelExport({
   station,
+  dateRange,
   granularity,
   observations,
   dataSourceLabel,
@@ -72,12 +75,16 @@ export function useExcelExport({
         throw new Error('No hay datos suficientes para generar las hojas de detalle y diario.');
       }
 
-      await buildAndDownloadExcel(
+      await buildAndDownloadExcel({
         obs30min,
         obsDaily,
-        station.name || 'data',
-        dataSourceLabel ?? undefined,
-      );
+        stationName: station.name || 'data',
+        dataSourceLabel: dataSourceLabel ?? undefined,
+        sourceDisplayName: getSourceLabel(station.source ?? 'xema-transparencia'),
+        dateRange,
+        activeGranularity: granularity,
+        timezoneLabel: 'Europe/Madrid',
+      });
     } catch (error) {
       console.error(error);
       if (isChunkLoadError(error)) {

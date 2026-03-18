@@ -8,10 +8,11 @@ Consume datos abiertos de la red XEMA del Servei Meteorologic de Catalunya a tra
 
 - Seleccion de estaciones meteorologicas cercanas a Barcelona con mapa interactivo y lista.
 - Seleccion de rango de fechas con presets rapidos de 7, 14 y 30 dias.
+- Persistencia del estado principal del dashboard en la URL (`station`, `from`, `to`, `granularity`).
 - Dos vistas temporales: detalle cada 30 minutos y resumen diario.
 - KPIs de temperatura, humedad, viento y precipitacion.
 - Graficas de series temporales y tabla paginada de observaciones.
-- Exportacion a Excel con dos hojas: `30min` y `Diario`.
+- Exportacion a Excel con tres hojas: `Contexto`, `30min` y `Diario`.
 - Alertas de cobertura cuando faltan datos en el rango seleccionado.
 
 ## Inicio rapido
@@ -32,6 +33,7 @@ La app de desarrollo arranca en `http://localhost:8080`.
 | `npm run test:watch` | Tests en modo watch |
 | `npm run lint` | Verificacion de ESLint |
 | `npm run build` | Type-check y build de produccion |
+| `npm run check:bundle` | Verifica los presupuestos del bundle sobre `dist/assets` |
 | `npm run preview` | Servir localmente el build generado |
 
 ## Variables de entorno soportadas
@@ -43,8 +45,6 @@ Copia `.env.example` a `.env`. La configuracion habitual del proyecto solo neces
 | `VITE_DEBUG_XEMA` | Diagnostico del provider XEMA y del fetch subdaily (`true` o `1`, solo en desarrollo) |
 | `VITE_XEMA_HTTP_TIMEOUT_MS` | Timeout de las peticiones XEMA / Socrata en ms. Valor por defecto: `40000` |
 | `VITE_DEBUG_DATA` | Auditoria del dataset final en consola (`1`) |
-
-Nota: `src/config/env.ts` tambien expone `VITE_DATA_MODE`, pero el runtime actual no cambia de provider ni de flujo en funcion de esa variable. Se considera configuracion interna y no forma parte del setup normal del proyecto.
 
 ## Documentacion
 
