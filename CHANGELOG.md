@@ -6,6 +6,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-18 — Ajustes del gráfico de viento
+
+### Changed
+
+- `WeatherCharts` afina el grosor de las líneas de temperatura, humedad y viento para aligerar la visualización sin cambiar el comportamiento de `activeDot`.
+- La línea umbral de `5 m/s` del gráfico de viento mantiene la referencia dentro del chart, pero su texto deja de mostrarse arriba y pasa a una leyenda inferior unificada junto a `Racha máx.` y `Viento media`.
+
+### Added
+
+- Nueva cobertura de tests para documentar explícitamente los códigos de viento consultados en `30min` (`VV10`, `DV10`, `VVx10`) y `daily` (`VVM10`, `VVX10`, con `VVx10` subdaily solo para `windGustTime`).
+- Nuevo test del componente `WeatherCharts` para validar la leyenda inferior del gráfico de viento y los grosores actualizados de las líneas.
+
 ## 2026-03-12 — Estabilizacion del pipeline de datos
 
 ### Changed

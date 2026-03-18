@@ -222,6 +222,15 @@ describe('getObservations', () => {
       }),
       { signal: undefined },
     );
+    const [, dailyQuery] = fetchSocrataAllMock.mock.calls[0] as [
+      string,
+      { $select?: string; $where?: string },
+    ];
+    expect(dailyQuery.$where).toContain("codi_variable in ('1000','1100','1300','1503','1512')");
+    expect(dailyQuery.$where).not.toContain("'1500'");
+    expect(dailyQuery.$where).not.toContain("'1506'");
+    expect(dailyQuery.$where).not.toContain("'1509'");
+    expect(dailyQuery.$where).not.toContain("'1515'");
     expect(fetchSocrataAllMock).toHaveBeenNthCalledWith(
       2,
       'nzvn-apee',
@@ -280,6 +289,9 @@ describe('getObservations', () => {
     expect(query.$where).toContain("data_lectura >= '2024-01-01T00:00:00'");
     expect(query.$where).toContain("data_lectura <= '2024-01-07T23:59:59'");
     expect(query.$where).toContain("codi_variable in ('32','33','35','30','31','50')");
+    expect(query.$where).not.toContain("'46'");
+    expect(query.$where).not.toContain("'48'");
+    expect(query.$where).not.toContain("'51'");
     expect(query.$where).not.toContain("codi_estat in ('V','T')");
 
     expect(result[0]).toMatchObject({

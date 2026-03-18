@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Brush, BarChart, Bar, Legend, ReferenceLine, Label,
+  ResponsiveContainer, Brush, BarChart, Bar, ReferenceLine,
 } from 'recharts';
 import { Thermometer, Droplets, Wind, CloudRain } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
@@ -31,6 +31,32 @@ const LINE_CHARTS = [
     color: 'hsl(var(--chart-humidity))',
     unit: '%',
     colorClass: 'text-humidity',
+  },
+] as const;
+
+const LINE_STROKE_WIDTH = 1.5;
+const WIND_GUST_STROKE_WIDTH = 2;
+const WIND_THRESHOLD = 5;
+const WIND_THRESHOLD_LABEL = 'Límite 5 m/s';
+
+const WIND_LEGEND_ITEMS = [
+  {
+    label: 'Racha máx.',
+    color: 'hsl(160 55% 30%)',
+    strokeWidth: WIND_GUST_STROKE_WIDTH,
+    dashed: false,
+  },
+  {
+    label: 'Viento media',
+    color: 'hsl(var(--chart-wind))',
+    strokeWidth: LINE_STROKE_WIDTH,
+    dashed: false,
+  },
+  {
+    label: WIND_THRESHOLD_LABEL,
+    color: 'hsl(25 95% 50%)',
+    strokeWidth: LINE_STROKE_WIDTH,
+    dashed: true,
   },
 ] as const;
 
@@ -98,7 +124,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
                 formatter={(value: number | null) => [value !== null ? `${value}${chart.unit}` : 'Sin datos', chart.title]}
               />
-              <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
+              <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={LINE_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
               {chartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
             </LineChart>
           </ResponsiveContainer>
@@ -125,15 +151,28 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
                 return order.indexOf(String(a?.name ?? '')) - order.indexOf(String(b?.name ?? ''));
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Line type="monotone" name="Racha máx." dataKey="windMax" stroke="hsl(160 55% 30%)" strokeWidth={2.5} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
-            <Line type="monotone" name="Viento media" dataKey="windAvg" stroke="hsl(var(--chart-wind))" strokeWidth={2} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
-            <ReferenceLine y={5} stroke="hsl(25 95% 50%)" strokeDasharray="5 5" strokeWidth={2}
-              label={<Label value="Límite mediciones acústicas (5 m/s)" position="top" fill="hsl(25 95% 50%)" fontSize={11} />}
-            />
+            <Line type="monotone" name="Racha máx." dataKey="windMax" stroke="hsl(160 55% 30%)" strokeWidth={WIND_GUST_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
+            <Line type="monotone" name="Viento media" dataKey="windAvg" stroke="hsl(var(--chart-wind))" strokeWidth={LINE_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
+            <ReferenceLine y={WIND_THRESHOLD} stroke="hsl(25 95% 50%)" strokeDasharray="5 5" strokeWidth={LINE_STROKE_WIDTH} />
             {windChartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
           </LineChart>
         </ResponsiveContainer>
+        <div aria-label="Leyenda de viento" className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          {WIND_LEGEND_ITEMS.map((item) => (
+            <div key={item.label} className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="inline-block w-6 shrink-0"
+                style={{
+                  borderTopColor: item.color,
+                  borderTopStyle: item.dashed ? 'dashed' : 'solid',
+                  borderTopWidth: `${item.strokeWidth}px`,
+                }}
+              />
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Precipitation */}
