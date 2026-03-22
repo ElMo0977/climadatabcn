@@ -9,6 +9,7 @@ Este directorio contiene el mapa canonico de la documentacion tecnica del proyec
 | `README.md` | Entrada al proyecto, comandos y variables de entorno soportadas | Cuando cambian setup, comandos o configuracion operativa |
 | `ARCHITECTURE.md` | Arquitectura por capas, flujo de datos y decisiones tecnicas | Cuando cambia la estructura del codigo o el flujo entre capas |
 | `docs/xema-transparencia-implementation.md` | Integracion vigente con XEMA / Socrata, contratos y debug | Cuando cambian datasets, providers, labels o flags de diagnostico |
+| `docs/frame-c-repo-hygiene.md` | Uso de la skill reusable FRAME-C para limpieza y mantenimiento de repositorios | Cuando cambian la skill, su taxonomia o su prompt base |
 | `ROADMAP.md` | Trabajo pendiente | Cuando se anaden, repriorizan o cierran tareas futuras |
 | `CHANGELOG.md` | Historial de cambios relevantes | Cuando un cambio ya se completo |
 | `AGENTS.md` | Guia operativa para agentes: arquitectura, comandos, tests y convenciones | Cuando cambian las convenciones para agentes o la lista de fuentes canonicas |
