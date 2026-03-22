@@ -1,6 +1,4 @@
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
+import { isFiniteNumber } from '@/lib/weatherUtils';
 
 export interface WindKpiDisplay {
   label: string;

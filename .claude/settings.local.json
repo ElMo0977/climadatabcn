@@ -11,7 +11,18 @@
       "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --noEmit --strict --listFiles)",
       "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --showConfig)",
       "Bash(./node_modules/.bin/tsc -p tsconfig.app.json --noEmit --strict --noImplicitAny --strictNullChecks --strictFunctionTypes --strictBindCallApply --strictPropertyInitialization --noImplicitThis --alwaysStrict --noUnusedLocals --noUnusedParameters --noFallthroughCasesInSwitch)",
-      "Bash(npx tsc -p tsconfig.app.json --noEmit)"
+      "Bash(npx tsc -p tsconfig.app.json --noEmit)",
+      "Bash(grep -r \"VITE_API_PROXY_URL\\\\|VITE_DATA_MODE\\\\|VITE_SUPABASE\" /Users/pablor/Documents/GitHub/climadatabcn/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"deply\\\\|workflows\" /Users/pablor/Documents/GitHub/climadatabcn --include=*.md --include=*.yml --include=*.yaml --include=*.json)",
+      "Bash(find /Users/pablor/Documents/GitHub/climadatabcn/.github -name *.yml -o -name *.yaml)",
+      "Bash(xargs ls:*)",
+      "Bash(grep -E \"^[^:]+:[0-9]+:\\\\s*\\(//|/\\\\*\\).{0,40}\\(const|let|function|return|if|for|while|class|interface|type|export|import\\)\\\\s*\\\\\\(\")",
+      "Bash(grep -E \"\\\\.tsx?$\")",
+      "Bash(npm test:*)",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm list:*)",
+      "Bash(node -e \":*)"
     ]
   }
 }

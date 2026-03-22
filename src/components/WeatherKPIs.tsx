@@ -3,14 +3,11 @@ import type { WeatherStats } from '@/types/weather';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getWindKpiDisplay } from '@/lib/windKpi';
+import { isFiniteNumber } from '@/lib/weatherUtils';
 
 interface WeatherKPIsProps {
   stats: WeatherStats | null;
   isLoading: boolean;
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
 }
 
 export function WeatherKPIs({ stats, isLoading }: WeatherKPIsProps) {

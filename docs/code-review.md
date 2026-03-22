@@ -81,6 +81,7 @@ Nota: no he encontrado imports directos que salten literalmente de `pages` o `co
 - Referencias: `.env.example:8`, `README.md:43`, `src/config/env.ts:28`, `src/services/http/socrata.ts:8`, `src/services/http/socrata.ts:38`
 - Hallazgo: el proyecto documenta `VITE_API_PROXY_URL` y `env.ts` la parsea, pero `src/services/http/socrata.ts` sigue construyendo siempre las URLs contra `https://analisi.transparenciacatalunya.cat`. En la practica, configurar el proxy no cambia nada.
 - Recomendacion: o bien conectar realmente `env.apiProxyBaseUrl` en el cliente Socrata, o bien retirar la variable de la documentacion para no prometer un comportamiento inexistente.
+- **Resuelto**: VITE_API_PROXY_URL fue eliminada en la limpieza de 2026-03-12 (ver CHANGELOG). La variable ya no existe en `env.ts` ni en `.env.example`.
 
 ### Hallazgo RQ2 - La carga de estaciones oculta errores reales tras el fallback estatico
 

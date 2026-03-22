@@ -6,6 +6,29 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-22 — Higiene FRAME-C: eliminacion de codigo muerto
+
+### Removed
+
+- `src/components/ui/tabs.tsx` eliminado: componente Tabs/TabsList/TabsTrigger/TabsContent sin ningun import en el proyecto.
+- `src/hooks/use-mobile.tsx` eliminado: hook `useIsMobile` sin ningun import en el proyecto.
+- `convertToCSV` y `downloadFile` eliminados de `src/lib/weatherUtils.ts`: exports sin uso. `downloadFileBuffer` se conserva (en uso).
+- `supabase/` eliminado: directorio residual con solo `config.toml` y `functions/` vacio tras la limpieza de 2026-02-25.
+- `src/integrations/` eliminado: directorio vacio residual de la integracion Supabase eliminada en 2026-02-25.
+
+### Refactored
+
+- `isFiniteNumber` type guard extraida a `src/lib/weatherUtils.ts` como export nombrado; eliminadas las definiciones locales duplicadas de `src/lib/windKpi.ts` y `src/components/WeatherKPIs.tsx`.
+
+### Changed
+
+- `docs/code-review.md`: hallazgo RQ1 marcado como resuelto (VITE_API_PROXY_URL fue eliminada en 2026-03-12).
+- `ROADMAP.md`: entrada sobre el destino de `supabase/` retirada (resuelto con la eliminacion del directorio). Entrada sobre consolidacion de `downloadFile`/`downloadFileBuffer` retirada (resuelta con la eliminacion de `downloadFile`). Entrada sobre renombrar `deply.yml` retirada (resuelto).
+- `.github/workflows/deply.yml` renombrado a `deploy.yml`: correccion de typo en el nombre del workflow de CI/CD sin cambios en su comportamiento.
+- `eslint.config.js`: rehabilitada la regla `@typescript-eslint/no-unused-vars` como `error` con escape hatch `_` (`argsIgnorePattern`/`varsIgnorePattern: ^_`). Dos violaciones corregidas: `actionTypes` renombrado a `_actionTypes` en `use-toast.ts` (usado solo como tipo), destructuring `sortTs` renombrado a `_sortTs` en `weatherUtils.ts`.
+
+---
+
 ## 2026-03-18 — Estado navegable, exportacion contextual y control de bundle
 
 ### Added

@@ -8,6 +8,10 @@ export interface WindBucketAggregate {
   windMax: number;
 }
 
+export function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
 export function formatDayKey(timestamp: string): string {
   try {
     const date = parseISO(timestamp);
@@ -64,7 +68,7 @@ export function aggregateWindByBucket(
       if (b.sortTs === null) return -1;
       return a.sortTs - b.sortTs;
     })
-    .map(({ sortTs, ...rest }) => rest);
+    .map(({ sortTs: _sortTs, ...rest }) => rest);
 }
 
 export function calculateStats(observations: Observation[]): WeatherStats {
@@ -180,32 +184,6 @@ export function buildDailySummary(observations: Observation[]): DailySummaryRow[
       precipSum: Math.round(precipSum * 10) / 10,
     };
   });
-}
-
-export function convertToCSV(observations: Observation[]): string {
-  const headers = ['Timestamp', 'Temperature (°C)', 'Humidity (%)', 'Wind Speed (m/s)', 'Wind Gust (m/s)', 'Wind Dir (°)', 'Precipitation (mm)'];
-  const rows = observations.map(o => [
-    o.timestamp,
-    o.temperature ?? '',
-    o.humidity ?? '',
-    o.windSpeed ?? '',
-    o.windSpeedMax ?? '',
-    o.windDirection ?? '',
-    o.precipitation ?? '',
-  ]);
-  return [headers.join(';'), ...rows.map(row => row.join(';'))].join('\n');
-}
-
-export function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
 }
 
 export function downloadFileBuffer(
