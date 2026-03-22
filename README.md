@@ -33,8 +33,17 @@ La app de desarrollo arranca en `http://localhost:8080`.
 | `npm run test:watch` | Tests en modo watch |
 | `npm run lint` | Verificacion de ESLint |
 | `npm run build` | Type-check y build de produccion |
-| `npm run check:bundle` | Verifica los presupuestos del bundle sobre `dist/assets` |
-| `npm run preview` | Servir localmente el build generado |
+| `npm run check:bundle` | Verifica los presupuestos del bundle sobre `dist/assets` despues de un build |
+| `npm run preview` | Servir localmente el build generado despues de `npm run build` |
+
+## Tests puntuales
+
+Durante el desarrollo conviene iterar con un test puntual y despues volver a la suite completa.
+
+- Archivo unico: `npm test -- src/pages/Index.test.tsx`
+- Otro archivo: `npm test -- src/hooks/useObservations.test.ts`
+- Por nombre: `npm test -- -t "loads stations successfully"`
+- Watch puntual: `npx vitest src/pages/Index.test.tsx --watch`
 
 ## Variables de entorno soportadas
 
@@ -42,7 +51,7 @@ Copia `.env.example` a `.env`. La configuracion habitual del proyecto solo neces
 
 | Variable | Uso |
 |----------|-----|
-| `VITE_DEBUG_XEMA` | Diagnostico del provider XEMA y del fetch subdaily (`true` o `1`, solo en desarrollo) |
+| `VITE_DEBUG_XEMA` | Diagnostico del provider XEMA y del fetch subdaily (`true`, `1`, `yes` u `on`) |
 | `VITE_XEMA_HTTP_TIMEOUT_MS` | Timeout de las peticiones XEMA / Socrata en ms. Valor por defecto: `40000` |
 | `VITE_DEBUG_DATA` | Auditoria del dataset final en consola (`1`) |
 
@@ -57,7 +66,7 @@ El mapa documental completo vive en [docs/README.md](docs/README.md).
 | [docs/xema-transparencia-implementation.md](docs/xema-transparencia-implementation.md) | Integracion actual con XEMA / Socrata, contratos y flags de debug |
 | [ROADMAP.md](ROADMAP.md) | Trabajo pendiente |
 | [CHANGELOG.md](CHANGELOG.md) | Historial de cambios relevantes |
-| [AGENTS.md](AGENTS.md) | Flujo de trabajo y referencias para agentes |
+| [AGENTS.md](AGENTS.md) | Guia operativa repo-especifica para agentes: arquitectura, comandos, tests y convenciones |
 
 ## Fuente de datos
 

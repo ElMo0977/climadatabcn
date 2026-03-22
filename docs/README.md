@@ -1,4 +1,4 @@
-# Documentacion
+# Documentacion del proyecto
 
 Este directorio contiene el mapa canonico de la documentacion tecnica del proyecto. La idea es sencilla: cada documento principal responde a una sola pregunta y enlaza al resto cuando hace falta, en lugar de duplicar contenido.
 
@@ -11,7 +11,7 @@ Este directorio contiene el mapa canonico de la documentacion tecnica del proyec
 | `docs/xema-transparencia-implementation.md` | Integracion vigente con XEMA / Socrata, contratos y debug | Cuando cambian datasets, providers, labels o flags de diagnostico |
 | `ROADMAP.md` | Trabajo pendiente | Cuando se anaden, repriorizan o cierran tareas futuras |
 | `CHANGELOG.md` | Historial de cambios relevantes | Cuando un cambio ya se completo |
-| `AGENTS.md` | Flujo y referencias para agentes | Cuando cambian las convenciones para agentes o la lista de fuentes canonicas |
+| `AGENTS.md` | Guia operativa para agentes: arquitectura, comandos, tests y convenciones | Cuando cambian las convenciones para agentes o la lista de fuentes canonicas |
 
 ## Artefactos historicos
 
@@ -26,11 +26,12 @@ Este directorio contiene el mapa canonico de la documentacion tecnica del proyec
 - `README.md` debe seguir siendo corto y operativo.
 - `ARCHITECTURE.md` debe hablar de arquitectura actual, no de historial ni de tareas pendientes.
 - `ROADMAP.md` solo contiene trabajo abierto; los completados pertenecen a `CHANGELOG.md`.
-- Si `AGENTS.md` empieza a referenciar nuevos documentos canonicos, refresca tambien `.atl/skill-registry.md`.
+- Si `AGENTS.md` empieza a referenciar nuevos documentos canonicos, actualizalo en la misma tarea.
 
 ## Ruta recomendada de lectura
 
 1. `README.md` para arrancar el proyecto.
 2. `ARCHITECTURE.md` para entender la arquitectura.
-3. `docs/xema-transparencia-implementation.md` para contratos de datos y debug.
-4. `ROADMAP.md` o `CHANGELOG.md` segun necesites futuro o historial.
+3. `docs/xema-transparencia-implementation.md` para contratos de datos y diagnostico.
+4. `AGENTS.md` si vas a editar codigo con ayuda de agentes.
+5. `ROADMAP.md` o `CHANGELOG.md` segun necesites futuro o historial.

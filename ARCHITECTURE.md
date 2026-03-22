@@ -10,6 +10,7 @@ La arquitectura sigue una separacion por capas: las paginas orquestan componente
 
 - Una sola fuente de datos en runtime: `xema-transparencia`.
 - UI sin `fetch` directo: el acceso remoto pasa por `src/services/`.
+- Fachada meteorologica estable: `src/services/providers/xemaTransparencia.ts` concentra el acceso de dominio.
 - Logica de negocio y transformaciones fuera de la capa visual.
 - Exportacion pesada diferida: ExcelJS se carga solo al exportar.
 - Despliegue estatico: el build de produccion usa `base: "/climadatabcn/"`.
@@ -92,6 +93,7 @@ src/
 ## Verificacion
 
 - Tests: Vitest + Testing Library, colocados junto a los modulos cuando aplica.
+- Iteracion rapida: `npm test -- path/to/file.test.tsx` o `npm test -- -t "nombre del test"`.
 - Comandos operativos: `npm test`, `npm run lint`, `npm run build`, `npm run check:bundle`.
 
 ## Documentos relacionados

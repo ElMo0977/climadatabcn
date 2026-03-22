@@ -136,15 +136,17 @@ Los dos flags actuales tienen responsabilidades distintas y pueden activarse por
 
 | Variable | Que activa | Donde se usa |
 |----------|------------|--------------|
-| `VITE_DEBUG_XEMA` | Logs del provider XEMA y resumen de fetch subdaily | `src/config/env.ts`, `src/services/providers/xemaObservations.ts`, `Index.tsx` |
+| `VITE_DEBUG_XEMA` | Logs del provider XEMA, resumen de fetch subdaily y diagnostico diario del dashboard | `src/config/env.ts`, `src/services/providers/xemaObservations.ts`, `src/hooks/useWeatherDashboard.ts` |
 | `VITE_XEMA_HTTP_TIMEOUT_MS` | Timeout de peticiones XEMA / Socrata. Default runtime: `40000` ms | `src/config/env.ts`, `src/services/http/socrata.ts`, `src/services/http/fetchJson.ts` |
 | `VITE_DEBUG_DATA` | Auditoria del dataset final (`stats`, timestamps, snapshot en `window.__DATA_DEBUG_SNAPSHOT`) | `src/lib/dataDebug.ts`, `src/hooks/useObservations.ts` |
 
 Notas:
 
-- `VITE_DEBUG_XEMA` solo se considera en desarrollo mediante `isXemaDebugEnabled()`.
+- `useWeatherDashboard.ts` usa `isXemaDebugEnabled()` y solo emite esos logs en desarrollo.
+- `xemaObservations.ts` tambien lee `VITE_DEBUG_XEMA` para el resumen del fetch subdaily.
 - `VITE_XEMA_HTTP_TIMEOUT_MS` permite dar mas margen cuando Socrata responde con latencia alta o muy variable.
 - `VITE_DEBUG_DATA` se activa unicamente con el valor literal `1`.
+
 ## Verificacion manual
 
 1. Copia `.env.example` a `.env`.
