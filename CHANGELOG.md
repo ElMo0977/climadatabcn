@@ -6,6 +6,32 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-03-26 — Punto de referencia, mejoras de mapa y limites de dia en graficas
+
+### Added
+
+- `src/hooks/useReferencePoint.ts`: nuevo hook que geocodifica una dirección libre (Nominatim) y expone `referencePoint`, `isGeocoding`, `geocodeError` y `geocode()`.
+- `src/services/geocoder.ts`: servicio HTTP para Nominatim; retorna `GeocodeResult` (union discriminada `{ ok: true; lat; lon } | { ok: false; reason: 'not_found' | 'network_error' }`), diferenciando error de red de dirección no encontrada.
+- `src/lib/geocoder.ts`: tipos `GeoPoint` y `GeocodeResult` (sin lógica HTTP).
+- `StationSelector`: campo de dirección editable con botón de búsqueda para cambiar el punto de referencia en tiempo real. Muestra distancia desde el punto seleccionado en cada fila de estación.
+- `StationMap`: pin SVG rojo en la ubicación del punto de referencia. Al seleccionar una estación, usa `fitBounds` para encuadrar ambos puntos en pantalla. Usa `DEFAULT_REFERENCE_ADDRESS` como valor inicial del input.
+
+### Changed
+
+- `StationMap`: eliminados los popups de estaciones (el marcador agrandado es suficiente feedback visual). Corregida la stale closure en los click handlers de marcadores existentes (`off('click').on('click', ...)` en cada re-render del efecto).
+- `WeatherCharts`: las cuatro gráficas (Temperatura, Humedad, Viento, Precipitación) muestran líneas verticales exactamente en los límites de día calendario para granularidad `30min`. En granularidad `daily` se mantiene el grid vertical automático de Recharts.
+- `useWeatherDashboard`: integra `useReferencePoint`, recomputa distancias haversine cuando cambia el punto de referencia.
+- Dirección de referencia por defecto corregida a "Plaça Sanllehy, Barcelona" (nombre en catalán requerido por Nominatim; "Plaza Sanllehy" retornaba 0 resultados).
+
+### Fixed
+
+- Imports reordenados para cumplir la regla "externos primero, internos después" en `StationMap`, `StationSelector`, `useExcelExport` e `Index`.
+- Imports relativos (`./`) en lugar de `@/` para módulos del mismo directorio en `useExcelExport`, `useWeatherDashboard` y `exportExcel`.
+- JSDoc de `buildAndDownloadExcel` actualizado: "two sheets" → "three sheets".
+- `DEFAULT_REFERENCE_ADDRESS` reutilizado en `StationSelector` en vez de string literal duplicado.
+
+---
+
 ## 2026-03-22 — Higiene FRAME-C: eliminacion de codigo muerto
 
 ### Removed
