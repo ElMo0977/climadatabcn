@@ -27,7 +27,8 @@
       "Bash(git stash:*)",
       "Bash(git commit:*)",
       "Bash(gga run:*)",
-      "Bash(find /Users/pablor/Documents/GitHub/climadatabcn -name .gga* -o -name gga*cache*)"
+      "Bash(find /Users/pablor/Documents/GitHub/climadatabcn -name .gga* -o -name gga*cache*)",
+      "Bash(git add:*)"
     ]
   }
 }
