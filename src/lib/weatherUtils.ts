@@ -186,6 +186,73 @@ export function buildDailySummary(observations: Observation[]): DailySummaryRow[
   });
 }
 
+/**
+ * Aggregates 30-min observations into one Observation per calendar day.
+ * Designed for Excel export where the daily API may have a ~2-day lag.
+ *
+ * Field mapping from 30-min → daily:
+ *   temperature  → mean of T values
+ *   humidity     → mean of HR values (rounded to integer)
+ *   precipitation → sum of PPT values
+ *   windSpeed    → mean of VV10 values  (equivalent to VVM10)
+ *   windSpeedMax → max of VVx10 values  (equivalent to VVX10)
+ *   windGustTime → local HH:MM of the interval with the highest VVx10
+ *   windDirection → null (not meaningful at daily resolution)
+ */
+export function aggregate30minToDaily(observations: Observation[]): Observation[] {
+  const byDay = new Map<string, Observation[]>();
+
+  for (const obs of observations) {
+    const key = formatDayKey(obs.timestamp);
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key)!.push(obs);
+  }
+
+  const avg = (arr: number[]): number | null =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+  const sum = (arr: number[]): number | null =>
+    arr.length > 0 ? arr.reduce((a, b) => a + b, 0) : null;
+  const roundTo1 = (v: number | null): number | null =>
+    v !== null ? Math.round(v * 10) / 10 : null;
+
+  const sortedDays = Array.from(byDay.keys()).sort();
+  return sortedDays.map((date) => {
+    const dayObs = byDay.get(date)!;
+
+    const validTemps    = dayObs.map((o) => o.temperature).filter(isFiniteNumber);
+    const validHums     = dayObs.map((o) => o.humidity).filter(isFiniteNumber);
+    const validPrecips  = dayObs.map((o) => o.precipitation).filter(isFiniteNumber);
+    const validWind     = dayObs.map((o) => o.windSpeed).filter(isFiniteNumber);
+    const validWindMax  = dayObs.map((o) => o.windSpeedMax).filter(isFiniteNumber);
+
+    const windSpeedMax = validWindMax.length > 0 ? Math.max(...validWindMax) : null;
+
+    // Extract local HH:MM from the observation with the highest windSpeedMax
+    let windGustTime: string | null = null;
+    if (windSpeedMax !== null) {
+      const maxObs = dayObs.find(
+        (o) => isFiniteNumber(o.windSpeedMax) && o.windSpeedMax === windSpeedMax,
+      );
+      if (maxObs) {
+        const match = maxObs.timestamp.match(/T(\d{2}:\d{2})/);
+        windGustTime = match ? match[1] : null;
+      }
+    }
+
+    const humAvg = avg(validHums);
+    return {
+      timestamp: date,
+      temperature: roundTo1(avg(validTemps)),
+      humidity: humAvg !== null ? Math.round(humAvg) : null,
+      precipitation: roundTo1(sum(validPrecips)),
+      windSpeed: roundTo1(avg(validWind)),
+      windSpeedMax: roundTo1(windSpeedMax),
+      windGustTime,
+      windDirection: null,
+    };
+  });
+}
+
 export function downloadFileBuffer(
   buffer: ArrayBuffer | Uint8Array | BlobPart,
   filename: string,

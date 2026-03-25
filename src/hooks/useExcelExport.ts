@@ -1,6 +1,7 @@
 import type { Observation, Granularity, Station, DateRange } from '@/types/weather';
 import type { ObservationsRefetchFn } from '@/hooks/useObservations';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
+import { aggregate30minToDaily } from '@/lib/weatherUtils';
 import { getSourceLabel } from '@/config/sources';
 import { toast } from 'sonner';
 
@@ -55,23 +56,24 @@ export function useExcelExport({
     }
 
     try {
-      const currentDataPromise = isLoading || isFetching
-        ? refetchObservations().then((result) => {
-            if (result.error) throw result.error;
-            return result.data?.data ?? [];
-          })
-        : Promise.resolve(observations);
+      // Always use 30-min data as the source for both sheets.
+      // The daily API has a ~2-day lag; aggregating from 30-min gives complete data.
+      const obs30min: Observation[] =
+        granularity === '30min'
+          ? isLoading || isFetching
+            ? await refetchObservations().then((result) => {
+                if (result.error) throw result.error;
+                return result.data?.data ?? [];
+              })
+            : observations
+          : await refetchOtherObservations().then((result) => {
+              if (result.error) throw result.error;
+              return result.data?.data ?? [];
+            });
 
-      const otherDataPromise = refetchOtherObservations().then((result) => {
-        if (result.error) throw result.error;
-        return result.data?.data ?? [];
-      });
+      const obsDaily = aggregate30minToDaily(obs30min);
 
-      const [currentData, otherData] = await Promise.all([currentDataPromise, otherDataPromise]);
-      const obs30min = granularity === '30min' ? currentData : otherData;
-      const obsDaily = granularity === 'daily' ? currentData : otherData;
-
-      if (obs30min.length === 0 || obsDaily.length === 0) {
+      if (obs30min.length === 0) {
         throw new Error('No hay datos suficientes para generar las hojas de detalle y diario.');
       }
 

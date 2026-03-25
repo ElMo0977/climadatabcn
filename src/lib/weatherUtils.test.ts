@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateWindByBucket, buildDailySummary, calculateStats } from './weatherUtils';
+import { aggregateWindByBucket, aggregate30minToDaily, buildDailySummary, calculateStats } from './weatherUtils';
 import type { Observation } from '@/types/weather';
 
 const makeObs = (timestamp: string, windSpeed: number | null): Observation => ({
@@ -59,6 +59,63 @@ describe('aggregateWindByBucket', () => {
     expect(result).toHaveLength(1);
     expect(result[0].windMax).toBe(8);
     expect(result[0].windAvg).toBe(5);
+  });
+});
+
+describe('aggregate30minToDaily', () => {
+  it('returns empty array for empty input', () => {
+    expect(aggregate30minToDaily([])).toEqual([]);
+  });
+
+  it('groups multiple 30-min observations into one daily entry', () => {
+    const observations: Observation[] = [
+      { timestamp: '2024-03-11T08:00:00', temperature: 10, humidity: 60, windSpeed: 2, windSpeedMax: 3, windDirection: 90, precipitation: 0 },
+      { timestamp: '2024-03-11T08:30:00', temperature: 12, humidity: 62, windSpeed: 3, windSpeedMax: 5, windDirection: 100, precipitation: 0.2 },
+      { timestamp: '2024-03-11T09:00:00', temperature: 14, humidity: 58, windSpeed: 1, windSpeedMax: 2, windDirection: 110, precipitation: 0.1 },
+    ];
+    const result = aggregate30minToDaily(observations);
+    expect(result).toHaveLength(1);
+    const day = result[0];
+    expect(day.timestamp).toBe('2024-03-11');
+    expect(day.temperature).toBe(12); // avg(10,12,14)
+    expect(day.humidity).toBe(60);    // round(avg(60,62,58))
+    expect(day.precipitation).toBe(0.3); // sum(0, 0.2, 0.1)
+    expect(day.windSpeed).toBe(2);    // avg(2,3,1)
+    expect(day.windSpeedMax).toBe(5); // max(3,5,2)
+    expect(day.windGustTime).toBe('08:30'); // timestamp of max gust
+    expect(day.windDirection).toBeNull();
+  });
+
+  it('produces one entry per day and sorts by date', () => {
+    const observations: Observation[] = [
+      { timestamp: '2024-03-12T10:00:00', temperature: 15, humidity: 50, windSpeed: 2, windSpeedMax: 3, windDirection: null, precipitation: 0 },
+      { timestamp: '2024-03-11T10:00:00', temperature: 10, humidity: 55, windSpeed: 1, windSpeedMax: 2, windDirection: null, precipitation: 1 },
+    ];
+    const result = aggregate30minToDaily(observations);
+    expect(result).toHaveLength(2);
+    expect(result[0].timestamp).toBe('2024-03-11');
+    expect(result[1].timestamp).toBe('2024-03-12');
+  });
+
+  it('returns null for fields with no valid values', () => {
+    const observations: Observation[] = [
+      { timestamp: '2024-03-11T08:00:00', temperature: null, humidity: null, windSpeed: null, windSpeedMax: null, windDirection: null, precipitation: null },
+    ];
+    const result = aggregate30minToDaily(observations);
+    expect(result[0].temperature).toBeNull();
+    expect(result[0].humidity).toBeNull();
+    expect(result[0].precipitation).toBeNull();
+    expect(result[0].windSpeed).toBeNull();
+    expect(result[0].windSpeedMax).toBeNull();
+    expect(result[0].windGustTime).toBeNull();
+  });
+
+  it('sets windGustTime to null when windSpeedMax has no valid values', () => {
+    const observations: Observation[] = [
+      { timestamp: '2024-03-11T08:00:00', temperature: 10, humidity: 50, windSpeed: 2, windSpeedMax: null, windDirection: null, precipitation: 0 },
+    ];
+    const result = aggregate30minToDaily(observations);
+    expect(result[0].windGustTime).toBeNull();
   });
 });
 

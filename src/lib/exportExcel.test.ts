@@ -141,6 +141,10 @@ describe('buildAndDownloadExcel', () => {
       field: 'Vista activa',
       value: 'Diario',
     });
+    expect(workbook.sheets[0].rows[7].values).toMatchObject({
+      field: 'Datos diarios',
+      value: 'Calculados desde observaciones de 30 min',
+    });
     expect(workbook.sheets[1].rows[0].values).toEqual(['Fuente: XEMA - Estación: Test']);
     expect(workbook.sheets[1].rows[2].values).toMatchObject({
       ts: '01/02/2024 10:30',

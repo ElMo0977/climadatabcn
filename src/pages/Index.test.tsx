@@ -166,12 +166,13 @@ describe('Index export and query behavior', () => {
     });
   });
 
-  it('shows visible error and avoids Excel generation when secondary dataset fails', async () => {
+  it('shows visible error and avoids Excel generation when 30-min dataset fails (daily view)', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const refetchPrimary = vi.fn().mockResolvedValue({
       data: { data: [TEST_OBSERVATION], dataSourceLabel: 'Fuente: XEMA - Estación: Fabra' },
       error: null,
     });
+    // The 30-min query is disabled (enabled=false) when viewing daily, so its refetch is "secondary"
     const refetchSecondary = vi.fn().mockResolvedValue({
       data: undefined,
       error: new Error('fallo en dataset secundario'),
@@ -201,6 +202,9 @@ describe('Index export and query behavior', () => {
     });
 
     renderIndex();
+    // Switch to daily view: the 30-min query (enabled=false) is then used as refetchOther
+    // In daily mode, export fetches 30-min via refetchOtherObservations — if that fails, we get an error
+    fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
     fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
 
     const exportButton = screen.getByRole('button', { name: /Excel/i });

@@ -141,6 +141,7 @@ export async function buildAndDownloadExcel({
     { field: 'Vista activa', value: activeGranularity === 'daily' ? 'Diario' : 'Datos 30 min' },
     { field: 'Generado', value: formatLocalGeneratedAt(generatedAt) },
     { field: 'Zona horaria', value: timezoneLabel },
+    { field: 'Datos diarios', value: 'Calculados desde observaciones de 30 min' },
   ].forEach((row) => contextSheet.addRow(row));
 
   // ── Sheet 1: 30min ──
