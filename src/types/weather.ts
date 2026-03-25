@@ -1,6 +1,13 @@
 /** Origen de los datos: XEMA (única fuente en runtime) */
 export type DataSource = 'xema-transparencia';
 
+export interface ReferencePoint {
+  lat: number;
+  lon: number;
+  /** Address label as typed by the user */
+  label: string;
+}
+
 export interface Station {
   id: string;
   name: string;

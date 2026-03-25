@@ -1,9 +1,9 @@
+import { toast } from 'sonner';
 import type { Observation, Granularity, Station, DateRange } from '@/types/weather';
-import type { ObservationsRefetchFn } from '@/hooks/useObservations';
+import type { ObservationsRefetchFn } from './useObservations';
 import { buildAndDownloadExcel } from '@/lib/exportExcel';
 import { aggregate30minToDaily } from '@/lib/weatherUtils';
 import { getSourceLabel } from '@/config/sources';
-import { toast } from 'sonner';
 
 function isChunkLoadError(error: unknown): boolean {
   if (error instanceof Error) {
@@ -36,6 +36,7 @@ interface UseExcelExportParams {
   isFetching: boolean;
   refetchObservations: ObservationsRefetchFn;
   refetchOtherObservations: ObservationsRefetchFn;
+  referencePointLabel?: string;
 }
 
 export function useExcelExport({
@@ -48,6 +49,7 @@ export function useExcelExport({
   isFetching,
   refetchObservations,
   refetchOtherObservations,
+  referencePointLabel,
 }: UseExcelExportParams) {
   const handleExportExcel = async () => {
     if (!station) {
@@ -86,6 +88,7 @@ export function useExcelExport({
         dateRange,
         activeGranularity: granularity,
         timezoneLabel: 'Europe/Madrid',
+        referencePointLabel,
       });
     } catch (error) {
       console.error(error);

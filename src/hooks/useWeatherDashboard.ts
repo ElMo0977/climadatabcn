@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSearchParams } from 'react-router-dom';
-import { useStations } from '@/hooks/useStations';
-import { useObservations } from '@/hooks/useObservations';
-import { useExcelExport } from '@/hooks/useExcelExport';
+import { useStations } from './useStations';
+import { useObservations } from './useObservations';
+import { useExcelExport } from './useExcelExport';
+import { useReferencePoint } from './useReferencePoint';
 import { calculateStats } from '@/lib/weatherUtils';
 import { computeDailyCoverage } from '@/lib/dailyCoverage';
 import { computeSubdailyCoverage } from '@/lib/subdailyCoverage';
+import { haversineDistanceKm } from '@/lib/stationGeo';
 import type { Station, DateRange, Granularity } from '@/types/weather';
 import { isXemaDebugEnabled } from '@/config/env';
 import { buildQuickRangeExcludingToday } from '@/lib/quickDateRanges';
@@ -78,6 +80,24 @@ export function useWeatherDashboard() {
     isFetching: stationsFetching,
   } = useStations();
 
+  const {
+    referencePoint,
+    isGeocoding: isGeocodingReference,
+    geocodeError: referenceGeoError,
+    geocode: searchReferenceAddress,
+  } = useReferencePoint();
+
+  // Recompute station distances from the custom reference point and re-sort
+  const stationsWithDistance = useMemo((): Station[] => {
+    if (!referencePoint || stations.length === 0) return stations;
+    return [...stations]
+      .map((s) => ({
+        ...s,
+        distance: haversineDistanceKm(referencePoint.lat, referencePoint.lon, s.latitude, s.longitude),
+      }))
+      .sort((a, b) => a.distance - b.distance);
+  }, [stations, referencePoint]);
+
   const dateRange = useMemo(
     () => readDateRangeFromParams(searchParams) ?? defaultDateRangeRef.current,
     [searchParams],
@@ -86,8 +106,8 @@ export function useWeatherDashboard() {
   const granularity = parseGranularityParam(searchParams.get('granularity'));
 
   const selectedStation = useMemo(
-    () => stations.find((station) => station.id === stationIdFromUrl) ?? null,
-    [stationIdFromUrl, stations],
+    () => stationsWithDistance.find((station) => station.id === stationIdFromUrl) ?? null,
+    [stationIdFromUrl, stationsWithDistance],
   );
 
   const {
@@ -274,6 +294,7 @@ export function useWeatherDashboard() {
     isFetching: observationsFetching,
     refetchObservations,
     refetchOtherObservations,
+    referencePointLabel: referencePoint?.label,
   });
 
   return {
@@ -283,7 +304,11 @@ export function useWeatherDashboard() {
     setDateRange,
     granularity,
     setGranularity,
-    stations,
+    stations: stationsWithDistance,
+    referencePoint,
+    isGeocodingReference,
+    referenceGeoError,
+    searchReferenceAddress,
     metadataSource,
     stationsWarning,
     stationsLoading,

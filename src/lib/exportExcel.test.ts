@@ -142,6 +142,10 @@ describe('buildAndDownloadExcel', () => {
       value: 'Diario',
     });
     expect(workbook.sheets[0].rows[7].values).toMatchObject({
+      field: 'Punto de referencia',
+      value: 'Barcelona',
+    });
+    expect(workbook.sheets[0].rows[8].values).toMatchObject({
       field: 'Datos diarios',
       value: 'Calculados desde observaciones de 30 min',
     });

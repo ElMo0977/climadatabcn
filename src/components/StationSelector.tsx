@@ -1,9 +1,11 @@
-import { Search, MapPin, Mountain, AlertTriangle } from 'lucide-react';
+import { lazy, Suspense, useMemo, useState, type FormEvent } from 'react';
+import { Search, MapPin, Mountain, AlertTriangle, Loader2 } from 'lucide-react';
+import { DEFAULT_REFERENCE_ADDRESS } from '@/hooks/useReferencePoint';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { Station } from '@/types/weather';
-import { lazy, Suspense, useMemo, useState } from 'react';
+import type { Station, ReferencePoint } from '@/types/weather';
 import { cn } from '@/lib/utils';
 
 const LazyStationMap = lazy(async () => {
@@ -18,6 +20,10 @@ interface StationSelectorProps {
   isLoading: boolean;
   error: Error | null;
   warning?: string | null;
+  referencePoint?: ReferencePoint | null;
+  onReferenceAddressSearch?: (address: string) => void;
+  isGeocodingReference?: boolean;
+  referenceGeoError?: string | null;
 }
 
 export function StationSelector({
@@ -27,8 +33,20 @@ export function StationSelector({
   isLoading,
   error,
   warning,
+  referencePoint,
+  onReferenceAddressSearch,
+  isGeocodingReference = false,
+  referenceGeoError,
 }: StationSelectorProps) {
   const [search, setSearch] = useState('');
+  const [refAddress, setRefAddress] = useState(
+    referencePoint?.label ?? DEFAULT_REFERENCE_ADDRESS,
+  );
+
+  const handleRefSearch = (e: FormEvent) => {
+    e.preventDefault();
+    onReferenceAddressSearch?.(refAddress);
+  };
   const canRenderMap = typeof window !== 'undefined';
 
   const normalizedSearch = search.trim().toLowerCase();
@@ -54,6 +72,38 @@ export function StationSelector({
       <div className="p-4 border-b border-border">
         <h2 className="font-display text-lg font-semibold mb-3">Estaciones</h2>
         
+        {/* Reference point input */}
+        <div className="mb-3">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1.5">
+            <MapPin className="h-3 w-3 text-red-500" />
+            <span>Punto de referencia</span>
+          </div>
+          <form onSubmit={handleRefSearch} className="flex gap-1.5">
+            <Input
+              value={refAddress}
+              onChange={(e) => setRefAddress(e.target.value)}
+              placeholder="Introduce una dirección..."
+              className="text-xs h-8 flex-1"
+              aria-label="Dirección de referencia"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              variant="outline"
+              className="h-8 px-2.5"
+              disabled={isGeocodingReference || !refAddress.trim()}
+              aria-label="Buscar dirección"
+            >
+              {isGeocodingReference
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <Search className="h-3 w-3" />}
+            </Button>
+          </form>
+          {referenceGeoError && (
+            <p className="text-xs text-destructive mt-1">{referenceGeoError}</p>
+          )}
+        </div>
+
         {/* Map */}
         {canRenderMap && !isLoading && !error && stations.length > 0 && (
           <div className="mb-3">
@@ -68,6 +118,7 @@ export function StationSelector({
                 stations={stations}
                 selectedStation={selectedStation}
                 onSelectStation={onSelectStation}
+                referencePoint={referencePoint}
               />
             </Suspense>
           </div>

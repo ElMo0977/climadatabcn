@@ -22,7 +22,12 @@
       "Bash(npm run:*)",
       "Bash(npx eslint:*)",
       "Bash(npm list:*)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\(''''hooks'''', {}\\), indent=2\\)\\)\")",
+      "Bash(git stash:*)",
+      "Bash(git commit:*)",
+      "Bash(gga run:*)",
+      "Bash(find /Users/pablor/Documents/GitHub/climadatabcn -name .gga* -o -name gga*cache*)"
     ]
   }
 }

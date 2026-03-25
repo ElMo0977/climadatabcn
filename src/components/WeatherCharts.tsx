@@ -83,6 +83,21 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
     [formatObservationLabel, observations],
   );
 
+  // Vertical grid lines at day boundaries (only needed for 30min — one line per calendar day)
+  const dayBoundaryLabels = useMemo((): string[] => {
+    if (granularity !== '30min' || observations.length === 0) return [];
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const obs of observations) {
+      const dayKey = obs.timestamp.slice(0, 10);
+      if (!seen.has(dayKey)) {
+        seen.add(dayKey);
+        result.push(formatObservationLabel(obs.timestamp));
+      }
+    }
+    return result;
+  }, [granularity, observations, formatObservationLabel]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -116,7 +131,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={granularity === 'daily'} />
               <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} interval="preserveStartEnd" />
               <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} unit={chart.unit} width={50} />
               <Tooltip
@@ -125,6 +140,9 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
                 formatter={(value: number | null) => [value !== null ? `${value}${chart.unit}` : 'Sin datos', chart.title]}
               />
               <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={LINE_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
+              {dayBoundaryLabels.map((lbl) => (
+                <ReferenceLine key={lbl} x={lbl} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+              ))}
               {chartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
             </LineChart>
           </ResponsiveContainer>
@@ -139,7 +157,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={windChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={granularity === 'daily'} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} interval="preserveStartEnd" />
             <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} unit="m/s" width={50} />
             <Tooltip
@@ -154,6 +172,9 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             <Line type="monotone" name="Racha máx." dataKey="windMax" stroke="hsl(160 55% 30%)" strokeWidth={WIND_GUST_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
             <Line type="monotone" name="Viento media" dataKey="windAvg" stroke="hsl(var(--chart-wind))" strokeWidth={LINE_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
             <ReferenceLine y={WIND_THRESHOLD} stroke="hsl(25 95% 50%)" strokeDasharray="5 5" strokeWidth={LINE_STROKE_WIDTH} />
+            {dayBoundaryLabels.map((lbl) => (
+              <ReferenceLine key={lbl} x={lbl} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+            ))}
             {windChartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
           </LineChart>
         </ResponsiveContainer>
@@ -183,7 +204,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={granularity === 'daily'} />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} interval="preserveStartEnd" />
             <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={{ stroke: 'hsl(var(--border))' }} unit="mm" width={50} />
             <Tooltip
@@ -192,6 +213,9 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
               formatter={(value: number | null) => [value !== null ? `${value} mm` : 'Sin datos', 'Precipitación']}
             />
             <Bar dataKey="precipitation" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            {dayBoundaryLabels.map((lbl) => (
+              <ReferenceLine key={lbl} x={lbl} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+            ))}
             {chartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
           </BarChart>
         </ResponsiveContainer>

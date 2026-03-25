@@ -1,6 +1,6 @@
 import type { Cell, Fill } from 'exceljs';
 import type { Observation, DateRange, Granularity } from '@/types/weather';
-import { downloadFileBuffer } from '@/lib/weatherUtils';
+import { downloadFileBuffer } from './weatherUtils';
 
 const WIND_LIMIT_ACOUSTIC = 5;
 const HEADER_FILL: Fill = {
@@ -105,10 +105,11 @@ export interface ExcelExportOptions {
   dateRange: DateRange;
   activeGranularity: Granularity;
   timezoneLabel?: string;
+  referencePointLabel?: string;
 }
 
 /**
- * Build and download Excel with two sheets:
+ * Build and download Excel with three sheets:
  * - "Contexto": export metadata
  * - "30min": raw 30-min observations
  * - "Diario": daily observations
@@ -122,6 +123,7 @@ export async function buildAndDownloadExcel({
   dateRange,
   activeGranularity,
   timezoneLabel = 'Europe/Madrid',
+  referencePointLabel,
 }: ExcelExportOptions): Promise<void> {
   const { Workbook } = await import('exceljs');
   const workbook = new Workbook();
@@ -141,6 +143,7 @@ export async function buildAndDownloadExcel({
     { field: 'Vista activa', value: activeGranularity === 'daily' ? 'Diario' : 'Datos 30 min' },
     { field: 'Generado', value: formatLocalGeneratedAt(generatedAt) },
     { field: 'Zona horaria', value: timezoneLabel },
+    { field: 'Punto de referencia', value: referencePointLabel ?? 'Barcelona' },
     { field: 'Datos diarios', value: 'Calculados desde observaciones de 30 min' },
   ].forEach((row) => contextSheet.addRow(row));
 

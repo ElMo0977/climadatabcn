@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { StationSelector } from '@/components/StationSelector';
 import { DateRangePicker } from '@/components/DateRangePicker';
@@ -8,7 +9,6 @@ import { WeatherKPIs } from '@/components/WeatherKPIs';
 import { DataTable } from '@/components/DataTable';
 import { DownloadButtons } from '@/components/DownloadButtons';
 import { CoverageAlerts } from '@/components/CoverageAlerts';
-import { AlertCircle, Loader2 } from 'lucide-react';
 import { useWeatherDashboard } from '@/hooks/useWeatherDashboard';
 
 const LazyWeatherCharts = lazy(async () => {
@@ -45,6 +45,10 @@ const Index = () => {
     handleRefresh,
     handleExportExcel,
     isRefreshing,
+    referencePoint,
+    isGeocodingReference,
+    referenceGeoError,
+    searchReferenceAddress,
   } = useWeatherDashboard();
 
   return (
@@ -61,6 +65,10 @@ const Index = () => {
               isLoading={stationsLoading}
               error={stationsError}
               warning={stationsWarning}
+              referencePoint={referencePoint}
+              onReferenceAddressSearch={searchReferenceAddress}
+              isGeocodingReference={isGeocodingReference}
+              referenceGeoError={referenceGeoError}
             />
           </aside>
 
@@ -96,7 +104,7 @@ const Index = () => {
                   <div>
                     <h2 className="font-display font-semibold text-lg">{selectedStation.name}</h2>
                     <p className="text-sm text-muted-foreground">
-                      {selectedStation.distance} km desde Barcelona
+                      {selectedStation.distance} km desde {referencePoint?.label ?? 'Barcelona'}
                       {selectedStation.elevation != null && ` · ${selectedStation.elevation} m altitud`}
                     </p>
                     {dataSourceLabel && (
