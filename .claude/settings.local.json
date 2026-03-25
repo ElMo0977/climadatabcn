@@ -28,7 +28,24 @@
       "Bash(git commit:*)",
       "Bash(gga run:*)",
       "Bash(find /Users/pablor/Documents/GitHub/climadatabcn -name .gga* -o -name gga*cache*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(jq -e '.hooks.PostToolUse[] | select\\(.matcher == \"\"Bash\"\"\\) | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' /Users/pablor/Documents/GitHub/climadatabcn/.claude/settings.local.json)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport sys,json\nd=json.load(sys.stdin)\ncmd=d.get('tool_input',{}).get('command','')\nif 'git commit' in cmd:\n    print(json.dumps({'hookSpecificOutput':{'hookEventName':'PostToolUse','additionalContext':'[ENGRAM] Commit detectado. Guardá los cambios y decisiones relevantes con mem_save antes de continuar.'}}))\n\"",
+            "statusMessage": "Verificando si hay que guardar en engram..."
+          }
+        ]
+      }
     ]
   }
 }
