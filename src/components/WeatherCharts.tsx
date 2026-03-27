@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Brush, BarChart, Bar, ReferenceLine,
 } from 'recharts';
-import { Thermometer, Droplets, Wind, CloudRain } from 'lucide-react';
+import { Thermometer, Droplets, Wind, CloudRain, Download } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
 import { aggregateWindByBucket, formatShortDate, formatDayKey } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { exportChartAsPng, exportChartAsPdf } from '@/lib/exportChart';
 
 interface WeatherChartsProps {
   observations: Observation[];
@@ -60,7 +61,70 @@ const WIND_LEGEND_ITEMS = [
   },
 ] as const;
 
+function ChartExportMenu({ chartRef, title }: { chartRef: RefObject<HTMLDivElement>; title: string }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [open]);
+
+  const slug = title.toLowerCase().replace(/\s+/g, '-');
+
+  const run = async (fn: (el: HTMLElement, name: string) => Promise<void>) => {
+    if (!chartRef.current || busy) return;
+    setBusy(true);
+    setOpen(false);
+    try {
+      await fn(chartRef.current, `grafico-${slug}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        disabled={busy}
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+        title="Descargar gráfico"
+      >
+        <Download className="h-3.5 w-3.5" />
+      </button>
+      {open && (
+        <div ref={menuRef} onClick={(e) => e.stopPropagation()} className="absolute right-0 top-5 z-10 min-w-[110px] rounded-md border border-border bg-card shadow-md text-xs overflow-hidden">
+          <button
+            type="button"
+            className="block w-full px-3 py-2 text-left hover:bg-muted"
+            onClick={() => void run(exportChartAsPng)}
+          >
+            PNG
+          </button>
+          <button
+            type="button"
+            className="block w-full px-3 py-2 text-left hover:bg-muted"
+            onClick={() => void run(exportChartAsPdf)}
+          >
+            PDF
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WeatherCharts({ observations, granularity, isLoading, dataSourceLabel }: WeatherChartsProps) {
+  const tempRef = useRef<HTMLDivElement>(null);
+  const humRef = useRef<HTMLDivElement>(null);
+  const windRef = useRef<HTMLDivElement>(null);
+  const rainRef = useRef<HTMLDivElement>(null);
+
   const formatObservationLabel = granularity === 'daily' ? formatDayKey : formatShortDate;
 
   const chartData = useMemo(
@@ -123,11 +187,16 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
     <div className="space-y-4">
       {dataSourceLabel && <p className="text-xs text-muted-foreground">{dataSourceLabel}</p>}
 
-      {LINE_CHARTS.map((chart, index) => (
-        <div key={chart.dataKey} className="chart-container animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
-          <div className="flex items-center gap-2 mb-4">
-            <chart.icon className={`h-5 w-5 ${chart.colorClass}`} />
-            <h4 className="font-display font-semibold text-sm">{chart.title}</h4>
+      {LINE_CHARTS.map((chart, index) => {
+        const ref = index === 0 ? tempRef : humRef;
+        return (
+        <div key={chart.dataKey} ref={ref} className="chart-container animate-slide-up" style={{ animationDelay: `${index * 100}ms` }}>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <chart.icon className={`h-5 w-5 ${chart.colorClass}`} />
+              <h4 className="font-display font-semibold text-sm">{chart.title}</h4>
+            </div>
+            <ChartExportMenu chartRef={ref} title={chart.title} />
           </div>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -147,13 +216,17 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             </LineChart>
           </ResponsiveContainer>
         </div>
-      ))}
+        );
+      })}
 
       {/* Wind Chart */}
-      <div className="chart-container animate-slide-up" style={{ animationDelay: `${LINE_CHARTS.length * 100}ms` }}>
-        <div className="flex items-center gap-2 mb-4">
-          <Wind className="h-5 w-5 text-wind" />
-          <h4 className="font-display font-semibold text-sm">Velocidad del viento</h4>
+      <div ref={windRef} className="chart-container animate-slide-up" style={{ animationDelay: `${LINE_CHARTS.length * 100}ms` }}>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <Wind className="h-5 w-5 text-wind" />
+            <h4 className="font-display font-semibold text-sm">Velocidad del viento</h4>
+          </div>
+          <ChartExportMenu chartRef={windRef} title="Velocidad del viento" />
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <LineChart data={windChartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
@@ -197,10 +270,13 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
       </div>
 
       {/* Precipitation */}
-      <div className="chart-container animate-slide-up" style={{ animationDelay: `${(LINE_CHARTS.length + 1) * 100}ms` }}>
-        <div className="flex items-center gap-2 mb-4">
-          <CloudRain className="h-5 w-5 text-primary" />
-          <h4 className="font-display font-semibold text-sm">Precipitación</h4>
+      <div ref={rainRef} className="chart-container animate-slide-up" style={{ animationDelay: `${(LINE_CHARTS.length + 1) * 100}ms` }}>
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="flex items-center gap-2">
+            <CloudRain className="h-5 w-5 text-primary" />
+            <h4 className="font-display font-semibold text-sm">Precipitación</h4>
+          </div>
+          <ChartExportMenu chartRef={rainRef} title="Precipitacion" />
         </div>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>

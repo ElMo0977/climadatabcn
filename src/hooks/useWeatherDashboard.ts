@@ -44,6 +44,14 @@ function parseGranularityParam(value: string | null): Granularity {
   return value === 'daily' ? 'daily' : '30min';
 }
 
+/** Parses a "HH:mm" time param (only 30-min slots: mm must be "00" or "30"). */
+function parseTimeParam(value: string | null): string | null {
+  if (!value || !/^\d{2}:\d{2}$/.test(value)) return null;
+  const [hh, mm] = value.split(':').map(Number);
+  if (hh < 0 || hh > 23 || (mm !== 0 && mm !== 30)) return null;
+  return value;
+}
+
 function formatDayParam(date: Date): string {
   return format(date, 'yyyy-MM-dd');
 }
@@ -110,14 +118,26 @@ export function useWeatherDashboard() {
     [stationIdFromUrl, stationsWithDistance],
   );
 
+  const fromTime = parseTimeParam(searchParams.get('timeFrom'));
+  const toTime = parseTimeParam(searchParams.get('timeTo'));
+
   const {
-    data: observations = [],
+    data: rawObservations = [],
     dataSourceLabel,
     isLoading: observationsLoading,
     error: observationsError,
     refetch: refetchObservations,
     isFetching: observationsFetching,
   } = useObservations({ station: selectedStation, dateRange, granularity });
+
+  // For charts, KPIs, and table: filter by time range when in 30min mode
+  const observations = useMemo(() => {
+    if (granularity !== '30min' || !fromTime || !toTime) return rawObservations;
+    return rawObservations.filter((obs) => {
+      const timeStr = obs.timestamp.slice(11, 16); // "HH:mm"
+      return timeStr >= fromTime && timeStr <= toTime;
+    });
+  }, [rawObservations, granularity, fromTime, toTime]);
 
   const otherGranularity: Granularity = granularity === '30min' ? 'daily' : '30min';
   const { refetch: refetchOtherObservations } = useObservations({
@@ -132,6 +152,10 @@ export function useWeatherDashboard() {
     nextSearchParams.set('from', formatDayParam(dateRange.from));
     nextSearchParams.set('to', formatDayParam(dateRange.to));
     nextSearchParams.set('granularity', granularity);
+    if (granularity === 'daily') {
+      nextSearchParams.delete('timeFrom');
+      nextSearchParams.delete('timeTo');
+    }
 
     if (nextSearchParams.toString() !== searchParams.toString()) {
       setSearchParams(nextSearchParams, { replace: true });
@@ -145,13 +169,13 @@ export function useWeatherDashboard() {
 
   const dailyCoverage = useMemo(() => {
     if (granularity !== 'daily') return null;
-    return computeDailyCoverage(dateRange, observations);
-  }, [dateRange, granularity, observations]);
+    return computeDailyCoverage(dateRange, rawObservations);
+  }, [dateRange, granularity, rawObservations]);
 
   const subdailyCoverage = useMemo(() => {
     if (granularity !== '30min') return null;
-    return computeSubdailyCoverage(dateRange, observations);
-  }, [dateRange, granularity, observations]);
+    return computeSubdailyCoverage(dateRange, rawObservations);
+  }, [dateRange, granularity, rawObservations]);
 
   const missingDaysText = useMemo(() => {
     if (!dailyCoverage || dailyCoverage.missingCount === 0) return '';
@@ -276,6 +300,10 @@ export function useWeatherDashboard() {
     nextSearchParams.set('from', formatDayParam(dateRange.from));
     nextSearchParams.set('to', formatDayParam(dateRange.to));
     nextSearchParams.set('granularity', nextGranularity);
+    if (nextGranularity === 'daily') {
+      nextSearchParams.delete('timeFrom');
+      nextSearchParams.delete('timeTo');
+    }
     if (selectedStation?.id) {
       nextSearchParams.set('station', selectedStation.id);
     } else {
@@ -284,11 +312,26 @@ export function useWeatherDashboard() {
     setSearchParams(nextSearchParams);
   };
 
+  const setTimeRange = (nextFromTime: string | null, nextToTime: string | null) => {
+    const nextSearchParams = new URLSearchParams(searchParams);
+    if (nextFromTime && nextFromTime !== '00:00') {
+      nextSearchParams.set('timeFrom', nextFromTime);
+    } else {
+      nextSearchParams.delete('timeFrom');
+    }
+    if (nextToTime && nextToTime !== '23:30') {
+      nextSearchParams.set('timeTo', nextToTime);
+    } else {
+      nextSearchParams.delete('timeTo');
+    }
+    setSearchParams(nextSearchParams);
+  };
+
   const { handleExportExcel } = useExcelExport({
     station: selectedStation,
     dateRange,
     granularity,
-    observations,
+    observations: rawObservations,
     dataSourceLabel,
     isLoading: observationsLoading,
     isFetching: observationsFetching,
@@ -304,6 +347,9 @@ export function useWeatherDashboard() {
     setDateRange,
     granularity,
     setGranularity,
+    fromTime,
+    toTime,
+    setTimeRange,
     stations: stationsWithDistance,
     referencePoint,
     isGeocodingReference,

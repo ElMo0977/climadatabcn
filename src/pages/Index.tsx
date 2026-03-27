@@ -24,6 +24,9 @@ const Index = () => {
     setDateRange,
     granularity,
     setGranularity,
+    fromTime,
+    toTime,
+    setTimeRange,
     stations,
     metadataSource,
     stationsWarning,
@@ -79,6 +82,9 @@ const Index = () => {
                 onDateRangeChange={setDateRange}
                 granularity={granularity}
                 onGranularityChange={setGranularity}
+                fromTime={fromTime}
+                toTime={toTime}
+                onTimeRangeChange={setTimeRange}
               />
               <DownloadButtons
                 onDownloadExcel={handleExportExcel}

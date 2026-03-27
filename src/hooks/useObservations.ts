@@ -10,6 +10,7 @@ import {
 import { buildDataSourceLabel } from '@/config/sources';
 import { logDataDebug } from '@/lib/dataDebug';
 import { getObservations as getObservationsXema } from '@/services/providers/xemaTransparencia';
+import { aggregate30minToDaily } from '@/lib/weatherUtils';
 
 interface UseObservationsParams {
   station: Station | null;
@@ -101,14 +102,16 @@ export function useObservations({
         });
       }
 
-      const xemaGranularity = granularity === 'daily' ? 'day' : '30min';
-      const data = await getObservationsXema({
+      // Always fetch 30-min data. The daily API has a ~2-day lag; aggregating
+      // from 30-min gives complete and up-to-date daily data (same strategy as Excel export).
+      const raw = await getObservationsXema({
         stationId: station.id,
         from: dateRange.from,
         to: dateRange.to,
-        granularity: xemaGranularity,
+        granularity: '30min',
         signal,
       });
+      const data = granularity === 'daily' ? aggregate30minToDaily(raw) : raw;
       const dataSourceLabel = buildDataSourceLabel(source, stationName);
       const withLabel = data.map((obs) => ({ ...obs, dataSourceLabel }));
       logDataDebug(
@@ -118,7 +121,7 @@ export function useObservations({
           from: fromStr,
           to: toStr,
           granularity,
-          agg: xemaGranularity === 'day' ? 'daily' : 'hourly',
+          agg: granularity === 'daily' ? 'daily-from-30min' : 'subdaily',
           provider: 'xema-transparencia',
         },
         withLabel,
