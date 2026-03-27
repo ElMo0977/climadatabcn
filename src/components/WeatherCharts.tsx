@@ -90,7 +90,7 @@ function ChartExportMenu({ chartRef, title }: { chartRef: RefObject<HTMLDivEleme
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
         disabled={busy}
         className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
         title="Descargar gráfico"
