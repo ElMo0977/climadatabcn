@@ -31,7 +31,10 @@
       "Bash(git add:*)",
       "Skill(update-config)",
       "Skill(update-config:*)",
-      "Bash(jq -e '.hooks.PostToolUse[] | select\\(.matcher == \"\"Bash\"\"\\) | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' /Users/pablor/Documents/GitHub/climadatabcn/.claude/settings.local.json)"
+      "Bash(jq -e '.hooks.PostToolUse[] | select\\(.matcher == \"\"Bash\"\"\\) | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' /Users/pablor/Documents/GitHub/climadatabcn/.claude/settings.local.json)",
+      "Bash(npm install:*)",
+      "Bash(ls /Users/pablor/Documents/GitHub/climadatabcn/node_modules/jspdf/dist/*.d.ts)",
+      "Bash(wait)"
     ]
   },
   "hooks": {
