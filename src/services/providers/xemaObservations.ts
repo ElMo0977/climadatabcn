@@ -1,4 +1,11 @@
-import { ProviderError, type Observation } from '@/types/weather';
+import {
+  ProviderError,
+  type Observation,
+  type ObservationVariable,
+  type ObservationVariableMetadata,
+  type XemaTemporalBase,
+  type XemaValidationStatus,
+} from '@/types/weather';
 import { DAY_KEY_RE, toLocalDayKey } from '@/lib/dateKeys';
 import { DAILY_CODES, SUBDAILY_CODES } from './xemaVariableMap';
 import { fetchSocrataAll } from '@/services/http/socrata';
@@ -32,6 +39,7 @@ interface SubdailyRow {
   codi_variable: string;
   valor_lectura?: string;
   codi_estat?: string;
+  codi_base?: string;
 }
 
 interface SubdailyGustRow {
@@ -85,7 +93,7 @@ export async function getObservations(params: {
     `AND codi_variable in ('${SUBDAILY_VARIABLE_CODES.join("','")}')`;
 
   const rows = await fetchSocrataAll<SubdailyRow>('nzvn-apee', {
-    $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat',
+    $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat,codi_base',
     $where: subdailyWhere,
     $limit: 50000,
   }, { signal: params.signal });
@@ -209,6 +217,33 @@ function sortCountMap(input: Record<string, number>): Record<string, number> {
     }, {});
 }
 
+function getValidationStatus(code: string | undefined): XemaValidationStatus {
+  if (code === undefined) return 'unreported';
+  if (code === '') return 'not-started';
+  if (code === 'V') return 'valid';
+  if (code === 'T') return 'pending';
+  return 'unknown';
+}
+
+function getTemporalBase(code: string | undefined): XemaTemporalBase {
+  if (code === undefined) return 'unreported';
+  if (code === '') return 'unspecified';
+  if (code === 'HO') return 'hourly';
+  if (code === 'SH') return 'half-hourly';
+  return 'unknown';
+}
+
+function mapVariableMetadata(row: SubdailyRow): ObservationVariableMetadata {
+  const validationCode = row.codi_estat?.trim();
+  const temporalBaseCode = row.codi_base?.trim();
+  return {
+    validationStatus: getValidationStatus(validationCode),
+    temporalBase: getTemporalBase(temporalBaseCode),
+    ...(validationCode !== undefined && { validationCode }),
+    ...(temporalBaseCode !== undefined && { temporalBaseCode }),
+  };
+}
+
 export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[] {
   const byTimestamp: Record<string, Observation> = {};
 
@@ -229,18 +264,18 @@ export function mapSubdailyRowsToObservations(rows: SubdailyRow[]): Observation[
     const parsedValue = parseNumericOrNull(row);
     const base = byTimestamp[ts];
 
-    if (row.codi_variable === SUBDAILY_CODES.T) {
-      base.temperature = parsedValue;
-    } else if (row.codi_variable === SUBDAILY_CODES.HR) {
-      base.humidity = parsedValue;
-    } else if (row.codi_variable === SUBDAILY_CODES.PPT) {
-      base.precipitation = parsedValue;
-    } else if (row.codi_variable === SUBDAILY_CODES.VV10) {
-      base.windSpeed = parsedValue;
-    } else if (row.codi_variable === SUBDAILY_CODES.DV10) {
-      base.windDirection = parsedValue;
-    } else if (row.codi_variable === SUBDAILY_CODES.VVx10) {
-      base.windSpeedMax = parsedValue;
+    let variable: ObservationVariable | undefined;
+    if (row.codi_variable === SUBDAILY_CODES.T) variable = 'temperature';
+    else if (row.codi_variable === SUBDAILY_CODES.HR) variable = 'humidity';
+    else if (row.codi_variable === SUBDAILY_CODES.PPT) variable = 'precipitation';
+    else if (row.codi_variable === SUBDAILY_CODES.VV10) variable = 'windSpeed';
+    else if (row.codi_variable === SUBDAILY_CODES.DV10) variable = 'windDirection';
+    else if (row.codi_variable === SUBDAILY_CODES.VVx10) variable = 'windSpeedMax';
+
+    if (variable) {
+      base[variable] = parsedValue;
+      base.variableMetadata ??= {};
+      base.variableMetadata[variable] = mapVariableMetadata(row);
     }
   });
 

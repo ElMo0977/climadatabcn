@@ -29,6 +29,7 @@ interface RawSubdailyValueRow {
   codi_variable: string;
   valor_lectura?: string;
   codi_estat?: string;
+  codi_base?: string;
 }
 
 interface RawSubdailyGustRow {
@@ -133,6 +134,69 @@ describe('mapDailyRowsToObservations', () => {
 });
 
 describe('mapSubdailyRowsToObservations', () => {
+  it('retains normalized validation and temporal-base metadata for every variable', () => {
+    const timestamp = '2024-01-05T10:00:00';
+    const variables = [
+      ['32', 'temperature', '13.5'],
+      ['33', 'humidity', '72'],
+      ['35', 'precipitation', '0.2'],
+      ['30', 'windSpeed', '3.1'],
+      ['31', 'windDirection', '290'],
+      ['50', 'windSpeedMax', '9.7'],
+    ] as const;
+    const result = mapSubdailyRowsToObservations(variables.map(([code, , value]) => ({
+      codi_estacio: 'X4',
+      data_lectura: timestamp,
+      codi_variable: code,
+      valor_lectura: value,
+      codi_estat: ' V ',
+      codi_base: ' SH ',
+    })));
+
+    expect(result).toHaveLength(1);
+    for (const [, field, value] of variables) {
+      expect(result[0][field]).toBe(Number(value));
+      expect(result[0].variableMetadata?.[field]).toEqual({
+        validationStatus: 'valid',
+        validationCode: 'V',
+        temporalBase: 'half-hourly',
+        temporalBaseCode: 'SH',
+      });
+    }
+    expect(result[0].timestamp).toBe(timestamp);
+  });
+
+  it('distinguishes blank, absent, pending, and unknown status codes', () => {
+    const result = mapSubdailyRowsToObservations([
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '32', valor_lectura: '1', codi_estat: '', codi_base: '' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '33', valor_lectura: '2' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '35', valor_lectura: '3', codi_estat: ' T ', codi_base: ' 30 ' },
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '30', valor_lectura: '4', codi_estat: 'Q' },
+    ]);
+
+    expect(result[0].variableMetadata).toMatchObject({
+      temperature: { validationStatus: 'not-started', validationCode: '', temporalBase: 'unspecified', temporalBaseCode: '' },
+      humidity: { validationStatus: 'unreported', temporalBase: 'unreported' },
+      precipitation: { validationStatus: 'pending', validationCode: 'T', temporalBase: 'unknown', temporalBaseCode: '30' },
+      windSpeed: { validationStatus: 'unknown', validationCode: 'Q', temporalBase: 'unreported' },
+    });
+    expect(result[0].variableMetadata?.humidity?.temporalBaseCode).toBeUndefined();
+    expect(result[0].variableMetadata?.humidity?.validationCode).toBeUndefined();
+    expect(result[0].variableMetadata?.windDirection).toBeUndefined();
+  });
+
+  it('normalizes HO separately from SH without changing the reading', () => {
+    const result = mapSubdailyRowsToObservations([
+      { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '32', valor_lectura: '7.5', codi_base: ' HO ' },
+    ]);
+
+    expect(result[0].temperature).toBe(7.5);
+    expect(result[0].variableMetadata?.temperature).toMatchObject({
+      temporalBase: 'hourly',
+      temporalBaseCode: 'HO',
+    });
+  });
+
   it('maps all configured subdaily variables by timestamp', () => {
     const result = mapSubdailyRowsToObservations([
       { codi_estacio: 'X4', data_lectura: '2024-01-05T10:00:00', codi_variable: '32', valor_lectura: '13.5' },
@@ -162,6 +226,8 @@ describe('mapSubdailyRowsToObservations', () => {
         data_lectura: '2024-01-05T11:00:00',
         codi_variable: '32',
         valor_lectura: '',
+        codi_estat: 'T',
+        codi_base: 'SH',
       },
       {
         codi_estacio: 'X4',
@@ -173,6 +239,12 @@ describe('mapSubdailyRowsToObservations', () => {
     expect(result).toHaveLength(1);
     expect(result[0].temperature).toBeNull();
     expect(result[0].humidity).toBeNull();
+    expect(result[0].variableMetadata?.temperature).toEqual({
+      validationStatus: 'pending',
+      validationCode: 'T',
+      temporalBase: 'half-hourly',
+      temporalBaseCode: 'SH',
+    });
   });
 });
 
@@ -282,7 +354,7 @@ describe('getObservations', () => {
       string,
       { $select?: string; $where?: string },
     ];
-    expect(query.$select).toBe('codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat');
+    expect(query.$select).toBe('codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat,codi_base');
     expect(query.$select).toContain('codi_estat');
     expect(query.$select).not.toContain(',valor,');
     expect(query.$select).not.toContain('valor,valor_lectura');

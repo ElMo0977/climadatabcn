@@ -35,9 +35,8 @@ La etiqueta visible para UI y exportacion se construye desde `src/config/sources
 ### Granularidad
 
 - La UI trabaja con `Granularity = '30min' | 'daily'`.
-- `useObservations()` traduce esa granularidad al contrato del provider:
-  - `30min -> '30min'`
-  - `daily -> 'day'`
+- `useObservations()` solicita siempre `30min` al provider. En la vista `daily`, agrega esas lecturas localmente para evitar el retraso del dataset diario oficial.
+- El provider conserva el contrato `day` para consultas directas, pero la vista diaria web no lo utiliza.
 
 Contrato del provider:
 
@@ -97,6 +96,9 @@ Comportamiento actual:
 - Se consulta `data_lectura` en el rango completo `fromDay 00:00:00 -> toDay 23:59:59`.
 - El mapping agrupa por timestamp exacto devuelto por Socrata.
 - La salida conserva detalle cada 30 minutos; no hay agregacion horaria intermedia en el codigo actual.
+- La consulta incluye `codi_estat` y `codi_base`. Cada variable disponible, incluida la direccion del viento, conserva `variableMetadata` con `validationStatus`, `validationCode`, `temporalBase` y `temporalBaseCode`. Los codigos se recortan de espacios; un codigo vacio se conserva como `''` y no se confunde con uno ausente.
+- `validationStatus` normaliza `V` a `valid`, `T` a `pending`, vacio a `not-started`, codigo inesperado a `unknown` y campo ausente a `unreported`. El codigo original recortado se conserva para diagnostico. Este estado no representa cobertura diaria ni altera el valor numerico.
+- `temporalBase` normaliza `HO` a `hourly`, `SH` a `half-hourly`, vacio a `unspecified`, codigo inesperado a `unknown` y campo ausente a `unreported`. `temporalBaseCode` retiene el codigo original recortado.
 
 ### Observaciones diarias: `7bvh-jvq2`
 
@@ -117,7 +119,7 @@ Ademas, hace una segunda consulta a `nzvn-apee` para `VVx10` y completa `windGus
 2. `useStations()` carga metadata de estaciones, anade `source: 'xema-transparencia'` y expone `metadataSource` / `warning`.
 3. `StationSelector` muestra el warning de modo degradado sin bloquear la seleccion de estaciones fallback.
 4. `useObservations()` construye la query key, valida que la fuente seleccionada sea XEMA y usa la `signal` de React Query.
-5. `getObservations()` devuelve `Observation[]`.
+5. `getObservations()` devuelve `Observation[]` con metadata por variable en las lecturas de 30 minutos.
 6. `useObservations()` anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
 7. `Index.tsx` compone el dashboard y carga `WeatherCharts` en diferido.
 8. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`, que genera `Contexto`, `30min` y `Diario`.
