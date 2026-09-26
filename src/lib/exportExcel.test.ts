@@ -174,4 +174,62 @@ describe('buildAndDownloadExcel', () => {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
   });
+
+  it('preserves existing columns and null cells for sparse daily and 30-min data', async () => {
+    await buildAndDownloadExcel({
+      obs30min: [{
+        timestamp: '2024-02-01T18:30:00',
+        temperature: null,
+        humidity: 70,
+        windSpeed: null,
+        windSpeedMax: 6.2,
+        windDirection: null,
+        precipitation: null,
+      }],
+      obsDaily: [{
+        timestamp: '2024-02-01',
+        temperature: null,
+        humidity: 70,
+        windSpeed: null,
+        windSpeedMax: 6.2,
+        windDirection: null,
+        precipitation: null,
+        windGustTime: '18:30',
+      }],
+      stationName: 'Estacion Test',
+      dateRange: {
+        from: new Date('2024-02-01T00:00:00'),
+        to: new Date('2024-02-01T23:59:59'),
+      },
+      activeGranularity: 'daily',
+    });
+
+    const [, halfHourly, daily] = workbookRegistry.workbooks[0].sheets;
+    expect(halfHourly.columns).toEqual([
+      expect.objectContaining({ header: 'FechaHoraLocal', key: 'ts' }),
+      expect.objectContaining({ header: 'T (°C)', key: 'temp' }),
+      expect.objectContaining({ header: 'HR (%)', key: 'hr' }),
+      expect.objectContaining({ header: 'PPT (mm)', key: 'ppt' }),
+      expect.objectContaining({ header: 'VV10 (m/s)', key: 'vv' }),
+      expect.objectContaining({ header: 'DV10 (°)', key: 'dv' }),
+      expect.objectContaining({ header: 'VVx10 (m/s)', key: 'vvx' }),
+    ]);
+    expect(daily.columns).toEqual([
+      expect.objectContaining({ header: 'Fecha', key: 'date' }),
+      expect.objectContaining({ header: 'TM (°C)', key: 'tm' }),
+      expect.objectContaining({ header: 'HRM (%)', key: 'hrm' }),
+      expect.objectContaining({ header: 'PPT (mm)', key: 'ppt' }),
+      expect.objectContaining({ header: 'VVM10 (m/s)', key: 'vvm' }),
+      expect.objectContaining({ header: 'VVX10 (m/s)', key: 'vvx' }),
+      expect.objectContaining({ header: 'HoraVVX10 (local)', key: 'vvxTime' }),
+    ]);
+    expect(halfHourly.rows[0].values).toEqual({
+      ts: '01/02/2024 18:30', temp: null, hr: 70, ppt: null,
+      vv: null, dv: null, vvx: 6.2,
+    });
+    expect(daily.rows[0].values).toEqual({
+      date: '01/02/2024', tm: null, hrm: 70, ppt: null,
+      vvm: null, vvx: 6.2, vvxTime: '18:30',
+    });
+  });
 });
