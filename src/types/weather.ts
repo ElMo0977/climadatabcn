@@ -20,6 +20,38 @@ export interface Station {
   source?: DataSource;
 }
 
+export type ObservationVariable =
+  | 'temperature'
+  | 'humidity'
+  | 'precipitation'
+  | 'windSpeed'
+  | 'windDirection'
+  | 'windSpeedMax';
+
+/** Validation is distinct from the presence or coverage of a reading. */
+export type XemaValidationStatus =
+  | 'valid'
+  | 'pending'
+  | 'not-started'
+  | 'unknown'
+  | 'unreported';
+
+export type XemaTemporalBase =
+  | 'hourly'
+  | 'half-hourly'
+  | 'unspecified'
+  | 'unknown'
+  | 'unreported';
+
+export interface ObservationVariableMetadata {
+  validationStatus: XemaValidationStatus;
+  temporalBase: XemaTemporalBase;
+  /** Trimmed XEMA code; an empty string is distinct from an omitted code. */
+  validationCode?: string;
+  /** Trimmed XEMA temporal-base code; an empty string is distinct from an omitted code. */
+  temporalBaseCode?: string;
+}
+
 export interface Observation {
   timestamp: string; // ISO 8601
   temperature: number | null;
@@ -34,6 +66,8 @@ export interface Observation {
   windGustTime?: string | null;
   /** Etiqueta para mostrar: "Fuente: X - Estación: Y" */
   dataSourceLabel?: string;
+  /** Provider metadata keyed by the corresponding measured variable. */
+  variableMetadata?: Partial<Record<ObservationVariable, ObservationVariableMetadata>>;
 }
 
 export type Granularity = '30min' | 'daily';
