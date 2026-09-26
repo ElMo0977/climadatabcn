@@ -83,16 +83,25 @@ describe('useObservations', () => {
     mockLogDataDebug.mockReset();
   });
 
-  it('maps daily granularity to day and forwards an abort signal', async () => {
+  it('requests 30-min observations and aggregates them for the daily view', async () => {
     const observations: Observation[] = [
       {
-        timestamp: '2024-02-01',
+        timestamp: '2024-02-01T10:00:00',
         temperature: 12,
         humidity: 60,
         windSpeed: 2.1,
         windSpeedMax: 4.2,
         windDirection: null,
         precipitation: 0.3,
+      },
+      {
+        timestamp: '2024-02-01T10:30:00',
+        temperature: 14,
+        humidity: 70,
+        windSpeed: 3.1,
+        windSpeedMax: 5.2,
+        windDirection: null,
+        precipitation: 0.2,
       },
     ];
     let capturedSignal: AbortSignal | undefined;
@@ -117,11 +126,22 @@ describe('useObservations', () => {
     expect(mockGetObservations).toHaveBeenCalledWith(
       expect.objectContaining({
         stationId: 'X4',
-        granularity: 'day',
+        granularity: '30min',
         signal: expect.any(AbortSignal),
       }),
     );
     expect(capturedSignal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual([
+      expect.objectContaining({
+        timestamp: '2024-02-01',
+        temperature: 13,
+        humidity: 65,
+        windSpeed: 2.6,
+        windSpeedMax: 5.2,
+        windGustTime: '10:30',
+        precipitation: 0.5,
+      }),
+    ]);
     expect(result.current.dataSourceLabel).toContain(TEST_STATION.name);
     expect(mockLogDataDebug).toHaveBeenCalledTimes(1);
   });

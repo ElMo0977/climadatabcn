@@ -162,4 +162,73 @@ describe('useExcelExport', () => {
       }),
     );
   });
+
+  it.each(['30min', 'daily'] as const)(
+    'keeps sparse readings in both Excel sheets when viewing %s',
+    async (granularity) => {
+      const sparseReadings: Observation[] = [
+        {
+          timestamp: '2024-02-01T10:00:00',
+          temperature: 12,
+          humidity: null,
+          windSpeed: null,
+          windSpeedMax: null,
+          windDirection: null,
+          precipitation: 0.2,
+        },
+        {
+          timestamp: '2024-02-01T18:30:00',
+          temperature: null,
+          humidity: 70,
+          windSpeed: 3.2,
+          windSpeedMax: 6.2,
+          windDirection: 180,
+          precipitation: null,
+        },
+      ];
+      const refetchOther = vi.fn().mockResolvedValue({
+        data: { data: sparseReadings, dataSourceLabel: 'Fuente: XEMA - Estación: Test' },
+        error: null,
+      });
+
+      const { result } = renderHook(() =>
+        useExcelExport({
+          station: TEST_STATION,
+          dateRange: {
+            from: new Date('2024-02-01T00:00:00'),
+            to: new Date('2024-02-01T23:59:59'),
+          },
+          granularity,
+          observations: granularity === '30min' ? sparseReadings : [],
+          dataSourceLabel: 'Fuente: XEMA - Estación: Test',
+          isLoading: false,
+          isFetching: false,
+          refetchObservations: vi.fn(),
+          refetchOtherObservations: refetchOther,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.handleExportExcel();
+      });
+
+      expect(refetchOther).toHaveBeenCalledTimes(granularity === 'daily' ? 1 : 0);
+      expect(mockBuildAndDownloadExcel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          obs30min: sparseReadings,
+          obsDaily: [{
+            timestamp: '2024-02-01',
+            temperature: 12,
+            humidity: 70,
+            precipitation: 0.2,
+            windSpeed: 3.2,
+            windSpeedMax: 6.2,
+            windGustTime: '18:30',
+            windDirection: null,
+          }],
+          activeGranularity: granularity,
+        }),
+      );
+    },
+  );
 });
