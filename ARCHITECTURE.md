@@ -53,14 +53,14 @@ src/
 1. `Index.tsx` se mantiene como capa de composicion y delega estado de pantalla y datos derivados en `useWeatherDashboard()`.
 2. `useWeatherDashboard()` usa los search params (`station`, `from`, `to`, `granularity`) como estado navegable del dashboard y expone setters compatibles con la UI.
 3. `useStations()` intenta leer estaciones activas desde `yqwd-vj5e` y, si falla o no hay metadata util, cae al fallback estatico definido en `xemaStations.ts`, marcando modo degradado visible.
-4. `useObservations()` traduce la granularidad de UI a contrato de provider (`daily -> day`, `30min -> 30min`), usa la cancelacion de React Query y llama a `getObservations()` desde `xemaTransparencia.ts`.
+4. `useObservations()` mantiene dos rutas sobre lecturas XEMA de 30 minutos: `30min` usa `getObservations()` sin cambios; `daily` usa `getWebDailyReadings()` con un rango UTC ampliado para cubrir los limites del dia en `Europe/Madrid`. Ambas propagan la cancelacion de React Query. La vista web no depende del dataset diario oficial.
 5. `src/lib/dateKeys.ts` y `src/lib/stationGeo.ts` concentran reglas puras de day keys y proximidad de estaciones para no mezclarlas en hooks o providers.
 6. `xemaObservations.ts` consulta Socrata:
-   - `7bvh-jvq2` para el agregado diario
-   - `nzvn-apee` para detalle 30 min y para completar `windGustTime` diario
-7. `src/lib/` calcula estadisticas (`weatherUtils.ts`), cobertura (`dailyCoverage.ts`, `subdailyCoverage.ts`) y exportacion (`exportExcel.ts`).
+   - `nzvn-apee` para detalle 30 min y para la agregacion diaria web. Esta ultima consulta comienza en la fecha UTC anterior al primer dia seleccionado y termina al final de la fecha UTC del ultimo dia; los dias adicionales no se muestran.
+   - `7bvh-jvq2` conserva el contrato de consulta diaria directa; `nzvn-apee` completa su `windGustTime`.
+7. `src/lib/` calcula estadisticas (`weatherUtils.ts`), cobertura (`dailyCoverage.ts`, `subdailyCoverage.ts`), calidad diaria por variable (`dailyQuality.ts`) y agregacion diaria web por franjas locales (`webDailyObservations.ts`). Solo valores diarios con calidad completa o parcial entran en las estadisticas meteorologicas de la vista diaria; validacion XEMA y cobertura son estados distintos.
 8. `WeatherCharts` se carga en diferido desde la ruta principal y `StationMap` actualiza marcadores sin reconstruirlos completos al cambiar la seleccion.
-9. `useExcelExport()` recupera ambas granularidades bajo demanda y genera un `.xlsx` con hoja `Contexto` y detalle `30min` / `Diario`.
+9. `useExcelExport()` sigue consultando la ruta `30min` existente y usando `aggregate30minToDaily()` para generar el `.xlsx` con hojas `Contexto`, `30min` y `Diario`; no utiliza la agregacion ni la calidad diaria web.
 
 ## Modulos clave
 
@@ -68,7 +68,9 @@ src/
 |--------|-----------------|
 | `src/services/providers/xemaTransparencia.ts` | Fachada del dominio XEMA y punto de entrada para estaciones y observaciones |
 | `src/services/providers/xemaStations.ts` | Estaciones activas via Socrata, `metadataSource`, `warning` y fallback estatico |
-| `src/services/providers/xemaObservations.ts` | Queries daily y 30 min, validacion de parametros y mapping a `Observation[]` |
+| `src/services/providers/xemaObservations.ts` | Queries daily y 30 min, consulta diaria web ampliada en UTC, validacion de parametros y mapping a `Observation[]` |
+| `src/lib/dailyQuality.ts` | Calidad y cobertura diaria por variable en franjas de `Europe/Madrid` |
+| `src/lib/webDailyObservations.ts` | Valores diarios web, tratamiento conservador de lecturas HO ambiguas y estadisticas filtradas por calidad |
 | `src/services/http/socrata.ts` | Cliente SODA con paginacion por offset |
 | `src/services/http/fetchJson.ts` | Fetch con timeout configurable, cancelacion cooperativa y errores tipados |
 | `src/hooks/useWeatherDashboard.ts` | View-model de la pagina principal y punto de coordinacion del dashboard |

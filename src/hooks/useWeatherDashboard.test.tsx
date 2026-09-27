@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Observation, Station } from '@/types/weather';
+import { assessDailyQuality } from '@/lib/dailyQuality';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
 import { useExcelExport } from '@/hooks/useExcelExport';
@@ -82,6 +83,9 @@ function DashboardHarness() {
       <div>to:{format(dashboard.dateRange.to, 'yyyy-MM-dd')}</div>
       <div>metadata:{dashboard.metadataSource ?? 'none'}</div>
       <div>updated:{dashboard.lastUpdatedAt ? 'yes' : 'no'}</div>
+      <div>avg-temp:{dashboard.stats?.avgTemperature ?? 'none'}</div>
+      <div>avg-humidity:{dashboard.stats?.avgHumidity ?? 'none'}</div>
+      <div>quality-days:{Object.keys(dashboard.dailyQualityByDay ?? {}).length}</div>
       <button onClick={() => dashboard.setSelectedStation(STATIONS[1])}>select-wu</button>
       <button onClick={() => dashboard.setGranularity('daily')}>set-daily</button>
       <button onClick={() => dashboard.setGranularity('30min')}>set-30min</button>
@@ -179,6 +183,35 @@ describe('useWeatherDashboard', () => {
       expect(window.location.search).toBe(searchAfterStation);
       expect(screen.getByText('selected:WU')).toBeInTheDocument();
       expect(screen.getByText('granularity:30min')).toBeInTheDocument();
+    });
+  });
+
+  it('uses daily quality for variable-specific dashboard stats without changing 30min stats', async () => {
+    const first = { ...TEST_OBSERVATION, timestamp: '2024-02-01', temperature: 10, humidity: 60 };
+    const second = { ...TEST_OBSERVATION, timestamp: '2024-02-02', temperature: 20, humidity: 90 };
+    const firstQuality = assessDailyQuality('2024-02-01', []);
+    const secondQuality = assessDailyQuality('2024-02-02', []);
+    firstQuality.variables.temperature.status = 'complete';
+    secondQuality.variables.temperature.status = 'incomplete';
+    firstQuality.variables.humidity.status = 'incomplete';
+    secondQuality.variables.humidity.status = 'partial';
+    mockUseObservations.mockImplementation((params: unknown) => {
+      const { enabled, granularity } = params as { enabled?: boolean; granularity: string };
+      return {
+        data: enabled === false ? [] : [first, second],
+        dailyQualityByDay: granularity === 'daily' ? {
+          '2024-02-01': firstQuality, '2024-02-02': secondQuality,
+        } : null,
+        dataSourceLabel: 'XEMA', isLoading: false, error: null,
+        refetch: vi.fn(), isFetching: false,
+      } as ReturnType<typeof useObservations>;
+    });
+    window.history.pushState({}, '', '/?station=X4&from=2024-02-01&to=2024-02-02&granularity=daily');
+    renderInRouter(<DashboardHarness />);
+    await waitFor(() => {
+      expect(screen.getByText('avg-temp:10')).toBeInTheDocument();
+      expect(screen.getByText('avg-humidity:90')).toBeInTheDocument();
+      expect(screen.getByText('quality-days:2')).toBeInTheDocument();
     });
   });
 });

@@ -3,12 +3,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProviderError, type Observation, type Station } from '@/types/weather';
-import { getObservations } from '@/services/providers/xemaTransparencia';
+import { getObservations, getWebDailyReadings } from '@/services/providers/xemaTransparencia';
 import { logDataDebug } from '@/lib/dataDebug';
 import { getObservationsQueryKey, useObservations } from './useObservations';
 
 vi.mock('@/services/providers/xemaTransparencia', () => ({
   getObservations: vi.fn(),
+  getWebDailyReadings: vi.fn(),
 }));
 
 vi.mock('@/lib/dataDebug', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/lib/dataDebug', () => ({
 }));
 
 const mockGetObservations = vi.mocked(getObservations);
+const mockGetWebDailyReadings = vi.mocked(getWebDailyReadings);
 const mockLogDataDebug = vi.mocked(logDataDebug);
 
 const TEST_STATION: Station = {
@@ -80,10 +82,15 @@ describe('getObservationsQueryKey', () => {
 describe('useObservations', () => {
   beforeEach(() => {
     mockGetObservations.mockReset();
+    mockGetWebDailyReadings.mockReset();
     mockLogDataDebug.mockReset();
   });
 
   it('requests 30-min observations and aggregates them for the daily view', async () => {
+    const shMetadata = Object.fromEntries(
+      ['temperature', 'humidity', 'precipitation', 'windSpeed', 'windSpeedMax']
+        .map((variable) => [variable, { temporalBase: 'half-hourly', validationStatus: 'valid' }]),
+    ) as Observation['variableMetadata'];
     const observations: Observation[] = [
       {
         timestamp: '2024-02-01T10:00:00',
@@ -93,6 +100,7 @@ describe('useObservations', () => {
         windSpeedMax: 4.2,
         windDirection: null,
         precipitation: 0.3,
+        variableMetadata: shMetadata,
       },
       {
         timestamp: '2024-02-01T10:30:00',
@@ -102,10 +110,11 @@ describe('useObservations', () => {
         windSpeedMax: 5.2,
         windDirection: null,
         precipitation: 0.2,
+        variableMetadata: shMetadata,
       },
     ];
     let capturedSignal: AbortSignal | undefined;
-    mockGetObservations.mockImplementationOnce(async (params) => {
+    mockGetWebDailyReadings.mockImplementationOnce(async (params) => {
       capturedSignal = params.signal;
       return observations;
     });
@@ -123,13 +132,15 @@ describe('useObservations', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
-    expect(mockGetObservations).toHaveBeenCalledWith(
+    expect(mockGetWebDailyReadings).toHaveBeenCalledWith(
       expect.objectContaining({
         stationId: 'X4',
-        granularity: '30min',
+        fromDay: '2024-02-01',
+        toDay: '2024-02-07',
         signal: expect.any(AbortSignal),
       }),
     );
+    expect(mockGetObservations).not.toHaveBeenCalled();
     expect(capturedSignal).toBeInstanceOf(AbortSignal);
     expect(result.current.data).toEqual([
       expect.objectContaining({
@@ -138,12 +149,24 @@ describe('useObservations', () => {
         humidity: 65,
         windSpeed: 2.6,
         windSpeedMax: 5.2,
-        windGustTime: '10:30',
+        windGustTime: '11:30',
         precipitation: 0.5,
       }),
     ]);
     expect(result.current.dataSourceLabel).toContain(TEST_STATION.name);
+    expect(result.current.dailyQualityByDay?.['2024-02-02'].variables.temperature.status).toBe('missing');
     expect(mockLogDataDebug).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the legacy 30min fetch and does not attach daily quality to the Excel source', async () => {
+    mockGetObservations.mockResolvedValueOnce([]);
+    const { result } = renderHook(() => useObservations({
+      station: TEST_STATION, dateRange: TEST_DATE_RANGE, granularity: '30min',
+    }), { wrapper: createWrapper(createQueryClient()) });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mockGetObservations).toHaveBeenCalledWith(expect.objectContaining({ granularity: '30min' }));
+    expect(mockGetWebDailyReadings).not.toHaveBeenCalled();
+    expect(result.current.dailyQualityByDay).toBeNull();
   });
 
   it('preserves ProviderError details and does not retry invalid params', async () => {
