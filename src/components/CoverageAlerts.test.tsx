@@ -57,20 +57,16 @@ describe('CoverageAlerts', () => {
       />,
     );
 
-    expect(screen.getByText('Datos disponibles para 5 de 7 días.')).toBeInTheDocument();
-    expect(screen.getByText(/Faltan datos para 2 días: 1 feb, 2 feb/)).toBeInTheDocument();
-    expect(screen.getByText('Datos 30 min disponibles para 44 de 48 franjas.')).toBeInTheDocument();
-    expect(screen.getByText(/Faltan datos entre 09:00 y 10:30/)).toBeInTheDocument();
+    expect(screen.getAllByText('▲')).toHaveLength(1);
+    expect(screen.getByLabelText(/Faltan datos para 2 días/)).toBeInTheDocument();
   });
 
   it('alerts on variable-level partial or incomplete days even when every day has an observation row', () => {
     render(<CoverageAlerts dailyCoverage={null} subdailyCoverage={null} showDaily={false}
       showSubdaily={false} showLargestGap={false} missingDaysText=""
       dailyQualityByDay={{ '2024-02-01': day('2024-02-01', 'partial'), '2024-02-02': day('2024-02-02', 'incomplete') }} />);
-    expect(screen.getByText(/Hay datos parciales, incompletos o ausentes/)).toBeInTheDocument();
-    expect(screen.getByText(/Parcial: 1 día/)).toBeInTheDocument();
-    expect(screen.getByText(/Incompleto: 1 día/)).toBeInTheDocument();
-    expect(screen.getByText(/tabla diaria/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Parcial: 1 día/)).toHaveTextContent('▲');
+    expect(screen.queryByText(/Hay datos parciales|Parcial: 1 día|tabla diaria/)).not.toBeInTheDocument();
   });
 
   it('does not show a quality warning for exclusively complete days', () => {
@@ -93,7 +89,7 @@ describe('CoverageAlerts', () => {
     }} subdailyCoverage={null} showDaily={false}
       showSubdaily={false} showLargestGap={false} missingDaysText="" granularity="daily"
       dailyQualityByDay={{ '2024-02-01': record }} />);
-    expect(screen.getByText(/Cobertura completa; validación XEMA no confirmada/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Validación XEMA no confirmada/)).toHaveTextContent('◇');
     expect(screen.queryByText(/Todo correcto/)).not.toBeInTheDocument();
     expect(screen.getByLabelText('Leyenda de calidad de datos')).toBeInTheDocument();
   });
@@ -119,8 +115,8 @@ describe('CoverageAlerts', () => {
     render(<CoverageAlerts dailyCoverage={null} subdailyCoverage={null} showDaily={false}
       showSubdaily={false} showLargestGap={false} missingDaysText="" granularity="30min"
       error={new Error('fallo de red')} />);
-    expect(screen.getByText(/⊗ Error al cargar datos/)).toBeInTheDocument();
-    expect(screen.getByText('fallo de red')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Error al cargar datos: fallo de red/)).toHaveTextContent('×');
+    expect(screen.queryByText('fallo de red')).not.toBeInTheDocument();
     expect(screen.queryByText(/Todo correcto/)).not.toBeInTheDocument();
   });
 

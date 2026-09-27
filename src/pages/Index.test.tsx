@@ -296,7 +296,7 @@ describe('Index export and query behavior', () => {
       expect(uiConsistency.tableQualityDays).toBe(1);
       expect(uiConsistency.kpiQualityDays).toBe(1);
       expect(uiConsistency.chartLength).toBe(1);
-      expect(screen.getByText(/Hay datos parciales, incompletos o ausentes/)).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: /Cobertura: Parcial: 0 días/ })).toHaveTextContent('▲');
     });
   });
 
@@ -321,7 +321,7 @@ describe('Index export and query behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
 
     await waitFor(() => {
-      expect(screen.queryByText(/Datos disponibles para/i)).not.toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: /Cobertura:/ })).not.toBeInTheDocument();
     });
   });
 
@@ -364,7 +364,7 @@ describe('Index export and query behavior', () => {
     fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Datos disponibles para 5 de 7 días\./i)).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: /Cobertura: Faltan datos para 2 días/ })).toHaveTextContent('▲');
     });
   });
 
