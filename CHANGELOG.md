@@ -6,6 +6,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-09-27 — Calidad web: estado y validación en 30 minutos (fase 4.5)
+
+### Changed
+
+- La tabla de 30 minutos señala junto a cada lectura los estados de validación XEMA no confirmados y los valores ausentes. La tabla diaria conserva cobertura y validación por variable, pero deja de repetir el estado correcto en cada celda.
+- Un único recuadro resume la calidad del rango seleccionado y explica los símbolos `◇?` (validación no confirmada), `▲!` (dato parcial, incompleto o ausente) y `⊗` (fallo técnico). Cobertura completa no equivale a validación confirmada.
+- Los KPI mantienen los mismos valores y muestran contexto solo cuando hay una incidencia. No cambian la recopilación de 30 minutos, las gráficas ni la exportación Excel.
+
+---
+
 ## 2026-09-27 — Calidad diaria web: tabla y resúmenes (fase 4)
 
 ### Changed

@@ -296,7 +296,7 @@ describe('Index export and query behavior', () => {
       expect(uiConsistency.tableQualityDays).toBe(1);
       expect(uiConsistency.kpiQualityDays).toBe(1);
       expect(uiConsistency.chartLength).toBe(1);
-      expect(screen.getByText(/Calidad diaria por variable/)).toBeInTheDocument();
+      expect(screen.getByText(/Hay datos parciales, incompletos o ausentes/)).toBeInTheDocument();
     });
   });
 

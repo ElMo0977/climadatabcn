@@ -2,6 +2,13 @@ import { format, parseISO } from 'date-fns';
 import type { DailyCoverage } from '@/lib/dailyCoverage';
 import type { SubdailyCoverage } from '@/lib/subdailyCoverage';
 import type { DailyQuality } from '@/lib/dailyQuality';
+import type { Granularity, Observation, ObservationVariable } from '@/types/weather';
+import { isFiniteNumber } from '@/lib/weatherUtils';
+import { QualityLegend } from './QualityMarks';
+
+const OBSERVATION_VARIABLES: ObservationVariable[] = [
+  'temperature', 'humidity', 'windSpeed', 'windDirection', 'windSpeedMax', 'precipitation',
+];
 
 function formatGapSlot(slot: string): string {
   const isoLike = slot.replace(' ', 'T');
@@ -31,6 +38,10 @@ interface CoverageAlertsProps {
   showLargestGap: boolean;
   missingDaysText: string;
   dailyQualityByDay?: Record<string, DailyQuality> | null;
+  granularity?: Granularity;
+  observations?: Observation[];
+  error?: Error | null;
+  isLoading?: boolean;
 }
 
 export function CoverageAlerts({
@@ -41,6 +52,10 @@ export function CoverageAlerts({
   showLargestGap,
   missingDaysText,
   dailyQualityByDay,
+  granularity = 'daily',
+  observations = [],
+  error,
+  isLoading = false,
 }: CoverageAlertsProps) {
   const qualityDays = Object.values(dailyQualityByDay ?? {});
   const countDays = (status: 'partial' | 'incomplete' | 'missing') => qualityDays.filter((day) =>
@@ -50,11 +65,49 @@ export function CoverageAlerts({
   const missingDays = countDays('missing');
   const showQualityAlert = partialDays + incompleteDays + missingDays > 0;
 
+  if (isLoading) return null;
+
+  const detailVariables = observations.flatMap((observation) => OBSERVATION_VARIABLES.map((variable) => ({
+    value: observation[variable],
+    validation: observation.variableMetadata?.[variable]?.validationStatus ?? 'unreported',
+  })));
+  const missingReadings = granularity === '30min' && detailVariables.some(({ value }) => !isFiniteNumber(value));
+  const unconfirmedReadings = granularity === '30min' && detailVariables.some(({ value, validation }) =>
+    isFiniteNumber(value) && validation !== 'valid');
+  const unconfirmedDays = qualityDays.some((day) => Object.values(day.variables).some((variable) =>
+    variable.validationStatus !== 'valid' && Object.values(variable.validationCounts).some((count) => count > 0)));
+  const coverageIssue = granularity === 'daily'
+    ? showQualityAlert || showDaily || !!dailyCoverage?.missingCount
+    : missingReadings || showSubdaily || !!subdailyCoverage?.missingCount;
+  const validationIssue = granularity === 'daily' ? unconfirmedDays : unconfirmedReadings;
+  const hasCoverageProof = granularity === 'daily'
+    ? dailyCoverage !== null && dailyCoverage.expectedCount > 0
+      && dailyCoverage.missingCount === 0 && qualityDays.length >= dailyCoverage.expectedCount
+    : subdailyCoverage !== null && subdailyCoverage.expectedCount > 0
+      && subdailyCoverage.missingCount === 0
+      && subdailyCoverage.availableCount === subdailyCoverage.expectedCount && observations.length > 0;
+  const hasEvidence = hasCoverageProof && (granularity === 'daily'
+    ? qualityDays.length > 0 && qualityDays.every((day) => Object.values(day.variables).every((variable) =>
+      variable.validationStatus === 'valid' && variable.validationCounts.valid > 0))
+    : detailVariables.length > 0 && detailVariables.every(({ value, validation }) =>
+      isFiniteNumber(value) && validation === 'valid'));
+  const headline = error ? '⊗ Error al cargar datos'
+    : coverageIssue ? '▲! Hay datos parciales, incompletos o ausentes'
+      : validationIssue ? granularity === '30min'
+        ? `◇? ${hasCoverageProof ? 'Cobertura completa en los días seleccionados; ' : ''}validación XEMA de las lecturas visibles no confirmada`
+        : `◇? ${hasCoverageProof ? 'Cobertura completa; ' : ''}validación XEMA no confirmada`
+        : hasEvidence ? granularity === '30min'
+          ? 'Todo correcto en las lecturas visibles: validación XEMA confirmada; cobertura completa en los días seleccionados.'
+          : 'Todo correcto: cobertura completa y validación XEMA confirmada'
+          : 'No hay datos suficientes para confirmar la calidad';
+
   return (
-    <>
+    <div className="glass-card rounded-xl p-3" role="status">
+      <p className="text-sm font-medium">{headline}</p>
+      {error ? <p className="text-xs text-muted-foreground">{error.message}</p> : <>
+      {coverageIssue && validationIssue && <p className="text-xs text-muted-foreground">◇? También hay lecturas cuya validación XEMA no está confirmada.</p>}
       {showQualityAlert && (
-        <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40" role="status">
-          <p className="text-sm font-medium">Calidad diaria por variable: hay datos parciales, incompletos o ausentes.</p>
+        <div>
           <p className="text-xs text-muted-foreground">
             Parcial: {partialDays} día{partialDays === 1 ? '' : 's'} · Incompleto: {incompleteDays} día{incompleteDays === 1 ? '' : 's'} · Sin dato: {missingDays} día{missingDays === 1 ? '' : 's'}.
             Un día puede aparecer en más de una categoría porque cada variable se evalúa por separado.
@@ -63,7 +116,7 @@ export function CoverageAlerts({
         </div>
       )}
       {showDaily && dailyCoverage && (
-        <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
+        <div>
           <p className="text-sm font-medium">
             Datos disponibles para {dailyCoverage.availableCount} de {dailyCoverage.expectedCount} días.
           </p>
@@ -74,7 +127,7 @@ export function CoverageAlerts({
       )}
 
       {showSubdaily && subdailyCoverage && (
-        <div className="glass-card rounded-xl p-3 border-amber-400/50 bg-amber-100/40">
+        <div>
           <p className="text-sm font-medium">
             Datos 30 min disponibles para {subdailyCoverage.availableCount} de {subdailyCoverage.expectedCount} franjas.
           </p>
@@ -95,6 +148,8 @@ export function CoverageAlerts({
           )}
         </div>
       )}
-    </>
+      </>}
+      <QualityLegend />
+    </div>
   );
 }

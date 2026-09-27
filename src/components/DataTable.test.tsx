@@ -113,4 +113,35 @@ describe('DataTable', () => {
     expect(screen.queryByText(/Validación XEMA/)).not.toBeInTheDocument();
     expect(screen.queryByText(/franjas/)).not.toBeInTheDocument();
   });
+
+  it('marks only the affected 30-minute readings with their XEMA validation state', () => {
+    const observation = { ...buildObservation(0), variableMetadata: {
+      temperature: { validationStatus: 'valid' as const, temporalBase: 'half-hourly' as const },
+      humidity: { validationStatus: 'pending' as const, temporalBase: 'half-hourly' as const },
+      precipitation: { validationStatus: 'unreported' as const, temporalBase: 'half-hourly' as const },
+    } };
+    render(<DataTable observations={[observation]} granularity="30min" isLoading={false} />);
+    const row = screen.getAllByRole('row')[1];
+    const cells = row.querySelectorAll('td');
+    expect(within(cells[1]).queryByText('◇?')).not.toBeInTheDocument();
+    expect(within(cells[2]).getByLabelText('Validación XEMA pendiente')).toBeInTheDocument();
+    expect(within(cells[6]).getByLabelText('Validación XEMA no informada')).toBeInTheDocument();
+    expect(within(cells[3]).getByLabelText('Validación XEMA no informada')).toBeInTheDocument();
+  });
+
+  it('does not repeat success on complete and validated daily cells', () => {
+    render(<DataTable observations={[{ ...buildObservation(0), timestamp: '2024-02-01' }]}
+      granularity="daily" isLoading={false}
+      dailyQualityByDay={{ '2024-02-01': dayQuality('2024-02-01', quality('complete', 48)) }} />);
+    expect(screen.queryByText(/Completo · 48\/48/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Validación XEMA: válida/)).not.toBeInTheDocument();
+  });
+
+  it('marks an absent 30-minute variable as missing, not as rejected by XEMA', () => {
+    render(<DataTable observations={[{ ...buildObservation(0), humidity: null }]}
+      granularity="30min" isLoading={false} />);
+    const cells = screen.getAllByRole('row')[1].querySelectorAll('td');
+    expect(within(cells[2]).getByLabelText('Cobertura sin dato')).toBeInTheDocument();
+    expect(within(cells[2]).queryByLabelText(/Validación XEMA/)).not.toBeInTheDocument();
+  });
 });

@@ -4,10 +4,11 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Observation, Granularity } from '@/types/weather';
+import type { Observation, Granularity, ObservationVariable } from '@/types/weather';
 import type { DailyQuality, DailyQualityVariable, VariableDailyQuality } from '@/lib/dailyQuality';
 import { formatTimestamp, formatDayLabel, isFiniteNumber } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CoverageMark, ValidationMark } from './QualityMarks';
 
 interface DataTableProps {
   observations: Observation[];
@@ -19,14 +20,19 @@ interface DataTableProps {
 const PAGE_SIZE = 20;
 const WIND_LIMIT_ACOUSTIC = 5;
 
-const COVERAGE_LABELS: Record<VariableDailyQuality['status'], string> = {
-  complete: 'Completo', partial: 'Parcial', incomplete: 'Incompleto', missing: 'Sin dato',
-};
-
-const VALIDATION_LABELS: Record<VariableDailyQuality['validationStatus'], string> = {
-  valid: 'válida', pending: 'pendiente', 'not-started': 'no iniciada',
-  unknown: 'desconocida', unreported: 'no informada', mixed: 'mixta',
-};
+function DetailValue({ observation, variable, value, className = 'text-right tabular-nums' }: {
+  observation: Observation;
+  variable: ObservationVariable;
+  value: number | string | null;
+  className?: string;
+}) {
+  const missing = value === null || (typeof value === 'number' && !isFiniteNumber(value));
+  return <TableCell className={className}>
+    <span>{missing ? '—' : value}</span>
+    {missing ? <CoverageMark status="missing-reading" />
+      : <ValidationMark status={observation.variableMetadata?.[variable]?.validationStatus ?? 'unreported'} />}
+  </TableCell>;
+}
 
 function DailyValue({ value, quality, expectedSlots, lowerBound = false, className = 'text-right tabular-nums' }: {
   value: number | string | null | undefined;
@@ -40,15 +46,21 @@ function DailyValue({ value, quality, expectedSlots, lowerBound = false, classNa
   return (
     <TableCell className={className}>
       <span>{isLowerBound ? `≥ ${displayValue}` : displayValue ?? '—'}</span>
-      {quality && expectedSlots !== undefined && (
+      {quality && quality.status !== 'complete' && expectedSlots !== undefined && (
         <span className="block text-xs text-muted-foreground font-normal whitespace-nowrap">
-          {COVERAGE_LABELS[quality.status]} · {quality.coveredSlots}/{expectedSlots} franjas
+          <CoverageMark status={quality.status} detail={`${quality.coveredSlots}/${expectedSlots} franjas`} />
+          {quality.status === 'partial' ? 'Parcial' : quality.status === 'missing' ? 'Sin dato' : 'Incompleto'} · {quality.coveredSlots}/{expectedSlots} franjas
           {(quality.status === 'incomplete' || quality.status === 'missing') && ' · Excluido de KPI'}
         </span>
       )}
-      {quality && (
+      {quality && quality.validationStatus !== 'valid'
+        && Object.values(quality.validationCounts).some((count) => count > 0) && (
         <span className="block text-xs text-muted-foreground font-normal">
-          Validación XEMA: {VALIDATION_LABELS[quality.validationStatus]}
+          <ValidationMark status={quality.validationStatus} />
+          Validación XEMA: {quality.validationStatus === 'pending' ? 'pendiente'
+            : quality.validationStatus === 'not-started' ? 'no iniciada'
+              : quality.validationStatus === 'unknown' ? 'desconocida'
+                : quality.validationStatus === 'mixed' ? 'mixta' : 'no informada'}
         </span>
       )}
       {isLowerBound && <span className="block text-xs text-muted-foreground font-normal">Mínimo observado</span>}
@@ -144,12 +156,12 @@ export function DataTable({ observations, granularity, isLoading, dailyQualityBy
             {isDetail ? paginatedData.map((obs, index) => (
               <TableRow key={`${obs.timestamp}-${index}`}>
                 <TableCell className="font-medium">{formatTimestamp(obs.timestamp, true)}</TableCell>
-                <TableCell className="text-right tabular-nums">{obs.temperature ?? '—'}</TableCell>
-                <TableCell className="text-right tabular-nums">{obs.humidity ?? '—'}</TableCell>
-                <TableCell className={windCellClass(obs.windSpeed)}>{roundWind(obs.windSpeed)}</TableCell>
-                <TableCell className="text-right tabular-nums">{obs.windDirection ?? '—'}</TableCell>
-                <TableCell className={windCellClass(obs.windSpeedMax)}>{roundWind(obs.windSpeedMax)}</TableCell>
-                <TableCell className="text-right tabular-nums">{obs.precipitation ?? '—'}</TableCell>
+                <DetailValue observation={obs} variable="temperature" value={obs.temperature} />
+                <DetailValue observation={obs} variable="humidity" value={obs.humidity} />
+                <DetailValue observation={obs} variable="windSpeed" value={obs.windSpeed == null ? null : roundWind(obs.windSpeed)} className={windCellClass(obs.windSpeed)} />
+                <DetailValue observation={obs} variable="windDirection" value={obs.windDirection} />
+                <DetailValue observation={obs} variable="windSpeedMax" value={obs.windSpeedMax == null ? null : roundWind(obs.windSpeedMax)} className={windCellClass(obs.windSpeedMax)} />
+                <DetailValue observation={obs} variable="precipitation" value={obs.precipitation} />
               </TableRow>
             )) : paginatedDays.map((dayKey) => {
               const obs = observationByDay.get(dayKey);

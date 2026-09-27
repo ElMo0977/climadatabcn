@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { CoverageAlerts } from './CoverageAlerts';
 import type { DailyQuality, VariableDailyQuality } from '@/lib/dailyQuality';
+import type { Observation } from '@/types/weather';
 
 function quality(status: VariableDailyQuality['status']): VariableDailyQuality {
   return { coveredSlots: status === 'complete' ? 48 : 24, coverage: 0.5, status,
@@ -66,7 +67,7 @@ describe('CoverageAlerts', () => {
     render(<CoverageAlerts dailyCoverage={null} subdailyCoverage={null} showDaily={false}
       showSubdaily={false} showLargestGap={false} missingDaysText=""
       dailyQualityByDay={{ '2024-02-01': day('2024-02-01', 'partial'), '2024-02-02': day('2024-02-02', 'incomplete') }} />);
-    expect(screen.getByText(/Calidad diaria por variable/)).toBeInTheDocument();
+    expect(screen.getByText(/Hay datos parciales, incompletos o ausentes/)).toBeInTheDocument();
     expect(screen.getByText(/Parcial: 1 día/)).toBeInTheDocument();
     expect(screen.getByText(/Incompleto: 1 día/)).toBeInTheDocument();
     expect(screen.getByText(/tabla diaria/)).toBeInTheDocument();
@@ -76,6 +77,67 @@ describe('CoverageAlerts', () => {
     render(<CoverageAlerts dailyCoverage={null} subdailyCoverage={null} showDaily={false}
       showSubdaily={false} showLargestGap={false} missingDaysText=""
       dailyQualityByDay={{ '2024-02-01': day('2024-02-01', 'complete') }} />);
-    expect(screen.queryByText(/Calidad diaria por variable/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Hay datos parciales, incompletos o ausentes/)).not.toBeInTheDocument();
+  });
+
+  it('does not call full coverage validated when XEMA status is unreported', () => {
+    const unreported = { ...quality('complete'), coveredSlots: 48, validationStatus: 'unreported' as const,
+      validationCounts: { valid: 0, pending: 0, 'not-started': 0, unknown: 0, unreported: 1 } };
+    const record = { ...day('2024-02-01', 'complete'), variables: {
+      temperature: unreported, humidity: unreported, precipitation: unreported,
+      windSpeed: unreported, windSpeedMax: unreported,
+    } };
+    render(<CoverageAlerts dailyCoverage={{
+      expectedDays: ['2024-02-01'], expectedCount: 1, availableCount: 1,
+      missingCount: 0, missingDays: [], availableDays: ['2024-02-01'],
+    }} subdailyCoverage={null} showDaily={false}
+      showSubdaily={false} showLargestGap={false} missingDaysText="" granularity="daily"
+      dailyQualityByDay={{ '2024-02-01': record }} />);
+    expect(screen.getByText(/Cobertura completa; validación XEMA no confirmada/)).toBeInTheDocument();
+    expect(screen.queryByText(/Todo correcto/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Leyenda de calidad de datos')).toBeInTheDocument();
+  });
+
+  it('reports all correct only when observed 30-minute readings are complete and validated', () => {
+    const observation: Observation = {
+      timestamp: '2024-02-01T00:00:00', temperature: 10, humidity: 60, windSpeed: 2,
+      windDirection: 180, windSpeedMax: 4, precipitation: 0,
+      variableMetadata: Object.fromEntries(['temperature', 'humidity', 'windSpeed', 'windDirection', 'windSpeedMax', 'precipitation']
+        .map((key) => [key, { validationStatus: 'valid', temporalBase: 'half-hourly' }])),
+    };
+    render(<CoverageAlerts dailyCoverage={null} subdailyCoverage={{
+      expectedSlots: ['2024-02-01 00:00'], availableSlots: ['2024-02-01 00:00'],
+      missingSlots: [], missingIntervals: [], expectedCount: 1, availableCount: 1,
+      missingCount: 0, largestGap: null,
+    }} showDaily={false}
+      showSubdaily={false} showLargestGap={false} missingDaysText="" granularity="30min"
+      observations={[observation]} />);
+    expect(screen.getByText('Todo correcto en las lecturas visibles: validación XEMA confirmada; cobertura completa en los días seleccionados.')).toBeInTheDocument();
+  });
+
+  it('separates technical loading failure from missing or unconfirmed data', () => {
+    render(<CoverageAlerts dailyCoverage={null} subdailyCoverage={null} showDaily={false}
+      showSubdaily={false} showLargestGap={false} missingDaysText="" granularity="30min"
+      error={new Error('fallo de red')} />);
+    expect(screen.getByText(/⊗ Error al cargar datos/)).toBeInTheDocument();
+    expect(screen.getByText('fallo de red')).toBeInTheDocument();
+    expect(screen.queryByText(/Todo correcto/)).not.toBeInTheDocument();
+  });
+
+  it('does not certify a complete daily sidecar without any V evidence', () => {
+    const noEvidence = { ...quality('complete'), coveredSlots: 48,
+      validationCounts: { valid: 0, pending: 0, 'not-started': 0, unknown: 0, unreported: 0 } };
+    render(<CoverageAlerts dailyCoverage={{
+      expectedDays: ['2024-02-01'], expectedCount: 1, availableCount: 1,
+      missingCount: 0, missingDays: [], availableDays: ['2024-02-01'],
+    }} subdailyCoverage={null} showDaily={false} showSubdaily={false}
+      showLargestGap={false} missingDaysText="" granularity="daily"
+      dailyQualityByDay={{ '2024-02-01': {
+        dayKey: '2024-02-01', expectedSlots: 48,
+        variables: { temperature: noEvidence, humidity: noEvidence, windSpeed: noEvidence,
+          windSpeedMax: noEvidence, precipitation: noEvidence },
+      } }} />);
+    expect(screen.queryByText(/Todo correcto/)).not.toBeInTheDocument();
+    expect(screen.getByText(/No hay datos suficientes para confirmar la calidad/)).toBeInTheDocument();
   });
 });
