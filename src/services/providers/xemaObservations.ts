@@ -56,6 +56,38 @@ const SUBDAILY_VARIABLE_CODES = [
   SUBDAILY_CODES.VVx10,
 ];
 
+/** Fetches a padded UTC date range only for Europe/Madrid web-day aggregation. */
+export async function getWebDailyReadings(params: {
+  stationId: string;
+  fromDay: string;
+  toDay: string;
+  signal?: AbortSignal;
+}): Promise<Observation[]> {
+  assertValidStationId(params.stationId);
+  const fromUtc = Date.parse(`${params.fromDay}T00:00:00Z`);
+  const toUtc = Date.parse(`${params.toDay}T00:00:00Z`);
+  const validDay = (day: string, time: number) =>
+    DAY_KEY_RE.test(day) && Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === day;
+  if (!validDay(params.fromDay, fromUtc) || !validDay(params.toDay, toUtc) || fromUtc > toUtc) {
+    throw new ProviderError({ code: 'INVALID_PARAMS', message: 'Invalid web daily range' });
+  }
+
+  // The first Madrid slot starts on the previous UTC date; a preceding HO
+  // reading can begin another 30 minutes earlier. Keep the existing 30min
+  // endpoint's bounds unchanged for Excel and subdaily display.
+  const paddedFromDay = new Date(fromUtc - 86_400_000).toISOString().slice(0, 10);
+  const where =
+    `codi_estacio = '${params.stationId}' AND data_lectura >= '${paddedFromDay}T00:00:00' ` +
+    `AND data_lectura <= '${params.toDay}T23:59:59' ` +
+    `AND codi_variable in ('${SUBDAILY_VARIABLE_CODES.join("','")}')`;
+  const rows = await fetchSocrataAll<SubdailyRow>('nzvn-apee', {
+    $select: 'codi_estacio,data_lectura,codi_variable,valor_lectura,codi_estat,codi_base',
+    $where: where,
+    $limit: 50000,
+  }, { signal: params.signal });
+  return mapSubdailyRowsToObservations(rows);
+}
+
 export async function getObservations(params: {
   stationId: string;
   from: Date;

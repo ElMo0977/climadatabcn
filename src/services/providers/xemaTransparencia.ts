@@ -11,6 +11,7 @@ export {
 
 export {
   getObservations,
+  getWebDailyReadings,
   buildDailyRangeBounds,
   filterDailyObservationsByRange,
   mapDailyRowsToObservations,

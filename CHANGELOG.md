@@ -6,6 +6,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-09-27 — Calidad diaria web: integracion de datos (fase 3)
+
+### Changed
+
+- La vista diaria web sigue usando lecturas XEMA de 30 minutos, ahora con una consulta UTC ampliada y agregacion por dias de `Europe/Madrid`, incluidos los cambios de hora. El dataset diario oficial no pasa a ser fuente operativa.
+- La calidad por variable se expone al dashboard para todos los dias seleccionados, incluso sin lecturas. Las estadisticas meteorologicas diarias excluyen valores incompletos o ausentes por variable; la presentacion de esos estados en tabla y graficas queda pendiente.
+- Las lecturas con base temporal no resoluble no alteran valores diarios. Los totales horarios de precipitacion solapados o que cruzan medianoche, y las rachas horarias que cruzan medianoche, se tratan conservadoramente.
+- Las lecturas horarias excluidas por ambiguedad conservan su estado de validacion en los dias afectados, sin atribuirles cobertura ni valores.
+- La vista de 30 minutos y la exportacion Excel conservan su consulta y agregacion anteriores.
+
+---
+
 ## 2026-03-26 — Punto de referencia, mejoras de mapa y limites de dia en graficas
 
 ### Added

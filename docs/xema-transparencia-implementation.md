@@ -12,11 +12,13 @@ Este documento describe la integracion vigente entre Meteo BCN y los datasets pu
 | `src/services/http/socrata.ts` | Cliente SODA (`fetchSocrata`, `fetchSocrataAll`) sobre `https://analisi.transparenciacatalunya.cat`, con propagacion de `signal` y timeout leido desde entorno |
 | `src/services/providers/xemaTransparencia.ts` | Fachada fina que reexporta estaciones y observaciones |
 | `src/services/providers/xemaStations.ts` | Estaciones XEMA activas via `yqwd-vj5e`, con `metadataSource`, `warning` y fallback visible |
-| `src/services/providers/xemaObservations.ts` | Observaciones `30min` y `day`, validacion de parametros, propagacion de `signal` y mapping a `Observation[]` |
+| `src/services/providers/xemaObservations.ts` | Observaciones `30min` y `day`, consulta ampliada para la vista diaria web, validacion de parametros, propagacion de `signal` y mapping a `Observation[]` |
 | `src/services/providers/xemaVariableMap.ts` | Codigos de variables usados por daily y subdaily, mas helper opcional de metadata |
 | `src/hooks/useWeatherDashboard.ts` | View-model de la pagina principal que centraliza estado, cobertura, exportacion y refresh |
 | `src/hooks/useStations.ts` | Consume metadata de estaciones y expone `warning` / `metadataSource` a la UI |
 | `src/hooks/useObservations.ts` | Traduce granularidad de UI a contrato del provider, propaga `ProviderError` y ejecuta `logDataDebug()` |
+| `src/lib/dailyQuality.ts` | Evalua cobertura, franjas esperadas y validacion por variable y dia local |
+| `src/lib/webDailyObservations.ts` | Agrega valores diarios web y filtra estadisticas por calidad sin alterar Excel |
 | `src/lib/dateKeys.ts` | Normalizacion y validacion de day keys compartidas |
 | `src/lib/stationGeo.ts` | Distancias y ordenacion de estaciones cercanas a Barcelona |
 | `src/lib/dataDebug.ts` | Auditoria opcional del dataset final (`VITE_DEBUG_DATA=1`) |
@@ -35,7 +37,7 @@ La etiqueta visible para UI y exportacion se construye desde `src/config/sources
 ### Granularidad
 
 - La UI trabaja con `Granularity = '30min' | 'daily'`.
-- `useObservations()` solicita siempre `30min` al provider. En la vista `daily`, agrega esas lecturas localmente para evitar el retraso del dataset diario oficial.
+- Ambas vistas usan el dataset operativo de 30 minutos `nzvn-apee` para evitar el retraso del dataset diario oficial. La vista `30min` llama al contrato existente; la vista `daily` usa una consulta separada y ampliada en UTC para incluir las lecturas que pertenecen al dia local en `Europe/Madrid`.
 - El provider conserva el contrato `day` para consultas directas, pero la vista diaria web no lo utiliza.
 
 Contrato del provider:
@@ -46,6 +48,13 @@ getObservations({
   from: Date,
   to: Date,
   granularity: '30min' | 'day',
+  signal?: AbortSignal,
+}): Promise<Observation[]>
+
+getWebDailyReadings({
+  stationId: string,
+  fromDay: string, // YYYY-MM-DD local
+  toDay: string,   // YYYY-MM-DD local
   signal?: AbortSignal,
 }): Promise<Observation[]>
 ```
@@ -100,6 +109,16 @@ Comportamiento actual:
 - `validationStatus` normaliza `V` a `valid`, `T` a `pending`, vacio a `not-started`, codigo inesperado a `unknown` y campo ausente a `unreported`. El codigo original recortado se conserva para diagnostico. Este estado no representa cobertura diaria ni altera el valor numerico.
 - `temporalBase` normaliza `HO` a `hourly`, `SH` a `half-hourly`, vacio a `unspecified`, codigo inesperado a `unknown` y campo ausente a `unreported`. `temporalBaseCode` retiene el codigo original recortado.
 
+### Agregacion diaria web desde `nzvn-apee`
+
+- `getWebDailyReadings()` consulta desde las `00:00:00` de la fecha UTC anterior al primer dia seleccionado hasta las `23:59:59` de la fecha UTC del ultimo dia. Este margen cubre el inicio del dia en `Europe/Madrid` y lecturas `HO` iniciadas en el dia local anterior. La ruta `getObservations({ granularity: '30min' })` no cambia.
+- `buildWebDailyObservations()` asigna cada lectura `SH` a una franja de 30 minutos y cada `HO` a dos franjas consecutivas; agrupa por dia en `Europe/Madrid`, incluidos los dias de 46 y 50 franjas de los cambios de hora. Recorta los dias adicionales y calcula `dailyQualityByDay` incluso cuando no hay lecturas.
+- Una base temporal `unknown`, `unspecified` o `unreported` queda registrada como lectura sin cobertura resoluble; no contribuye a los valores diarios ni a las estadisticas, aunque otras lecturas del dia permitan calidad parcial.
+- Las medias horarias se ponderan por las franjas cubiertas. Un total horario de precipitacion que cruza medianoche local o se solapa con otra lectura de base conocida no se puede distribuir o sumar con seguridad y se excluye del valor y de la cobertura. Una racha maxima `HO` que cruza medianoche tambien se excluye de ambos dias.
+- Excluir un valor ambiguo no borra su procedencia: su estado de validacion sigue contado en cada dia local intersectado, separado de la cobertura. Si no queda ninguna franja utilizable, el estado es `incomplete`, no `missing`.
+- Las estadisticas meteorologicas diarias admiten por variable estados `complete` y `partial`, y excluyen `incomplete` y `missing`. El contador `dataPoints` sigue contando filas diarias mostradas. La representacion de calidad en tabla y graficas queda para fases posteriores.
+- Excel permanece en la ruta previa: recupera `30min` mediante `getObservations()` y agrega con `aggregate30minToDaily()`, sin aplicar la nueva calidad web.
+
 ### Observaciones diarias: `7bvh-jvq2`
 
 `getObservations({ granularity: 'day' })` consulta `7bvh-jvq2` con:
@@ -119,10 +138,10 @@ Ademas, hace una segunda consulta a `nzvn-apee` para `VVx10` y completa `windGus
 2. `useStations()` carga metadata de estaciones, anade `source: 'xema-transparencia'` y expone `metadataSource` / `warning`.
 3. `StationSelector` muestra el warning de modo degradado sin bloquear la seleccion de estaciones fallback.
 4. `useObservations()` construye la query key, valida que la fuente seleccionada sea XEMA y usa la `signal` de React Query.
-5. `getObservations()` devuelve `Observation[]` con metadata por variable en las lecturas de 30 minutos.
-6. `useObservations()` anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
+5. `getObservations()` devuelve `Observation[]` con metadata por variable en la ruta `30min`; `getWebDailyReadings()` obtiene una consulta ampliada de la misma fuente para `daily`.
+6. `useObservations()` agrega los dias web y expone `dailyQualityByDay` solo en `daily`; anade `dataSourceLabel`, propaga `ProviderError` y dispara `logDataDebug()` cuando `VITE_DEBUG_DATA=1`.
 7. `Index.tsx` compone el dashboard y carga `WeatherCharts` en diferido.
-8. `useExcelExport()` recupera ambas granularidades y delega en `buildAndDownloadExcel()`, que genera `Contexto`, `30min` y `Diario`.
+8. `useExcelExport()` recupera la ruta original `30min`, usa la agregacion diaria heredada y delega en `buildAndDownloadExcel()`, que genera `Contexto`, `30min` y `Diario`.
 
 ## Reintentos y cancelacion
 
@@ -175,6 +194,7 @@ Notas:
 | `src/services/http/socrata.test.ts` | Construccion de URL, paginacion y `signal` |
 | `src/services/providers/xemaTransparencia.test.ts` | Fachada y mapping principal |
 | `src/hooks/useObservations.test.ts` | Coordinacion del hook y contrato de consulta |
+| `src/lib/webDailyObservations.test.ts` | Agregacion web por dia local, bases temporales, cruces HO y estadisticas |
 | `src/hooks/useStations.test.tsx` | Warning de modo degradado y metadata source |
 | `src/hooks/useExcelExport.test.ts` | Flujo de exportacion con refetch tipado |
 | `src/lib/windVector.test.ts` | Utilidades de viento |

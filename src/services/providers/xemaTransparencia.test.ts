@@ -7,6 +7,7 @@ import {
   fetchStationsFromSocrata,
   filterDailyObservationsByRange,
   getObservations,
+  getWebDailyReadings,
   listStations,
   mapDailyRowsToObservations,
   mapSubdailyRowsToObservations,
@@ -413,6 +414,27 @@ describe('getObservations', () => {
       }),
       { signal: controller.signal },
     );
+  });
+});
+
+describe('getWebDailyReadings', () => {
+  it('pads the UTC query by one preceding date without changing the legacy 30min query', async () => {
+    fetchSocrataAllMock.mockResolvedValueOnce([]);
+    const signal = new AbortController().signal;
+    await getWebDailyReadings({ stationId: 'X4', fromDay: '2024-03-31', toDay: '2024-04-01', signal });
+    const [, query] = fetchSocrataAllMock.mock.calls[0] as [string, { $where: string; $select: string }];
+    expect(query.$where).toContain("data_lectura >= '2024-03-30T00:00:00'");
+    expect(query.$where).toContain("data_lectura <= '2024-04-01T23:59:59'");
+    expect(query.$select).toContain('codi_base');
+    expect(fetchSocrataAllMock).toHaveBeenCalledWith('nzvn-apee', expect.any(Object), { signal });
+  });
+
+  it('rejects invalid or reversed local day keys before making a request', async () => {
+    await expect(getWebDailyReadings({ stationId: 'X4', fromDay: '2024-02-30', toDay: '2024-03-01' }))
+      .rejects.toMatchObject({ code: 'INVALID_PARAMS' });
+    await expect(getWebDailyReadings({ stationId: 'X4', fromDay: '2024-04-02', toDay: '2024-04-01' }))
+      .rejects.toMatchObject({ code: 'INVALID_PARAMS' });
+    expect(fetchSocrataAllMock).not.toHaveBeenCalled();
   });
 });
 

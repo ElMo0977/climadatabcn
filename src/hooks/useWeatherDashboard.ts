@@ -7,6 +7,7 @@ import { useObservations } from './useObservations';
 import { useExcelExport } from './useExcelExport';
 import { useReferencePoint } from './useReferencePoint';
 import { calculateStats } from '@/lib/weatherUtils';
+import { calculateQualityAwareDailyStats } from '@/lib/webDailyObservations';
 import { computeDailyCoverage } from '@/lib/dailyCoverage';
 import { computeSubdailyCoverage } from '@/lib/subdailyCoverage';
 import { haversineDistanceKm } from '@/lib/stationGeo';
@@ -124,6 +125,7 @@ export function useWeatherDashboard() {
   const {
     data: rawObservations = [],
     dataSourceLabel,
+    dailyQualityByDay,
     isLoading: observationsLoading,
     error: observationsError,
     refetch: refetchObservations,
@@ -164,8 +166,10 @@ export function useWeatherDashboard() {
 
   const stats = useMemo(() => {
     if (observations.length === 0) return null;
-    return calculateStats(observations);
-  }, [observations]);
+    return granularity === 'daily'
+      ? calculateQualityAwareDailyStats(observations, dailyQualityByDay ?? {})
+      : calculateStats(observations);
+  }, [observations, granularity, dailyQualityByDay]);
 
   const dailyCoverage = useMemo(() => {
     if (granularity !== 'daily') return null;
@@ -366,6 +370,7 @@ export function useWeatherDashboard() {
     observationsError,
     observationsFetching,
     stats,
+    dailyQualityByDay,
     dailyCoverage,
     subdailyCoverage,
     missingDaysText,

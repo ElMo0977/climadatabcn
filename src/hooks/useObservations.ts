@@ -9,8 +9,13 @@ import {
 } from '@/types/weather';
 import { buildDataSourceLabel } from '@/config/sources';
 import { logDataDebug } from '@/lib/dataDebug';
-import { getObservations as getObservationsXema } from '@/services/providers/xemaTransparencia';
-import { aggregate30minToDaily } from '@/lib/weatherUtils';
+import {
+  getObservations as getObservationsXema,
+  getWebDailyReadings,
+} from '@/services/providers/xemaTransparencia';
+import { buildExpectedDayKeys } from '@/lib/dailyCoverage';
+import { buildWebDailyObservations } from '@/lib/webDailyObservations';
+import type { DailyQuality } from '@/lib/dailyQuality';
 
 interface UseObservationsParams {
   station: Station | null;
@@ -22,11 +27,13 @@ interface UseObservationsParams {
 export interface ObservationsQueryData {
   data: Observation[];
   dataSourceLabel: string;
+  dailyQualityByDay?: Record<string, DailyQuality>;
 }
 
 export interface UseObservationsResult {
   data: Observation[];
   dataSourceLabel: string | null;
+  dailyQualityByDay: Record<string, DailyQuality> | null;
   isLoading: boolean;
   error: ProviderError | null;
   refetch: ObservationsRefetchFn;
@@ -102,16 +109,26 @@ export function useObservations({
         });
       }
 
-      // Always fetch 30-min data. The daily API has a ~2-day lag; aggregating
-      // from 30-min gives complete and up-to-date daily data (same strategy as Excel export).
-      const raw = await getObservationsXema({
-        stationId: station.id,
-        from: dateRange.from,
-        to: dateRange.to,
-        granularity: '30min',
-        signal,
-      });
-      const data = granularity === 'daily' ? aggregate30minToDaily(raw) : raw;
+      // Daily web aggregation uses padded UTC readings; the 30min/Excel source
+      // deliberately retains its existing request and legacy aggregation.
+      let data: Observation[];
+      let dailyQualityByDay: Record<string, DailyQuality> | undefined;
+      if (granularity === 'daily') {
+        const raw = await getWebDailyReadings({
+          stationId: station.id, fromDay: fromStr, toDay: toStr, signal,
+        });
+        const daily = buildWebDailyObservations(buildExpectedDayKeys(dateRange), raw);
+        data = daily.data;
+        dailyQualityByDay = daily.qualityByDay;
+      } else {
+        data = await getObservationsXema({
+          stationId: station.id,
+          from: dateRange.from,
+          to: dateRange.to,
+          granularity: '30min',
+          signal,
+        });
+      }
       const dataSourceLabel = buildDataSourceLabel(source, stationName);
       const withLabel = data.map((obs) => ({ ...obs, dataSourceLabel }));
       logDataDebug(
@@ -126,7 +143,7 @@ export function useObservations({
         },
         withLabel,
       );
-      return { data: withLabel, dataSourceLabel };
+      return { data: withLabel, dataSourceLabel, dailyQualityByDay };
     },
     enabled: enabled && !!station,
     staleTime: 5 * 60 * 1000,
@@ -137,6 +154,7 @@ export function useObservations({
   return {
     data: query.data?.data ?? [],
     dataSourceLabel: query.data?.dataSourceLabel ?? null,
+    dailyQualityByDay: granularity === 'daily' ? query.data?.dailyQualityByDay ?? null : null,
     isLoading: query.isLoading,
     error: query.error ?? null,
     refetch: query.refetch,
