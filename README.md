@@ -10,10 +10,11 @@ Consume datos abiertos de la red XEMA del Servei Meteorologic de Catalunya a tra
 - Seleccion de rango de fechas con presets rapidos de 7, 14 y 30 dias.
 - Persistencia del estado principal del dashboard en la URL (`station`, `from`, `to`, `granularity`).
 - Dos vistas temporales: detalle cada 30 minutos y resumen diario.
-- KPIs de temperatura, humedad, viento y precipitacion.
+- KPIs de temperatura, humedad, viento y precipitacion; en la vista diaria indican cuántos días aportan valor utilizable por variable.
 - Graficas de series temporales y tabla paginada de observaciones.
 - Exportacion a Excel con tres hojas: `Contexto`, `30min` y `Diario`.
-- Alertas de cobertura cuando faltan datos en el rango seleccionado.
+- Alertas de cobertura cuando faltan datos en el rango seleccionado o hay variables diarias parciales o incompletas.
+- La tabla diaria muestra cobertura por variable, validación XEMA y días seleccionados sin valor diario atribuible; los valores parciales de precipitación y racha se identifican como mínimos observados.
 
 ## Inicio rapido
 

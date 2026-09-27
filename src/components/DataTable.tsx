@@ -5,30 +5,77 @@ import {
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
-import { formatTimestamp, formatDayLabel } from '@/lib/weatherUtils';
+import type { DailyQuality, DailyQualityVariable, VariableDailyQuality } from '@/lib/dailyQuality';
+import { formatTimestamp, formatDayLabel, isFiniteNumber } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface DataTableProps {
   observations: Observation[];
   granularity: Granularity;
   isLoading: boolean;
+  dailyQualityByDay?: Record<string, DailyQuality> | null;
 }
 
 const PAGE_SIZE = 20;
 const WIND_LIMIT_ACOUSTIC = 5;
 
-export function DataTable({ observations, granularity, isLoading }: DataTableProps) {
+const COVERAGE_LABELS: Record<VariableDailyQuality['status'], string> = {
+  complete: 'Completo', partial: 'Parcial', incomplete: 'Incompleto', missing: 'Sin dato',
+};
+
+const VALIDATION_LABELS: Record<VariableDailyQuality['validationStatus'], string> = {
+  valid: 'válida', pending: 'pendiente', 'not-started': 'no iniciada',
+  unknown: 'desconocida', unreported: 'no informada', mixed: 'mixta',
+};
+
+function DailyValue({ value, quality, expectedSlots, lowerBound = false, className = 'text-right tabular-nums' }: {
+  value: number | string | null | undefined;
+  quality?: VariableDailyQuality;
+  expectedSlots?: number;
+  lowerBound?: boolean;
+  className?: string;
+}) {
+  const displayValue = typeof value === 'number' && !isFiniteNumber(value) ? null : value;
+  const isLowerBound = isFiniteNumber(displayValue) && lowerBound && quality?.isObservedLowerBound;
+  return (
+    <TableCell className={className}>
+      <span>{isLowerBound ? `≥ ${displayValue}` : displayValue ?? '—'}</span>
+      {quality && expectedSlots !== undefined && (
+        <span className="block text-xs text-muted-foreground font-normal whitespace-nowrap">
+          {COVERAGE_LABELS[quality.status]} · {quality.coveredSlots}/{expectedSlots} franjas
+          {(quality.status === 'incomplete' || quality.status === 'missing') && ' · Excluido de KPI'}
+        </span>
+      )}
+      {quality && (
+        <span className="block text-xs text-muted-foreground font-normal">
+          Validación XEMA: {VALIDATION_LABELS[quality.validationStatus]}
+        </span>
+      )}
+      {isLowerBound && <span className="block text-xs text-muted-foreground font-normal">Mínimo observado</span>}
+    </TableCell>
+  );
+}
+
+export function DataTable({ observations, granularity, isLoading, dailyQualityByDay }: DataTableProps) {
   const [page, setPage] = useState(0);
+
+  const isDetail = granularity === '30min';
+  const qualityDays = !isDetail && dailyQualityByDay ? Object.keys(dailyQualityByDay) : [];
+  const observationByDay = new Map(observations.map((observation) => [observation.timestamp.slice(0, 10), observation]));
+  const tableDays = qualityDays.length > 0
+    ? [...new Set([...qualityDays, ...observationByDay.keys()])].sort()
+    : observations.map((observation) => observation.timestamp.slice(0, 10));
+  const rowCount = isDetail ? observations.length : tableDays.length;
 
   useEffect(() => {
     setPage(0);
-  }, [granularity, observations]);
+  }, [granularity, observations, dailyQualityByDay]);
 
-  const isDetail = granularity === '30min';
-  const totalPages = Math.ceil(observations.length / PAGE_SIZE) || 1;
+  const totalPages = Math.ceil(rowCount / PAGE_SIZE) || 1;
   const safePage = Math.min(page, Math.max(0, totalPages - 1));
   const startIndex = safePage * PAGE_SIZE;
   const paginatedData = observations.slice(startIndex, startIndex + PAGE_SIZE);
+  const paginatedDays = tableDays.slice(startIndex, startIndex + PAGE_SIZE);
 
   if (isLoading) {
     return (
@@ -41,7 +88,7 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
     );
   }
 
-  if (observations.length === 0) {
+  if (rowCount === 0) {
     return (
       <div className="glass-card rounded-xl p-8 text-center">
         <p className="text-muted-foreground text-sm">No hay datos disponibles</p>
@@ -62,7 +109,7 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
           {isDetail ? 'Datos 30 min' : 'Resumen diario'}
         </h4>
         <span className="text-xs text-muted-foreground">
-          {observations.length} {isDetail ? 'registros' : 'días'}
+          {rowCount} {isDetail ? 'registros' : 'días seleccionados'}
         </span>
       </div>
 
@@ -94,31 +141,38 @@ export function DataTable({ observations, granularity, isLoading }: DataTablePro
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.map((obs, index) => (
+            {isDetail ? paginatedData.map((obs, index) => (
               <TableRow key={`${obs.timestamp}-${index}`}>
-                {isDetail ? (
-                  <>
-                    <TableCell className="font-medium">{formatTimestamp(obs.timestamp, true)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.temperature ?? '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.humidity ?? '—'}</TableCell>
-                    <TableCell className={windCellClass(obs.windSpeed)}>{roundWind(obs.windSpeed)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.windDirection ?? '—'}</TableCell>
-                    <TableCell className={windCellClass(obs.windSpeedMax)}>{roundWind(obs.windSpeedMax)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.precipitation ?? '—'}</TableCell>
-                  </>
-                ) : (
-                  <>
-                    <TableCell className="font-medium">{formatDayLabel(obs.timestamp)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.temperature ?? '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.humidity ?? '—'}</TableCell>
-                    <TableCell className={windCellClass(obs.windSpeed)}>{roundWind(obs.windSpeed)}</TableCell>
-                    <TableCell className={windCellClass(obs.windSpeedMax)}>{roundWind(obs.windSpeedMax)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.windGustTime ?? '—'}</TableCell>
-                    <TableCell className="text-right tabular-nums">{obs.precipitation ?? '—'}</TableCell>
-                  </>
-                )}
+                <TableCell className="font-medium">{formatTimestamp(obs.timestamp, true)}</TableCell>
+                <TableCell className="text-right tabular-nums">{obs.temperature ?? '—'}</TableCell>
+                <TableCell className="text-right tabular-nums">{obs.humidity ?? '—'}</TableCell>
+                <TableCell className={windCellClass(obs.windSpeed)}>{roundWind(obs.windSpeed)}</TableCell>
+                <TableCell className="text-right tabular-nums">{obs.windDirection ?? '—'}</TableCell>
+                <TableCell className={windCellClass(obs.windSpeedMax)}>{roundWind(obs.windSpeedMax)}</TableCell>
+                <TableCell className="text-right tabular-nums">{obs.precipitation ?? '—'}</TableCell>
               </TableRow>
-            ))}
+            )) : paginatedDays.map((dayKey) => {
+              const obs = observationByDay.get(dayKey);
+              const dailyQuality = dailyQualityByDay?.[dayKey];
+              const variableQuality = (variable: DailyQualityVariable) => dailyQuality?.variables[variable];
+              return (
+                <TableRow key={dayKey}>
+                  <TableCell className="font-medium">
+                    {formatDayLabel(dayKey)}
+                    {!obs && <span className="block text-xs text-muted-foreground">Sin valor diario</span>}
+                  </TableCell>
+                  <DailyValue value={obs?.temperature} quality={variableQuality('temperature')} expectedSlots={dailyQuality?.expectedSlots} />
+                  <DailyValue value={obs?.humidity} quality={variableQuality('humidity')} expectedSlots={dailyQuality?.expectedSlots} />
+                  <DailyValue value={obs?.windSpeed == null ? null : roundWind(obs.windSpeed)} quality={variableQuality('windSpeed')}
+                    expectedSlots={dailyQuality?.expectedSlots} className={windCellClass(obs?.windSpeed ?? null)} />
+                  <DailyValue value={obs?.windSpeedMax == null ? null : roundWind(obs.windSpeedMax)} quality={variableQuality('windSpeedMax')}
+                    expectedSlots={dailyQuality?.expectedSlots} lowerBound className={windCellClass(obs?.windSpeedMax ?? null)} />
+                  <TableCell className="text-right tabular-nums">{obs?.windGustTime ?? '—'}</TableCell>
+                  <DailyValue value={obs?.precipitation} quality={variableQuality('precipitation')}
+                    expectedSlots={dailyQuality?.expectedSlots} lowerBound />
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

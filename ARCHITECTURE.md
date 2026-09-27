@@ -59,7 +59,7 @@ src/
    - `nzvn-apee` para detalle 30 min y para la agregacion diaria web. Esta ultima consulta comienza en la fecha UTC anterior al primer dia seleccionado y termina al final de la fecha UTC del ultimo dia; los dias adicionales no se muestran.
    - `7bvh-jvq2` conserva el contrato de consulta diaria directa; `nzvn-apee` completa su `windGustTime`.
 7. `src/lib/` calcula estadisticas (`weatherUtils.ts`), cobertura (`dailyCoverage.ts`, `subdailyCoverage.ts`), calidad diaria por variable (`dailyQuality.ts`) y agregacion diaria web por franjas locales (`webDailyObservations.ts`). Solo valores diarios con calidad completa o parcial entran en las estadisticas meteorologicas de la vista diaria; validacion XEMA y cobertura son estados distintos.
-8. `WeatherCharts` se carga en diferido desde la ruta principal y `StationMap` actualiza marcadores sin reconstruirlos completos al cambiar la seleccion.
+8. `Index.tsx` pasa la calidad diaria a `DataTable`, `CoverageAlerts` y `WeatherKPIs`. La tabla conserva días sin fila de observación y distingue cobertura de validación; las alertas señalan degradación por variable; los KPI muestran los días que aportan un valor finito utilizable. `WeatherCharts` se carga en diferido y permanece pendiente de representación de calidad en la fase siguiente. `StationMap` actualiza marcadores sin reconstruirlos completos al cambiar la seleccion.
 9. `useExcelExport()` sigue consultando la ruta `30min` existente y usando `aggregate30minToDaily()` para generar el `.xlsx` con hojas `Contexto`, `30min` y `Diario`; no utiliza la agregacion ni la calidad diaria web.
 
 ## Modulos clave

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { Observation, Station } from '@/types/weather';
+import type { DailyQuality } from '@/lib/dailyQuality';
 import Index from './Index';
 import { useStations } from '@/hooks/useStations';
 import { useObservations } from '@/hooks/useObservations';
@@ -11,6 +12,8 @@ import { toast } from 'sonner';
 const uiConsistency = vi.hoisted(() => ({
   kpiDataPoints: null as number | null,
   chartLength: null as number | null,
+  tableQualityDays: null as number | null,
+  kpiQualityDays: null as number | null,
 }));
 
 vi.mock('@/hooks/useStations', () => ({
@@ -59,8 +62,9 @@ vi.mock('@/components/DateRangePicker', () => ({
 }));
 
 vi.mock('@/components/WeatherKPIs', () => ({
-  WeatherKPIs: ({ stats }: { stats: { dataPoints?: number } | null }) => {
+  WeatherKPIs: ({ stats, dailyQualityByDay }: { stats: { dataPoints?: number } | null; dailyQualityByDay?: Record<string, DailyQuality> | null }) => {
     uiConsistency.kpiDataPoints = typeof stats?.dataPoints === 'number' ? stats.dataPoints : null;
+    uiConsistency.kpiQualityDays = dailyQualityByDay ? Object.keys(dailyQualityByDay).length : null;
     return <div>kpis</div>;
   },
 }));
@@ -73,7 +77,10 @@ vi.mock('@/components/WeatherCharts', () => ({
 }));
 
 vi.mock('@/components/DataTable', () => ({
-  DataTable: () => <div>table</div>,
+  DataTable: ({ dailyQualityByDay }: { dailyQualityByDay?: Record<string, DailyQuality> | null }) => {
+    uiConsistency.tableQualityDays = dailyQualityByDay ? Object.keys(dailyQualityByDay).length : null;
+    return <div>table</div>;
+  },
 }));
 
 const mockUseStations = vi.mocked(useStations);
@@ -119,6 +126,8 @@ describe('Index export and query behavior', () => {
     vi.clearAllMocks();
     uiConsistency.kpiDataPoints = null;
     uiConsistency.chartLength = null;
+    uiConsistency.tableQualityDays = null;
+    uiConsistency.kpiQualityDays = null;
     mockUseStations.mockReturnValue({
       data: [TEST_STATION],
       metadataSource: 'live',
@@ -256,6 +265,38 @@ describe('Index export and query behavior', () => {
       expect(uiConsistency.chartLength).toBe(dailyObservations.length);
       expect(uiConsistency.kpiDataPoints).toBe(dailyObservations.length);
       expect(uiConsistency.kpiDataPoints).toBe(uiConsistency.chartLength);
+    });
+  });
+
+  it('passes daily quality to table, alert, and KPIs without adding empty days to chart rows', async () => {
+    const variable = {
+      coveredSlots: 0, coverage: 0, status: 'missing' as const,
+      longestMissingGapMinutes: 1440, unresolvedBaseReadings: 0,
+      validationCounts: { valid: 0, pending: 0, 'not-started': 0, unknown: 0, unreported: 0 },
+      validationStatus: 'unreported' as const, isObservedLowerBound: false,
+    };
+    const quality: DailyQuality = {
+      dayKey: '2025-01-02', expectedSlots: 48,
+      variables: { temperature: variable, humidity: variable, precipitation: variable,
+        windSpeed: variable, windSpeedMax: variable },
+    };
+    mockUseObservations.mockImplementation((params: unknown) => {
+      const p = params as { station: Station | null; granularity: '30min' | 'daily' };
+      return {
+        data: p.station && p.granularity === 'daily' ? [TEST_OBSERVATION] : [],
+        dailyQualityByDay: p.station && p.granularity === 'daily' ? { '2025-01-02': quality } : null,
+        dataSourceLabel: null, isLoading: false, error: null,
+        refetch: vi.fn(), isFetching: false,
+      } as ReturnType<typeof useObservations>;
+    });
+    renderIndex();
+    fireEvent.click(screen.getByRole('button', { name: 'set-daily' }));
+    fireEvent.click(screen.getByRole('button', { name: 'select-station' }));
+    await waitFor(() => {
+      expect(uiConsistency.tableQualityDays).toBe(1);
+      expect(uiConsistency.kpiQualityDays).toBe(1);
+      expect(uiConsistency.chartLength).toBe(1);
+      expect(screen.getByText(/Calidad diaria por variable/)).toBeInTheDocument();
     });
   });
 
