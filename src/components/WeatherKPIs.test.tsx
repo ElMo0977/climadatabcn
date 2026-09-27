@@ -41,14 +41,14 @@ describe('WeatherKPIs daily quality provenance', () => {
       '2024-02-02': day('2024-02-02', { temperature: 'incomplete', windSpeed: 'missing', windSpeedMax: 'partial' }),
     };
     const { container } = render(<WeatherKPIs stats={stats} isLoading={false} granularity="daily" dailyQualityByDay={quality} observations={observations} />);
-    expect(screen.getByText(/Temperatura: 1 de 2 días con valor utilizable; 1 excluido por cobertura; 0 sin valor/)).toBeInTheDocument();
-    expect(screen.getByText(/Humedad: 2 de 2 días con valor utilizable; 0 excluidos por cobertura; 0 sin valor/)).toBeInTheDocument();
-    expect(screen.getByText(/Viento medio: 1 de 2 días con valor utilizable; 1 excluido por cobertura; 0 sin valor/)).toBeInTheDocument();
-    expect(screen.getByText(/Racha máxima: 1 de 2 días con valor utilizable; 1 excluido por cobertura; 0 sin valor/)).toBeInTheDocument();
-    expect(screen.getByText(/Precipitación: 2 de 2 días con valor utilizable; 0 excluidos por cobertura; 0 sin valor/)).toBeInTheDocument();
+    expect(screen.getByText(/Temperatura: 1 parcial · 1 excluido por cobertura/)).toBeInTheDocument();
+    expect(screen.queryByText(/Humedad:.*de 2 días/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Viento medio: 1 excluido por cobertura/)).toBeInTheDocument();
+    expect(screen.getByText(/Racha máxima: 1 parcial · 1 excluido por cobertura/)).toBeInTheDocument();
+    expect(screen.getByText(/Precipitación: 1 parcial/)).toBeInTheDocument();
     expect(screen.getByText(/Precipitación: mínimo observado/)).toBeInTheDocument();
     expect(screen.getByText(/Racha máxima: mínimo observado/)).toBeInTheDocument();
-    expect(screen.getByText(/Datos: 2 filas con lecturas/)).toBeInTheDocument();
+    expect(screen.queryByText(/Datos: 2 filas con lecturas/)).not.toBeInTheDocument();
     expect(container.textContent).toContain('4 mm');
   });
 
@@ -56,7 +56,7 @@ describe('WeatherKPIs daily quality provenance', () => {
     render(<WeatherKPIs stats={{ ...stats, totalPrecipitation: null }} isLoading={false}
       granularity="daily" dailyQualityByDay={{ '2024-02-01': day('2024-02-01', {}) }}
       observations={[{ ...observations[0], precipitation: null }]} />);
-    expect(screen.getByText(/Precipitación: 0 de 1 día con valor utilizable; 0 excluidos por cobertura; 1 sin valor/)).toBeInTheDocument();
+    expect(screen.getByText(/Precipitación: 1 sin valor/)).toBeInTheDocument();
     expect(screen.queryByText(/Precipitación: mínimo observado/)).not.toBeInTheDocument();
   });
 
@@ -66,5 +66,18 @@ describe('WeatherKPIs daily quality provenance', () => {
     expect(screen.queryByText(/con valor utilizable/)).not.toBeInTheDocument();
     expect(screen.queryByText(/mínimo observado/)).not.toBeInTheDocument();
     expect(screen.getByText('Datos')).toBeInTheDocument();
+  });
+
+  it('names the affected wind constituent for validation-only issues', () => {
+    const quality = day('2024-02-01', {});
+    quality.variables.windSpeed = {
+      ...quality.variables.windSpeed,
+      validationStatus: 'pending',
+      validationCounts: { valid: 0, pending: 1, 'not-started': 0, unknown: 0, unreported: 0 },
+    };
+    render(<WeatherKPIs stats={stats} isLoading={false} granularity="daily"
+      dailyQualityByDay={{ '2024-02-01': quality }} observations={[observations[0]]} />);
+    expect(screen.getByText(/Viento medio: validación XEMA pendiente/)).toBeInTheDocument();
+    expect(screen.queryByText(/Racha máxima: validación XEMA/)).not.toBeInTheDocument();
   });
 });

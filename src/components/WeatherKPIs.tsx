@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { getWindKpiDisplay } from '@/lib/windKpi';
 import { isFiniteNumber } from '@/lib/weatherUtils';
+import { CoverageMark, ValidationMark } from './QualityMarks';
 
 interface WeatherKPIsProps {
   stats: WeatherStats | null;
@@ -14,13 +15,24 @@ interface WeatherKPIsProps {
   observations?: Observation[];
 }
 
-function dailyProvenance(days: DailyQuality[], observations: Observation[], variable: DailyQualityVariable, label: string): string {
+const VARIABLE_LABELS: Record<DailyQualityVariable, string> = {
+  temperature: 'Temperatura', humidity: 'Humedad', windSpeed: 'Viento medio',
+  windSpeedMax: 'Racha máxima', precipitation: 'Precipitación',
+};
+
+function dailyProvenance(days: DailyQuality[], observations: Observation[], variable: DailyQualityVariable): string | null {
   const observationsByDay = new Map(observations.map((observation) => [observation.timestamp.slice(0, 10), observation]));
   const excluded = days.filter((day) => !['complete', 'partial'].includes(day.variables[variable].status)).length;
+  const partial = days.filter((day) => day.variables[variable].status === 'partial').length;
   const usable = days.filter((day) => ['complete', 'partial'].includes(day.variables[variable].status)
     && isFiniteNumber(observationsByDay.get(day.dayKey)?.[variable])).length;
   const withoutValue = days.length - excluded - usable;
-  return `${label}: ${usable} de ${days.length} ${days.length === 1 ? 'día' : 'días'} con valor utilizable; ${excluded} excluido${excluded === 1 ? '' : 's'} por cobertura; ${withoutValue} sin valor`;
+  const issues = [
+    partial ? `${partial} parcial${partial === 1 ? '' : 'es'}` : null,
+    excluded ? `${excluded} excluido${excluded === 1 ? '' : 's'} por cobertura` : null,
+    withoutValue ? `${withoutValue} sin valor` : null,
+  ].filter(Boolean);
+  return issues.length ? issues.join(' · ') : null;
 }
 
 export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, observations = [] }: WeatherKPIsProps) {
@@ -51,7 +63,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
       colorClass: 'text-temperature',
       bgClass: 'bg-temperature/10',
       provenance: ['temperature'] as DailyQualityVariable[],
-      provenanceLabels: ['Temperatura'],
     },
     {
       label: 'Humedad media',
@@ -60,7 +71,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
       colorClass: 'text-humidity',
       bgClass: 'bg-humidity/10',
       provenance: ['humidity'] as DailyQualityVariable[],
-      provenanceLabels: ['Humedad'],
     },
     {
       label: windKpi.label,
@@ -69,7 +79,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
       colorClass: 'text-wind',
       bgClass: 'bg-wind/10',
       provenance: ['windSpeed', 'windSpeedMax'] as DailyQualityVariable[],
-      provenanceLabels: ['Viento medio', 'Racha máxima'],
     },
     {
       label: granularity === 'daily' ? 'Precipitación observada' : 'Precipitación total',
@@ -78,7 +87,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
       colorClass: 'text-primary',
       bgClass: 'bg-primary/10',
       provenance: ['precipitation'] as DailyQualityVariable[],
-      provenanceLabels: ['Precipitación'],
     },
     {
       label: 'Datos',
@@ -87,7 +95,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
       colorClass: 'text-muted-foreground',
       bgClass: 'bg-muted/50',
       provenance: [] as DailyQualityVariable[],
-      provenanceLabels: [],
     },
   ];
 
@@ -111,11 +118,29 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
               <p className={cn("text-2xl font-display font-bold", kpi.colorClass)}>
                 {kpi.value}
               </p>
-              {showDailyProvenance && kpi.provenance.map((variable, index) => (
-                <p key={variable} className="mt-1 text-xs text-muted-foreground">
-                  {dailyProvenance(dailyDays, observations, variable, kpi.provenanceLabels[index])}
-                </p>
-              ))}
+              {showDailyProvenance && kpi.provenance.map((variable) => {
+                const issue = dailyProvenance(dailyDays, observations, variable);
+                const validationStatuses = [...new Set(dailyDays.map((day) => day.variables[variable])
+                  .filter((quality) => quality.validationStatus !== 'valid'
+                    && Object.values(quality.validationCounts).some((count) => count > 0))
+                  .map((quality) => quality.validationStatus))];
+                const validationStatus = validationStatuses.length === 1 ? validationStatuses[0] : 'mixed';
+                const coverageStatus = dailyDays.some((day) => ['missing', 'incomplete'].includes(day.variables[variable].status))
+                  ? 'incomplete' : 'partial';
+                if (!issue && validationStatuses.length === 0) return null;
+                return <p key={variable} className="mt-1 text-xs text-muted-foreground">
+                  {issue && <><CoverageMark status={coverageStatus} /> {VARIABLE_LABELS[variable]}: {issue}</>}
+                  {validationStatuses.length > 0 && <>
+                    <ValidationMark status={validationStatus} />
+                    <span>{VARIABLE_LABELS[variable]}: validación XEMA {
+                      validationStatus === 'pending' ? 'pendiente'
+                        : validationStatus === 'not-started' ? 'no iniciada'
+                          : validationStatus === 'unknown' ? 'desconocida'
+                            : validationStatus === 'mixed' ? 'mixta' : 'no informada'
+                    }</span>
+                  </>}
+                </p>;
+              })}
               {showDailyProvenance && kpi.provenance.includes('precipitation')
                 && isFiniteNumber(totalPrecipitation) && hasPartialLowerBound('precipitation') && (
                   <p className="mt-1 text-xs text-muted-foreground">Precipitación: mínimo observado en días parciales</p>
@@ -124,9 +149,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
                 && isFiniteNumber(maxWindSpeed) && hasPartialLowerBound('windSpeedMax') && (
                   <p className="mt-1 text-xs text-muted-foreground">Racha máxima: mínimo observado en días parciales</p>
                 )}
-              {showDailyProvenance && kpi.label === 'Datos' && (
-                <p className="mt-1 text-xs text-muted-foreground">Datos: {dataPoints} filas con lecturas</p>
-              )}
             </>
           )}
         </div>

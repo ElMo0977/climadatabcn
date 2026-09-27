@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { StationSelector } from '@/components/StationSelector';
 import { DateRangePicker } from '@/components/DateRangePicker';
@@ -93,18 +93,6 @@ const Index = () => {
               />
             </div>
 
-            {observationsError && (
-              <div className="glass-card rounded-xl p-4 border-destructive/50 bg-destructive/5">
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                  <div>
-                    <p className="font-medium text-sm">Error al cargar datos</p>
-                    <p className="text-xs text-muted-foreground">{observationsError.message}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {selectedStation && (
               <div className="glass-card rounded-xl p-4">
                 <div className="flex items-center justify-between">
@@ -133,7 +121,7 @@ const Index = () => {
               </div>
             )}
 
-            <CoverageAlerts
+            {selectedStation && <CoverageAlerts
               dailyCoverage={dailyCoverage}
               subdailyCoverage={subdailyCoverage}
               showDaily={showDailyCoverageAlert}
@@ -141,7 +129,11 @@ const Index = () => {
               showLargestGap={showLargestSubdailyGap}
               missingDaysText={missingDaysText}
               dailyQualityByDay={granularity === 'daily' && !observationsError && !observationsLoading ? dailyQualityByDay : null}
-            />
+              granularity={granularity}
+              observations={observations}
+              error={observationsError}
+              isLoading={observationsLoading || observationsFetching}
+            />}
 
             <WeatherKPIs stats={stats} isLoading={observationsLoading} granularity={granularity} observations={observations}
               dailyQualityByDay={granularity === 'daily' && !observationsError ? dailyQualityByDay : null} />
