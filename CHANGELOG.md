@@ -6,6 +6,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-09-27 — Calidad diaria web: tabla y resúmenes (fase 4)
+
+### Changed
+
+- La tabla diaria muestra todos los días seleccionados y, para cada variable, cobertura en franjas y validación XEMA por separado. Un día sin observación numérica se indica como «Sin valor diario», sin afirmar que no hubo lecturas de origen. Los valores incompletos se identifican como excluidos de los KPI; precipitación y rachas parciales con valor se indican como mínimos observados.
+- Una alerta informa de días con variables parciales, incompletas o ausentes incluso cuando existen filas diarias. Los KPI explican sus cohortes por variable, incluidos días sin valor numérico y los dos cálculos de viento por separado.
+- La vista de 30 minutos, las gráficas y la exportación Excel mantienen su comportamiento anterior.
+
+---
+
 ## 2026-09-27 — Calidad diaria web: integracion de datos (fase 3)
 
 ### Changed

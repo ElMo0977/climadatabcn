@@ -39,6 +39,7 @@ const Index = () => {
     observationsError,
     observationsFetching,
     stats,
+    dailyQualityByDay,
     dailyCoverage,
     subdailyCoverage,
     missingDaysText,
@@ -139,9 +140,11 @@ const Index = () => {
               showSubdaily={showSubdailyCoverageAlert}
               showLargestGap={showLargestSubdailyGap}
               missingDaysText={missingDaysText}
+              dailyQualityByDay={granularity === 'daily' && !observationsError && !observationsLoading ? dailyQualityByDay : null}
             />
 
-            <WeatherKPIs stats={stats} isLoading={observationsLoading} />
+            <WeatherKPIs stats={stats} isLoading={observationsLoading} granularity={granularity} observations={observations}
+              dailyQualityByDay={granularity === 'daily' && !observationsError ? dailyQualityByDay : null} />
 
             <Suspense
               fallback={
@@ -162,6 +165,7 @@ const Index = () => {
               observations={observations}
               granularity={granularity}
               isLoading={observationsLoading}
+              dailyQualityByDay={granularity === 'daily' && !observationsError ? dailyQualityByDay : null}
             />
           </section>
         </div>
