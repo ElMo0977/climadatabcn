@@ -54,7 +54,6 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
     dailyDays.some((day) => day.variables[variable].status === 'partial'
       && day.variables[variable].isObservedLowerBound
       && isFiniteNumber(observationsByDay.get(day.dayKey)?.[variable]));
-
   const kpis = [
     {
       label: 'Temperatura media',
@@ -129,16 +128,14 @@ export function WeatherKPIs({ stats, isLoading, granularity, dailyQualityByDay, 
                   ? 'incomplete' : 'partial';
                 if (!issue && validationStatuses.length === 0) return null;
                 return <p key={variable} className="mt-1 text-xs text-muted-foreground">
-                  {issue && <><CoverageMark status={coverageStatus} /> {VARIABLE_LABELS[variable]}: {issue}</>}
-                  {validationStatuses.length > 0 && <>
-                    <ValidationMark status={validationStatus} />
-                    <span>{VARIABLE_LABELS[variable]}: validación XEMA {
+                  {issue && <CoverageMark status={coverageStatus}
+                    ariaLabel={`Cobertura ${VARIABLE_LABELS[variable].toLowerCase()}: ${issue}`} />}
+                  {validationStatuses.length > 0 && <ValidationMark status={validationStatus}
+                    detail={`${VARIABLE_LABELS[variable]}: validación XEMA ${
                       validationStatus === 'pending' ? 'pendiente'
                         : validationStatus === 'not-started' ? 'no iniciada'
                           : validationStatus === 'unknown' ? 'desconocida'
-                            : validationStatus === 'mixed' ? 'mixta' : 'no informada'
-                    }</span>
-                  </>}
+                            : validationStatus === 'mixed' ? 'mixta' : 'no informada'}`} />}
                 </p>;
               })}
               {showDailyProvenance && kpi.provenance.includes('precipitation')

@@ -91,64 +91,35 @@ export function CoverageAlerts({
       variable.validationStatus === 'valid' && variable.validationCounts.valid > 0))
     : detailVariables.length > 0 && detailVariables.every(({ value, validation }) =>
       isFiniteNumber(value) && validation === 'valid'));
-  const headline = error ? '⊗ Error al cargar datos'
-    : coverageIssue ? '▲! Hay datos parciales, incompletos o ausentes'
-      : validationIssue ? granularity === '30min'
-        ? `◇? ${hasCoverageProof ? 'Cobertura completa en los días seleccionados; ' : ''}validación XEMA de las lecturas visibles no confirmada`
-        : `◇? ${hasCoverageProof ? 'Cobertura completa; ' : ''}validación XEMA no confirmada`
-        : hasEvidence ? granularity === '30min'
-          ? 'Todo correcto en las lecturas visibles: validación XEMA confirmada; cobertura completa en los días seleccionados.'
-          : 'Todo correcto: cobertura completa y validación XEMA confirmada'
-          : 'No hay datos suficientes para confirmar la calidad';
+  const coverageDetails = [
+    showQualityAlert ? `Parcial: ${partialDays} días · Incompleto: ${incompleteDays} días · Sin dato: ${missingDays} días` : null,
+    showDaily && dailyCoverage?.missingCount ? `Faltan datos para ${dailyCoverage.missingCount} días: ${missingDaysText}` : null,
+    showSubdaily && subdailyCoverage?.missingCount ? `Faltan ${subdailyCoverage.missingCount} registros de Datos 30 min` : null,
+    showSubdaily && showLargestGap && subdailyCoverage?.largestGap
+      ? `Faltan datos entre ${formatGapInterval(subdailyCoverage.largestGap.start, subdailyCoverage.largestGap.end)} (${subdailyCoverage.largestGap.missingCount} franjas)` : null,
+    missingReadings ? 'Hay variables sin lectura en la vista de 30 minutos' : null,
+  ].filter(Boolean).join('. ');
+  const healthyText = hasEvidence ? granularity === '30min'
+    ? 'Todo correcto en las lecturas visibles: validación XEMA confirmada; cobertura completa en los días seleccionados.'
+    : 'Todo correcto: cobertura completa y validación XEMA confirmada'
+    : 'No hay datos suficientes para confirmar la calidad';
 
   return (
     <div className="glass-card rounded-xl p-3" role="status">
-      <p className="text-sm font-medium">{headline}</p>
-      {error ? <p className="text-xs text-muted-foreground">{error.message}</p> : <>
-      {coverageIssue && validationIssue && <p className="text-xs text-muted-foreground">◇? También hay lecturas cuya validación XEMA no está confirmada.</p>}
-      {showQualityAlert && (
-        <div>
-          <p className="text-xs text-muted-foreground">
-            Parcial: {partialDays} día{partialDays === 1 ? '' : 's'} · Incompleto: {incompleteDays} día{incompleteDays === 1 ? '' : 's'} · Sin dato: {missingDays} día{missingDays === 1 ? '' : 's'}.
-            Un día puede aparecer en más de una categoría porque cada variable se evalúa por separado.
-          </p>
-          <p className="text-xs text-muted-foreground">Consulta el detalle de cobertura y validación en la tabla diaria. Los valores incompletos no se incluyen en los KPI.</p>
-        </div>
-      )}
-      {showDaily && dailyCoverage && (
-        <div>
-          <p className="text-sm font-medium">
-            Datos disponibles para {dailyCoverage.availableCount} de {dailyCoverage.expectedCount} días.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Faltan datos para {dailyCoverage.missingCount} día{dailyCoverage.missingCount === 1 ? '' : 's'}: {missingDaysText}
-          </p>
-        </div>
-      )}
-
-      {showSubdaily && subdailyCoverage && (
-        <div>
-          <p className="text-sm font-medium">
-            Datos 30 min disponibles para {subdailyCoverage.availableCount} de {subdailyCoverage.expectedCount} franjas.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {subdailyCoverage.availableCount === 0
-              ? 'No hay Datos 30 min para el rango seleccionado en la estación.'
-              : `Faltan ${subdailyCoverage.missingCount} registro${subdailyCoverage.missingCount === 1 ? '' : 's'} de Datos 30 min en el rango seleccionado.`}
-          </p>
-          {showLargestGap && subdailyCoverage.largestGap && (
-            <>
-              <p className="text-xs text-muted-foreground">
-                Faltan datos entre {formatGapInterval(subdailyCoverage.largestGap.start, subdailyCoverage.largestGap.end)} ({subdailyCoverage.largestGap.missingCount} franjas).
-              </p>
-              <p className="text-xs text-muted-foreground">
-                La fuente de dades obertes (Socrata) no publica algunas franjas. Meteocat puede mostrar datos aún en control de calidad.
-              </p>
-            </>
-          )}
-        </div>
-      )}
-      </>}
+      <p className="text-sm font-medium">
+        {error ? <span role="img" aria-label={`Error al cargar datos: ${error.message}`}
+          title={`Error al cargar datos: ${error.message}`} className="text-red-700 dark:text-red-300">×</span>
+          : coverageIssue || validationIssue ? <>
+            {coverageIssue && <span role="img" aria-label={`Cobertura: ${coverageDetails || 'Datos parciales, incompletos o ausentes'}`}
+              title={`Cobertura: ${coverageDetails || 'Datos parciales, incompletos o ausentes'}`}
+              className="text-orange-700 dark:text-orange-300">▲</span>}
+            {validationIssue && <span role="img" aria-label={granularity === '30min'
+              ? 'Validación XEMA de las lecturas visibles no confirmada' : 'Validación XEMA no confirmada'}
+              title={granularity === '30min'
+                ? 'Validación XEMA de las lecturas visibles no confirmada' : 'Validación XEMA no confirmada'}
+              className="ml-1 text-amber-700 dark:text-amber-300">◇</span>}
+          </> : healthyText}
+      </p>
       <QualityLegend />
     </div>
   );

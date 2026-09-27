@@ -62,12 +62,14 @@ describe('DataTable', () => {
 
     const rows = screen.getAllByRole('row');
     expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getAllByText(/Parcial · 40\/48 franjas/)).toHaveLength(5);
-    expect(within(rows[1]).getAllByText(/Validación XEMA: pendiente/)).toHaveLength(5);
+    expect(within(rows[1]).getAllByText('▲')).toHaveLength(5);
+    expect(within(rows[1]).getAllByText('◇')).toHaveLength(5);
+    expect(within(rows[1]).queryByText(/Parcial|Validación XEMA|franjas/)).not.toBeInTheDocument();
     expect(within(rows[1]).getByText('≥ 1.5')).toBeInTheDocument();
     expect(within(rows[1]).getByText('≥ 7')).toBeInTheDocument();
+    expect(within(rows[1]).getAllByText('Mínimo observado')).toHaveLength(2);
     expect(within(rows[2]).getByText('Sin valor diario')).toBeInTheDocument();
-    expect(within(rows[2]).getAllByText(/Sin dato · 0\/48 franjas/)).toHaveLength(5);
+    expect(within(rows[2]).getAllByText('▲')).toHaveLength(5);
     expect(within(rows[2]).queryByText(/≥/)).not.toBeInTheDocument();
   });
 
@@ -80,8 +82,8 @@ describe('DataTable', () => {
     render(<DataTable observations={[]} granularity="daily" isLoading={false}
       dailyQualityByDay={{ '2024-02-01': dayQuality('2024-02-01', unresolved) }} />);
     expect(screen.getByText('Sin valor diario')).toBeInTheDocument();
-    expect(screen.getAllByText(/Incompleto · 0\/48 franjas · Excluido de KPI/)).toHaveLength(5);
-    expect(screen.getAllByText(/Validación XEMA: pendiente/)).toHaveLength(5);
+    expect(screen.getAllByText('▲')).toHaveLength(5);
+    expect(screen.getAllByText('◇')).toHaveLength(5);
     expect(screen.queryByText('No hay datos disponibles')).not.toBeInTheDocument();
   });
 
@@ -91,7 +93,7 @@ describe('DataTable', () => {
       granularity="daily" isLoading={false}
       dailyQualityByDay={{ '2024-02-01': dayQuality('2024-02-01', incomplete) }} />);
 
-    expect(screen.getAllByText(/Incompleto · 20\/48 franjas · Excluido de KPI/)).toHaveLength(5);
+    expect(screen.getAllByText('▲')).toHaveLength(5);
     expect(screen.getByText('≥ 2')).toBeInTheDocument();
     expect(screen.queryByText('≥ —')).not.toBeInTheDocument();
   });
@@ -123,10 +125,12 @@ describe('DataTable', () => {
     render(<DataTable observations={[observation]} granularity="30min" isLoading={false} />);
     const row = screen.getAllByRole('row')[1];
     const cells = row.querySelectorAll('td');
-    expect(within(cells[1]).queryByText('◇?')).not.toBeInTheDocument();
+    expect(within(cells[1]).queryByText('◇')).not.toBeInTheDocument();
     expect(within(cells[2]).getByLabelText('Validación XEMA pendiente')).toBeInTheDocument();
     expect(within(cells[6]).getByLabelText('Validación XEMA no informada')).toBeInTheDocument();
     expect(within(cells[3]).getByLabelText('Validación XEMA no informada')).toBeInTheDocument();
+    expect(within(cells[2]).getByText('◇')).toBeInTheDocument();
+    expect(within(row).queryByText(/Validación XEMA|pendiente|no informada/)).not.toBeInTheDocument();
   });
 
   it('does not repeat success on complete and validated daily cells', () => {

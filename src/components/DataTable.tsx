@@ -45,23 +45,14 @@ function DailyValue({ value, quality, expectedSlots, lowerBound = false, classNa
   const isLowerBound = isFiniteNumber(displayValue) && lowerBound && quality?.isObservedLowerBound;
   return (
     <TableCell className={className}>
-      <span>{isLowerBound ? `≥ ${displayValue}` : displayValue ?? '—'}</span>
+      <span title={isLowerBound ? 'Mínimo observado' : undefined}>{isLowerBound ? `≥ ${displayValue}` : displayValue ?? '—'}</span>
       {quality && quality.status !== 'complete' && expectedSlots !== undefined && (
-        <span className="block text-xs text-muted-foreground font-normal whitespace-nowrap">
-          <CoverageMark status={quality.status} detail={`${quality.coveredSlots}/${expectedSlots} franjas`} />
-          {quality.status === 'partial' ? 'Parcial' : quality.status === 'missing' ? 'Sin dato' : 'Incompleto'} · {quality.coveredSlots}/{expectedSlots} franjas
-          {(quality.status === 'incomplete' || quality.status === 'missing') && ' · Excluido de KPI'}
-        </span>
+        <CoverageMark status={quality.status} detail={`${quality.coveredSlots}/${expectedSlots} franjas${
+          quality.status === 'incomplete' || quality.status === 'missing' ? '; excluido de KPI' : ''}`} />
       )}
       {quality && quality.validationStatus !== 'valid'
         && Object.values(quality.validationCounts).some((count) => count > 0) && (
-        <span className="block text-xs text-muted-foreground font-normal">
-          <ValidationMark status={quality.validationStatus} />
-          Validación XEMA: {quality.validationStatus === 'pending' ? 'pendiente'
-            : quality.validationStatus === 'not-started' ? 'no iniciada'
-              : quality.validationStatus === 'unknown' ? 'desconocida'
-                : quality.validationStatus === 'mixed' ? 'mixta' : 'no informada'}
-        </span>
+        <ValidationMark status={quality.validationStatus} />
       )}
       {isLowerBound && <span className="block text-xs text-muted-foreground font-normal">Mínimo observado</span>}
     </TableCell>
