@@ -43,7 +43,7 @@ const madridDateFormatter = new Intl.DateTimeFormat('en-GB', {
   day: '2-digit',
 });
 
-function madridDayKey(timestampMs: number): string {
+export function madridDayKey(timestampMs: number): string {
   const parts = madridDateFormatter.formatToParts(new Date(timestampMs));
   const get = (type: 'year' | 'month' | 'day') => parts.find((part) => part.type === type)!.value;
   return `${get('year')}-${get('month')}-${get('day')}`;
@@ -67,7 +67,7 @@ function expectedSlotTimes(dayKey: string): number[] {
   return slots;
 }
 
-function parseXemaUtcTimestamp(timestamp: string): number | null {
+export function parseXemaUtcTimestamp(timestamp: string): number | null {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/i.test(timestamp)) {
     return null;
   }
@@ -82,7 +82,7 @@ function newValidationCounts(): Record<XemaValidationStatus, number> {
   return { valid: 0, pending: 0, 'not-started': 0, unknown: 0, unreported: 0 };
 }
 
-function validationSummary(counts: Record<XemaValidationStatus, number>): DailyValidationStatus {
+export function validationSummary(counts: Record<XemaValidationStatus, number>): DailyValidationStatus {
   const present = (Object.keys(counts) as XemaValidationStatus[])
     .filter((status) => counts[status] > 0);
   return present.length === 0 ? 'unreported' : present.length === 1 ? present[0] : 'mixed';
