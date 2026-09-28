@@ -11,8 +11,8 @@ Consume datos abiertos de la red XEMA del Servei Meteorologic de Catalunya a tra
 - Persistencia del estado principal del dashboard en la URL (`station`, `from`, `to`, `granularity`).
 - Dos vistas temporales: detalle cada 30 minutos y resumen diario.
 - KPIs de temperatura, humedad, viento y precipitacion; en la vista diaria indican cuántos días aportan valor utilizable por variable.
-- Graficas de series temporales y tabla paginada de observaciones.
-- Exportacion a Excel con tres hojas: `Contexto`, `30min` y `Diario`.
+- Graficas de series temporales y tabla paginada de observaciones. En la vista diaria, las graficas dejan huecos cuando falta un valor utilizable, muestran los parciales con `▲` y señalan la validacion XEMA no confirmada con `◇`; completar las franjas no equivale a obtener validacion `V`.
+- Cada grafica se puede descargar en PNG o PDF con las marcas de calidad visibles en su recuadro. La exportacion a Excel conserva su comportamiento anterior y genera tres hojas: `Contexto`, `30min` y `Diario`.
 - Alertas de cobertura cuando faltan datos en el rango seleccionado o hay variables diarias parciales o incompletas.
 - La tabla diaria muestra cobertura por variable, validación XEMA y días seleccionados sin valor diario atribuible; los valores parciales de precipitación y racha se identifican como mínimos observados.
 
