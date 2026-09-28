@@ -6,6 +6,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-09-28 — Calidad en gráficas diarias (fase 5)
+
+### Changed
+
+- Las gráficas diarias incluyen todos los días seleccionados, también los que carecen de valor diario. Los valores incompletos, ausentes o no finitos dejan huecos sin unir líneas; los puntos diarios utilizables permanecen visibles incluso si quedan aislados. Viento medio y racha máxima se evalúan por separado.
+- Los valores parciales utilizables conservan sus cifras y muestran `▲`; precipitación y racha parcial se identifican como mínimos observados incluso cuando valen cero. `◇` señala validación XEMA no confirmada por separado de la cobertura.
+- Las incidencias y sus fechas forman parte de cada contenedor de gráfica, por lo que aparecen también en sus capturas PNG y PDF. La leyenda general mantiene la explicación de los símbolos; la vista de 30 minutos, la fuente operativa y Excel no cambian.
+
+---
+
 ## 2026-09-27 — Marcas de calidad simplificadas (fase 4.5B)
 
 ### Changed

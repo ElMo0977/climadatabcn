@@ -5,15 +5,88 @@ import {
 } from 'recharts';
 import { Thermometer, Droplets, Wind, CloudRain, Download } from 'lucide-react';
 import type { Observation, Granularity } from '@/types/weather';
+import type { DailyQuality, DailyQualityVariable, VariableDailyQuality } from '@/lib/dailyQuality';
 import { aggregateWindByBucket, formatShortDate, formatDayKey } from '@/lib/weatherUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { exportChartAsPng, exportChartAsPdf } from '@/lib/exportChart';
+import { CoverageMark, ValidationMark } from './QualityMarks';
 
 interface WeatherChartsProps {
   observations: Observation[];
   granularity: Granularity;
   isLoading: boolean;
   dataSourceLabel?: string;
+  dailyQualityByDay?: Record<string, DailyQuality> | null;
+}
+
+const DAILY_VARIABLE_LABELS: Record<DailyQualityVariable, string> = {
+  temperature: 'Temperatura', humidity: 'Humedad', windSpeed: 'Viento medio',
+  windSpeedMax: 'Racha máxima', precipitation: 'Precipitación',
+};
+const COVERAGE_LABELS: Record<VariableDailyQuality['status'], string> = {
+  complete: 'completo', partial: 'parcial', incomplete: 'incompleto', missing: 'ausente',
+};
+const VALIDATION_LABELS: Record<VariableDailyQuality['validationStatus'], string> = {
+  valid: 'validada', pending: 'pendiente', 'not-started': 'no iniciada',
+  unknown: 'desconocida', unreported: 'no informada', mixed: 'mixta',
+};
+
+function usableValue(value: number | null | undefined, quality?: VariableDailyQuality): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  if (quality && quality.status !== 'complete' && quality.status !== 'partial') return null;
+  return value;
+}
+
+function qualityDetail(dayKey: string, variable: DailyQualityVariable, quality: DailyQuality): string {
+  const item = quality.variables[variable];
+  const status = COVERAGE_LABELS[item.status];
+  const lowerBound = item.status === 'partial' && item.isObservedLowerBound ? '; mínimo observado' : '';
+  return `${DAILY_VARIABLE_LABELS[variable]} ${dayKey}: ${item.coveredSlots}/${quality.expectedSlots} franjas, ${status}${lowerBound}`;
+}
+
+function chartTooltipValue(value: number | null, unit: string, variable: DailyQualityVariable,
+  dayKey: string | undefined, dailyQualityByDay?: Record<string, DailyQuality> | null): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 'Sin datos';
+  const quality = dayKey ? dailyQualityByDay?.[dayKey] : undefined;
+  if (!quality) return `${value}${unit}`;
+  const item = quality.variables[variable];
+  const lowerBound = item.status === 'partial' && item.isObservedLowerBound;
+  const validation = Object.values(item.validationCounts).some((count) => count > 0)
+    && item.validationStatus !== 'valid' ? `; validación XEMA ${VALIDATION_LABELS[item.validationStatus]}` : '';
+  return `${lowerBound ? '≥' : ''}${value}${unit} · ${item.coveredSlots}/${quality.expectedSlots} franjas, ${COVERAGE_LABELS[item.status]}${validation}`;
+}
+
+function ChartQualityNotes({ days, variables, observationsByDay, dailyQualityByDay }: {
+  days: string[];
+  variables: DailyQualityVariable[];
+  observationsByDay: Map<string, Observation>;
+  dailyQualityByDay?: Record<string, DailyQuality> | null;
+}) {
+  if (!dailyQualityByDay) return null;
+  return <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Incidencias de calidad en la gráfica">
+    {days.flatMap((dayKey) => variables.flatMap((variable) => {
+      const quality = dailyQualityByDay[dayKey];
+      if (!quality) return [];
+      const item = quality.variables[variable];
+      const value = observationsByDay.get(dayKey)?.[variable];
+      const numeric = typeof value === 'number' && Number.isFinite(value);
+      const issue = item.status !== 'complete' || !numeric;
+      const unconfirmed = Object.values(item.validationCounts).some((count) => count > 0)
+        && item.validationStatus !== 'valid';
+      if (!issue && !unconfirmed) return [];
+      const detail = qualityDetail(dayKey, variable, quality);
+      const missingValueDetail = !numeric ? `${detail}; sin valor diario utilizable` : detail;
+      const lowerBound = numeric && item.status === 'partial' && item.isObservedLowerBound;
+      return [<span key={`${dayKey}-${variable}`} className="inline-flex items-center gap-0.5 whitespace-nowrap">
+        <span>{dayKey}{variables.length > 1 ? ` · ${DAILY_VARIABLE_LABELS[variable]}` : ''}</span>
+        {issue && <CoverageMark status={numeric ? item.status : 'missing-reading'}
+          ariaLabel={missingValueDetail} />}
+        {unconfirmed && <ValidationMark status={item.validationStatus}
+          detail={`${DAILY_VARIABLE_LABELS[variable]} ${dayKey}: Validación XEMA ${VALIDATION_LABELS[item.validationStatus]}`} />}
+        {lowerBound && <span title="Mínimo observado">≥{value}</span>}
+      </span>];
+    }))}
+  </div>;
 }
 
 const LINE_CHARTS = [
@@ -119,32 +192,51 @@ function ChartExportMenu({ chartRef, title }: { chartRef: RefObject<HTMLDivEleme
   );
 }
 
-export function WeatherCharts({ observations, granularity, isLoading, dataSourceLabel }: WeatherChartsProps) {
+export function WeatherCharts({ observations, granularity, isLoading, dataSourceLabel, dailyQualityByDay }: WeatherChartsProps) {
   const tempRef = useRef<HTMLDivElement>(null);
   const humRef = useRef<HTMLDivElement>(null);
   const windRef = useRef<HTMLDivElement>(null);
   const rainRef = useRef<HTMLDivElement>(null);
 
   const formatObservationLabel = granularity === 'daily' ? formatDayKey : formatShortDate;
+  const isDaily = granularity === 'daily';
+  const observationsByDay = useMemo(() => new Map(observations.map((observation) => [
+    observation.timestamp.slice(0, 10), observation,
+  ])), [observations]);
+  const chartDays = useMemo(() => isDaily
+    ? [...new Set([...Object.keys(dailyQualityByDay ?? {}), ...observationsByDay.keys()])].sort()
+    : [], [isDaily, dailyQualityByDay, observationsByDay]);
 
   const chartData = useMemo(
-    () =>
-      observations.map((observation) => ({
+    () => isDaily && dailyQualityByDay
+      ? chartDays.map((dayKey) => {
+        const observation = observationsByDay.get(dayKey);
+        const quality = dailyQualityByDay[dayKey];
+        return {
+          dayKey, label: formatDayKey(dayKey),
+          temperature: usableValue(observation?.temperature, quality?.variables.temperature),
+          humidity: usableValue(observation?.humidity, quality?.variables.humidity),
+          windAvg: usableValue(observation?.windSpeed, quality?.variables.windSpeed),
+          windMax: usableValue(observation?.windSpeedMax, quality?.variables.windSpeedMax),
+          precipitation: usableValue(observation?.precipitation, quality?.variables.precipitation),
+        };
+      })
+      : observations.map((observation) => ({
         ...observation,
         label: formatObservationLabel(observation.timestamp),
       })),
-    [formatObservationLabel, observations],
+    [chartDays, dailyQualityByDay, formatObservationLabel, isDaily, observations, observationsByDay],
   );
 
   const windChartData = useMemo(
-    () =>
+    () => isDaily && dailyQualityByDay ? chartData :
       aggregateWindByBucket(observations, (observation) => formatObservationLabel(observation.timestamp)).map(
         (bucket) => ({
           ...bucket,
           label: bucket.time,
         }),
       ),
-    [formatObservationLabel, observations],
+    [chartData, dailyQualityByDay, formatObservationLabel, isDaily, observations],
   );
 
   // Vertical grid lines at day boundaries (only needed for 30min — one line per calendar day)
@@ -175,7 +267,7 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
     );
   }
 
-  if (observations.length === 0) {
+  if (observations.length === 0 && (!isDaily || chartDays.length === 0)) {
     return (
       <div className="chart-container flex items-center justify-center h-64">
         <p className="text-muted-foreground text-sm">Selecciona una estación para ver los datos</p>
@@ -206,15 +298,18 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
               <Tooltip
                 contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
-                formatter={(value: number | null) => [value !== null ? `${value}${chart.unit}` : 'Sin datos', chart.title]}
+                formatter={(value: number | null, _name: string, item: { payload?: { dayKey?: string } }) => [chartTooltipValue(value, chart.unit,
+                  chart.dataKey, item.payload?.dayKey, isDaily ? dailyQualityByDay : null), chart.title]}
               />
-              <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={LINE_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
+              <Line type="monotone" dataKey={chart.dataKey} stroke={chart.color} strokeWidth={LINE_STROKE_WIDTH} dot={isDaily} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls={!isDaily} />
               {dayBoundaryLabels.map((lbl) => (
                 <ReferenceLine key={lbl} x={lbl} stroke="hsl(var(--border))" strokeDasharray="3 3" />
               ))}
               {chartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
             </LineChart>
           </ResponsiveContainer>
+          {isDaily && <ChartQualityNotes days={chartDays} variables={[chart.dataKey]}
+            observationsByDay={observationsByDay} dailyQualityByDay={dailyQualityByDay} />}
         </div>
         );
       })}
@@ -236,14 +331,17 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             <Tooltip
               contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number | null, name: string) => [value !== null ? `${Number(Number(value).toFixed(1))} m/s` : 'Sin datos', name]}
+              formatter={(value: number | null, name: string, item: { payload?: { dayKey?: string } }) => [chartTooltipValue(
+                typeof value === 'number' && Number.isFinite(value) ? Number(value.toFixed(1)) : null, ' m/s',
+                name === 'Racha máx.' ? 'windSpeedMax' : 'windSpeed',
+                item.payload?.dayKey, isDaily ? dailyQualityByDay : null), name]}
               itemSorter={(a: { name?: string }, b: { name?: string }) => {
                 const order = ['Racha máx.', 'Viento media'];
                 return order.indexOf(String(a?.name ?? '')) - order.indexOf(String(b?.name ?? ''));
               }}
             />
-            <Line type="monotone" name="Racha máx." dataKey="windMax" stroke="hsl(160 55% 30%)" strokeWidth={WIND_GUST_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
-            <Line type="monotone" name="Viento media" dataKey="windAvg" stroke="hsl(var(--chart-wind))" strokeWidth={LINE_STROKE_WIDTH} dot={false} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls />
+            <Line type="monotone" name="Racha máx." dataKey="windMax" stroke="hsl(160 55% 30%)" strokeWidth={WIND_GUST_STROKE_WIDTH} dot={isDaily} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls={!isDaily} />
+            <Line type="monotone" name="Viento media" dataKey="windAvg" stroke="hsl(var(--chart-wind))" strokeWidth={LINE_STROKE_WIDTH} dot={isDaily} activeDot={{ r: 4, strokeWidth: 2 }} connectNulls={!isDaily} />
             <ReferenceLine y={WIND_THRESHOLD} stroke="hsl(25 95% 50%)" strokeDasharray="5 5" strokeWidth={LINE_STROKE_WIDTH} />
             {dayBoundaryLabels.map((lbl) => (
               <ReferenceLine key={lbl} x={lbl} stroke="hsl(var(--border))" strokeDasharray="3 3" />
@@ -251,6 +349,8 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             {windChartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
           </LineChart>
         </ResponsiveContainer>
+        {isDaily && <ChartQualityNotes days={chartDays} variables={['windSpeed', 'windSpeedMax']}
+          observationsByDay={observationsByDay} dailyQualityByDay={dailyQualityByDay} />}
         <div aria-label="Leyenda de viento" className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
           {WIND_LEGEND_ITEMS.map((item) => (
             <div key={item.label} className="flex items-center gap-2">
@@ -286,7 +386,8 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             <Tooltip
               contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
-              formatter={(value: number | null) => [value !== null ? `${value} mm` : 'Sin datos', 'Precipitación']}
+              formatter={(value: number | null, _name: string, item: { payload?: { dayKey?: string } }) => [chartTooltipValue(value, ' mm',
+                'precipitation', item.payload?.dayKey, isDaily ? dailyQualityByDay : null), 'Precipitación']}
             />
             <Bar dataKey="precipitation" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
             {dayBoundaryLabels.map((lbl) => (
@@ -295,6 +396,8 @@ export function WeatherCharts({ observations, granularity, isLoading, dataSource
             {chartData.length > 20 && <Brush dataKey="label" height={30} stroke="hsl(var(--primary))" fill="hsl(var(--muted))" />}
           </BarChart>
         </ResponsiveContainer>
+        {isDaily && <ChartQualityNotes days={chartDays} variables={['precipitation']}
+          observationsByDay={observationsByDay} dailyQualityByDay={dailyQualityByDay} />}
       </div>
     </div>
   );

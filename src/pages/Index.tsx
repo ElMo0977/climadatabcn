@@ -150,6 +150,7 @@ const Index = () => {
                 granularity={granularity}
                 isLoading={observationsLoading}
                 dataSourceLabel={dataSourceLabel ?? undefined}
+                dailyQualityByDay={granularity === 'daily' && !observationsError ? dailyQualityByDay : null}
               />
             </Suspense>
 

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 const uiConsistency = vi.hoisted(() => ({
   kpiDataPoints: null as number | null,
   chartLength: null as number | null,
+  chartQualityDays: null as number | null,
   tableQualityDays: null as number | null,
   kpiQualityDays: null as number | null,
 }));
@@ -70,8 +71,9 @@ vi.mock('@/components/WeatherKPIs', () => ({
 }));
 
 vi.mock('@/components/WeatherCharts', () => ({
-  WeatherCharts: ({ observations }: { observations: Observation[] }) => {
+  WeatherCharts: ({ observations, dailyQualityByDay }: { observations: Observation[]; dailyQualityByDay?: Record<string, DailyQuality> | null }) => {
     uiConsistency.chartLength = observations.length;
+    uiConsistency.chartQualityDays = dailyQualityByDay ? Object.keys(dailyQualityByDay).length : null;
     return <div>charts</div>;
   },
 }));
@@ -126,6 +128,7 @@ describe('Index export and query behavior', () => {
     vi.clearAllMocks();
     uiConsistency.kpiDataPoints = null;
     uiConsistency.chartLength = null;
+    uiConsistency.chartQualityDays = null;
     uiConsistency.tableQualityDays = null;
     uiConsistency.kpiQualityDays = null;
     mockUseStations.mockReturnValue({
@@ -229,7 +232,7 @@ describe('Index export and query behavior', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('keeps KPI "Datos" aligned with chart observations length in daily view', async () => {
+  it('keeps KPI "Datos" aligned with daily observation records, not quality-only chart days', async () => {
     const dailyObservations: Observation[] = [
       { ...TEST_OBSERVATION, timestamp: '2026-02-03' },
       { ...TEST_OBSERVATION, timestamp: '2026-02-04' },
@@ -268,7 +271,7 @@ describe('Index export and query behavior', () => {
     });
   });
 
-  it('passes daily quality to table, alert, and KPIs without adding empty days to chart rows', async () => {
+  it('passes selected-day quality to the chart as well as the table, alert, and KPIs', async () => {
     const variable = {
       coveredSlots: 0, coverage: 0, status: 'missing' as const,
       longestMissingGapMinutes: 1440, unresolvedBaseReadings: 0,
@@ -295,6 +298,7 @@ describe('Index export and query behavior', () => {
     await waitFor(() => {
       expect(uiConsistency.tableQualityDays).toBe(1);
       expect(uiConsistency.kpiQualityDays).toBe(1);
+      expect(uiConsistency.chartQualityDays).toBe(1);
       expect(uiConsistency.chartLength).toBe(1);
       expect(screen.getByRole('img', { name: /Cobertura: Parcial: 0 días/ })).toHaveTextContent('▲');
     });
