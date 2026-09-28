@@ -6,6 +6,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ---
 
+## 2026-09-28 — Cierre de calidad diaria web (fase 6)
+
+### Changed
+
+- `README.md` y la guía de XEMA documentan los huecos y las marcas de calidad de las gráficas diarias, también presentes en sus descargas PNG y PDF. La vista de 30 minutos y la exportación Excel conservan su comportamiento anterior.
+
+### Verified
+
+- El [PR #22](https://github.com/ElMo0977/climadatabcn/pull/22) cerró la fase 6 en `main` (`417d849`) y completó el trabajo web de las fases 0–6. El [despliegue de GitHub Pages](https://github.com/ElMo0977/climadatabcn/actions/runs/36485484277) terminó correctamente y la web publicada respondió HTTP 200.
+- En local pasaron 152 pruebas, lint, build y control del bundle. La revisión visual con datos sintéticos comprobó ambas vistas y los archivos PNG/PDF descargados. Esto no equivale a certificar los datos XEMA en vivo, que quedaron fuera de esta comprobación de cierre.
+
+---
+
 ## 2026-09-28 — Calidad en gráficas diarias (fase 5)
 
 ### Changed
